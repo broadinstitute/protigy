@@ -5,7 +5,7 @@ library(shiny)
 shinyUI(fluidPage(
 
     ## Application title
-    titlePanel("Moderated T-test (v0.1)"),
+    titlePanel("Moderated T-test (developmental version)"),
     tags$hr(), tags$br(),
 
 

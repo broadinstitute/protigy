@@ -5,7 +5,7 @@ library(shiny)
 shinyUI(fluidPage(
 
     ## Application title
-    titlePanel("Moderated T-test"),
+    titlePanel("Moderated T-test (v0.1)"),
     tags$hr(), tags$br(),
 
 
@@ -41,7 +41,6 @@ shinyUI(fluidPage(
         ###############################
         ## filter type
         tags$br(),
-
         uiOutput("filter.type"),
 
         ## nom p
@@ -51,12 +50,13 @@ shinyUI(fluidPage(
         ## top N
         conditionalPanel(condition = "input['filter.type'] == 'top.n'",  numericInput( "top.n", "Top N features", value=50, min=2, step=1)),
 
-        ################################
-        ## volcano plot
-        tableOutput("volc.tab.selected")
-        ##uiOutput("volc.tab.selected")
-        )## end panel
-        ),
+
+        ###############################
+        ## F5 hint
+        tags$br(),
+        htmlOutput('help')
+
+        )),
 
       ############################################################################
       ##
@@ -72,6 +72,6 @@ shinyUI(fluidPage(
              htmlOutput('help.results'),
 
              uiOutput('navbar')
-             ) ## end column
+      ) ## end column
   ) ## end row
 ))

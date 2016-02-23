@@ -4,16 +4,16 @@
 # $Id: two-class.r 60 2015-08-24 19:04:15Z manidr $
 ##print ('$Id: two-class.r 60 2015-08-24 19:04:15Z manidr $')
 
-library(limma)
-library (gplots)
-library (RColorBrewer)
+##library(limma)
+##library (gplots)
+##library (RColorBrewer)
 
-library(hexbin)
-library(ggplot2)
-library(Hmisc)
-library(grid)
+##library(hexbin)
+##library(ggplot2)
+##library(Hmisc)
+##library(grid)
 
-library(scatterplot3d)
+##library(scatterplot3d)
 
 #################################################################################################
 ##            multiscatterplot using hexagonal binning
@@ -48,7 +48,7 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
             if(matchidx$row < matchidx$col){
                 numb = plots[[i]]
                 ##col=
-                size = max(abs(90*as.numeric(numb)), 30)
+                size = max(abs(90*as.numeric(numb)), 25)
                 grid.rect(width=unit(.85, 'npc'), height=unit(.85, 'npc'), vp=vp, gp=gpar(fill='grey95', col='transparent'))
                 grid.text(numb, vp=vp, gp=gpar(fontsize=size))
             } else {
@@ -184,14 +184,13 @@ modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NU
 
     mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result) )
     ##mod.t <- data.frame ( cbind (data.frame (id),  mod.t.result, data) )
-    rownames(mod.t) <- mod.t[,1]
+    rownames(mod.t) <- make.unique(as.character(mod.t[,1]), sep='_')
+    colnames(mod.t)[1] <- 'id'
 
-    ##mod.t$Log.P.Value <- -10*log(mod.t$P.Value,10)
     ##write.csv (final.results, paste (output.prefix, ".csv", sep=''), row.names=FALSE)
 
     ## write out / return results
     final.results <- mod.t
-
 
     ##invisible (final.results)
     return( list(input=d, output=final.results, groups=groups.org) )
@@ -251,7 +250,7 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
   id.col <- make.names (id.col)
   if (fix.id) d[,id.col] <- make.unique (d[,id.col])
   id <- d[,id.col]
-  if ( any (duplicated (id)) ) stop ('IDs are not unique. Use fix.id=TRUE option')
+  ##if ( any (duplicated (id)) ) stop ('IDs are not unique. Use fix.id=TRUE option')
 
   # extract data columns
   if (is.null (data.col)) data <- d [, setdiff (colnames (d), id.col)]
@@ -283,7 +282,8 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
     ##mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result, change=change, significant=mod.sig) )
     mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result) )
     colnames (mod.t)[1] <- id.col   # retain id.col (if provided)
-    rownames(mod.t) <- mod.t[,1]
+    rownames(mod.t) <- make.unique( as.character(mod.t[,1]), sep='_' )
+    colnames(mod.t)[1] <- 'id'
 
   # plot and/or determine prediction CI's, etc.
   # the output/behavior of scatterhist.ci can be controlled using ... for specifying args
@@ -446,3 +446,35 @@ my.prcomp <- function(x, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.po
     return(pca)
 }
 
+#################################################
+#   Given a string and a number of characters
+#   the function chops the string to the
+#   specified number of characters and adds
+#   '...' to the end.
+#
+# parameter
+#   string     - character
+#   nChar      - numeric
+#
+# value
+#   string of 'nChar'´characters followed
+#     by '...'
+#
+##################################################
+chopString <- function(string, nChar=10)
+{
+
+    string.trim <- strtrim(string, nChar)
+    string.trim[ which(nchar(string) > nChar) ] <-  paste(string.trim[which(nchar(string) > nChar) ], '...')
+
+    return(string.trim)
+
+}
+
+##################################################
+## color ramp
+myColorRamp <- function(colors, values) {
+    v <- (values - min(values))/diff(range(values))
+    x <- colorRamp(colors)(v)
+    rgb(x[,1], x[,2], x[,3], maxColorValue = 255)
+}

@@ -4,16 +4,16 @@
 # $Id: two-class.r 60 2015-08-24 19:04:15Z manidr $
 ##print ('$Id: two-class.r 60 2015-08-24 19:04:15Z manidr $')
 
-library(limma)
-library (gplots)
-library (RColorBrewer)
+##library(limma)
+##library (gplots)
+##library (RColorBrewer)
 
-library(hexbin)
-library(ggplot2)
-library(Hmisc)
-library(grid)
+##library(hexbin)
+##library(ggplot2)
+##library(Hmisc)
+##library(grid)
 
-library(scatterplot3d)
+##library(scatterplot3d)
 
 #################################################################################################
 ##            multiscatterplot using hexagonal binning
@@ -48,7 +48,7 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
             if(matchidx$row < matchidx$col){
                 numb = plots[[i]]
                 ##col=
-                size = max(abs(90*as.numeric(numb)), 30)
+                size = max(abs(90*as.numeric(numb)), 25)
                 grid.rect(width=unit(.85, 'npc'), height=unit(.85, 'npc'), vp=vp, gp=gpar(fill='grey95', col='transparent'))
                 grid.text(numb, vp=vp, gp=gpar(fontsize=size))
             } else {
@@ -446,3 +446,32 @@ my.prcomp <- function(x, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.po
     return(pca)
 }
 
+##################################################
+## color ramp
+myColorRamp <- function(colors, values) {
+    v <- (values - min(values))/diff(range(values))
+    x <- colorRamp(colors)(v)
+    rgb(x[,1], x[,2], x[,3], maxColorValue = 255)
+}
+
+#################################################
+##   Given a string and a number of characters
+##   the function chops the string to the
+##   specified number of characters and adds
+##   '...' to the end.
+## parameter
+##   string     - character
+##   nChar      - numeric
+## value
+##   string of 'nChar' characters followed
+##     by '...'
+##################################################
+chopString <- function(string, nChar=10)
+{
+
+    string.trim <- strtrim(string, nChar)
+    string.trim[ which(nchar(string) > nChar) ] <-  paste(string.trim[which(nchar(string) > nChar) ], '...')
+
+    return(string.trim)
+
+}

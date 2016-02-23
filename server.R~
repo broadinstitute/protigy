@@ -1,18 +1,35 @@
 library(shiny)
-##library(shinyRGL)
-##library(rgl)
-library(ggplot2)
 
 
+library(pheatmap)
+library(limma)
+
+## colors
+library (RColorBrewer)
+## multiscatter
+library(hexbin)
+library(Hmisc)
+library(grid)
+## pca
+library(scatterplot3d)
+library(plotly)
+
+##library (gplots)
+
+## maxumum file size
 options(shiny.maxRequestSize = 200*1024^2)
 
-
+#################################################################
+## global parameters
 NASTRINGS <<- c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?")
 SEPARATOR <<- c(',', '\t', ';')
-GRPCOLORS <<- c('grey40', 'darkblue', 'darkred', 'darkgreen', palette())
+GRPCOLORS <<- RColorBrewer::brewer.pal(9, "Set1")
+STRLENGTH <<- 15 ## number of characters to display in plots/tables for column names
 
 
-# Define server logic
+###########################################################################################################
+##                         Define server logic
+###########################################################################################################
 shinyServer(
 
     function(input, output, session) {
@@ -37,7 +54,6 @@ shinyServer(
         )
         ## coordinates in volcano plot
         volc <- reactiveValues()
-
 
 
         ################################################################################
@@ -65,6 +81,7 @@ shinyServer(
 </table>
 <br><br><p><font size=\"5\">Please note that right now the expression values in your data matrix should be <b>log-transformed</b>, especially in case of ratio data!</font></p>
 <br><p><font size=\"5\">You can also load a <b>sample data set</b> by pressing the button on the left.</font></p>'
+
 ) )
         })
         ##############################
@@ -85,8 +102,10 @@ shinyServer(
             if(input$id.col ==0) return()
             if(global.param$grp.done == T) return()
 
-            HTML( paste('<br><br><p><font size=\"5\">Now you can specify your experimental design, i.e. assign columns of your table to groups that you want to compare. To do so please enter a name in the text field and select all columns that belong to that group. After pressing the \"Next\" button all selected columns will be removed from the list and you can continue to assign the remaining columns to another group. This process will go on until there are no unassigned columns left.<br><br>Please note that there is no limit in the number of groups you can define!</font></p>' ) )
-            ##HTML( paste('<br><br><p><font size=\"5\">Now you can specify your experimental design, i.e. assign columns of your table to groups that you want to compare. To do so please enter a name in the text field and select all columns that belong to that group. After pressing the \"Next\" button you can define another group. This process will go on until there are no unassigned columns left.<br><br>Please note that there is no limit in the number of groups you can define!</font></p>' ) )
+            HTML( paste('<br><br><p><font size=\"5\">Now you can specify your experimental design, i.e. assign columns of your table to groups that you want to compare. To do so please enter a name in the text field and select all columns that belong to that group. After pressing the \"Next\" button all selected columns will be removed from the list and you can continue to assign the remaining columns to another group. This process will go on until there are no unassigned columns left.<br><br>Please note that there is no limit in the number of groups you can define!</font></p>
+
+<br><p align=\"center\"><font size=\"5\"><mark>Don\'t use any special characters (e.g. spaces, colons, etc.) in the group names!</mark></font></p>' ) )
+
         })
 
         ################################
@@ -108,11 +127,15 @@ shinyServer(
             if(global.param$grp.done == F) return()
             if(input$run.test == 0) return()
 
-            HTML( paste('<br><br><p><font size=\"4\">This page allows you to interactively explore the results of you analyis. On the left you can choose between different filters, the results will be updated immediately. You can change the appearance of the heatmap by modifying the parameters below, you can select points shown in the Volcano plots and browse through the result table. Just feel free to play around and let me know if something is not working.
-</font></p>' ) )
+            HTML( paste('<p><font size=\"4\">This page allows you to interactively explore the results of you analyis. On the left you can choose between different filters, the results will be updated immediately. You can change the appearance of the heatmap by modifying the parameters below, you can select points shown in the Volcano plots and browse through the result table. Just feel free to play around and let me know if something is not working.
+</font></p><br>') )
         })
 
+        output$help <- renderText({
 
+            HTML('<p align=\"center\"><font size=\"5\"><mark>To analyze another data set or to start over hit the F5 button.</mark></font></p>' )
+
+        })
 
         ################################################################################
         ##
@@ -150,7 +173,6 @@ shinyServer(
                                               ),
                                               fluidRow(
                                                   column(11),
-                                                  ##column(1, downloadButton(paste('downloadVolcano', sep='.'), 'Download'))
                                                   column(1, downloadButton(paste('downloadVolcano', groups.comp[i],sep='.'), 'Download this plot'))
                                               ),
                                               tags$br(),
@@ -182,31 +204,31 @@ shinyServer(
                                         fluidRow(
                                             column(1, h4('Column labels')),
                                             column(1, h4('Row labels')),
-                                            column(1, h4('Color key')),
-                                            column(4),
-                                            column(1, h4('Dimensions')),
+                                            ##column(1, h4('Color key')),
                                             column(3),
+                                            column(1, h4('Dimensions')),
+                                            column(5),
                                             column(1, h4('Export'))
                                         ),
                                         fluidRow(
-                                            column(1, numericInput( "cexCol", "Size", value=1, min=.1, step=.1)),
-                                            column(1, numericInput( "cexRow", "Size", value=1, min=.1, step=.1)),
-                                            column(1, numericInput( "keysize", "Size", value=.7, min=.1, step=.1)),
-                                            column(2, selectInput( "hm.trace", "Trace", c("column","row","both","none"), selected="none")),
+                                            column(1, numericInput( "cexCol", "Size", value=8, min=1, step=1)),
+                                            column(1, numericInput( "cexRow", "Size", value=8, min=1, step=1)),
+                                            column(1, selectInput( "scale", "Scale", c("row","column","none"), selected="none")),
+                                            ##column(2, selectInput( "hm.trace", "Trace", c("column","row","both","none"), selected="none")),
                                             column(2, selectInput( "hm.clust", "Cluster", c("column","row","both","none"), selected="none")),
                                             column(1, numericInput( "pixRow", "Pixel rows", value=800, step=50)),
-                                            column(3),
-                                            fluidRow(column(1, downloadButton('downloadHM', 'Download this plot')), column(11))
-                                        ),
-                                        fluidRow(
-                                            column(1, numericInput( "srtCol", "Rotation", value=45, step=5)),
-                                            column(1, numericInput( "srtRow", "Rotation", value=0, step=5)),
-                                            column(5),
                                             column(1, numericInput( "pixCol", "Pixel columns", value=800, step=50)),
-                                            column(4)
-
-
+                                            column(4),
+                                            column(1, downloadButton('downloadHM', 'Download this plot'))
+                                            ##fluidRow(column(1, downloadButton('downloadHM', 'Download this plot')), column(11))
                                         ),
+                                        ##fluidRow(
+                                            ##column(1, numericInput( "srtCol", "Rotation", value=45, step=5)),
+                                            ##column(1, numericInput( "srtRow", "Rotation", value=0, step=5)),
+                                        ##    column(5),
+                                        ##    column(1, numericInput( "pixCol", "Pixel columns", value=800, step=50)),
+                                        ##    column(6)
+                                        ##),
                                         tags$br(),
                                         tags$hr(),
                                         tags$br(),
@@ -220,7 +242,7 @@ shinyServer(
                                     )
 
                                     ),
-
+                       ###################################################################################
                        ## insert volcanos
                        do.call(navbarMenu, volc.tabs),
 
@@ -240,19 +262,23 @@ shinyServer(
                                              column(11),
                                              column(1, downloadButton('downloadPCA', 'Download this plot'))
                                          ),
-                                         tags$br(),
+                                         ##tags$br(),
                                          tags$hr(),
-                                         tags$br(),
+                                        ## tags$br(),
                                          fluidRow(
-                                            column(12, plotOutput("pca", width=800, height=400) )
-                                        )
+                                             column(12, plotOutput("pca", width=800, height=400) )
+                                         ),
+                                         fluidRow(
+                                             ##column(12, plotOutput("pca", width=800, height=400) )
+                                             column(12, plotlyOutput("pca.plotly", width=400, height=400) )
+                                         )
                                     )
                                    ),
                            #######################################
                            ## table
                            tabPanel('Table',
                                     fluidPage(
-                                        fluidRow(column(8, tags$h3('Result table according to the chosen filter:')), column(4, downloadButton('downloadTable', 'Download complete table')) ),
+                                        fluidRow(column(8, tags$h3('Result table (filtered):')), column(4, downloadButton('downloadTable', 'Download entire table')) ),
                                         fluidRow( column(12, tags$br())),
                                         fluidRow(column(12, dataTableOutput("tableprev")))
                                     )
@@ -267,6 +293,7 @@ shinyServer(
                                                fluidPage(
                                                    fluidRow(
                                                        column(12, plotOutput("expr.boxplot"))
+                                                       ##column(12, plotlyOutput("expr.boxplot.plotly"))
                                                    )
                                                )
                                                ),
@@ -275,7 +302,8 @@ shinyServer(
                                       tabPanel('P-values',
                                                fluidPage(
                                                    fluidRow(
-                                                       column(12, plotOutput("pval.hist"))
+                                                        column(12, plotOutput("pval.hist"))
+                                                        ##column(12, plotlyOutput("pval.hist.plotly"))
                                                    )
                                                )
                                                ),
@@ -296,8 +324,6 @@ shinyServer(
                                                fluidPage(
                                                    column(1, numericInput( "pixColMS", "Pixel columns", value=1000, step=50)),
                                                    column(11)
-
-
                                                ),
                                                tags$br(),
                                                tags$hr(),
@@ -330,7 +356,7 @@ shinyServer(
                 HTML('<font size=\"3\"><b>Import data:</b></font>'),
                 fileInput("file", "", accept=c('text/csv',
                        'text/comma-separated-values,text/plain',
-                       '.csv', '.txt')),
+                       '.csv', '.txt', '.tsv')),
                 HTML('<hr border-width:\"10px\">')
             )
 
@@ -362,12 +388,16 @@ shinyServer(
                 if(input$id.col > 0 && !is.null(input$id.col.value)) return()
 
             tab <- global.input$table
+            tab.colnames <- global.input$table.colnames
 
-            ## checkbox to pick id column
+
+            ## radio button to pick id column
             list(
-                ##checkboxGroupInput( "id.col.value", "Choose ID column", colnames(tab)),
                 radioButtons( "id.col.value", "Choose ID column", colnames(tab)),
-                actionButton("id.col", 'OK')
+                actionButton("id.col", 'OK'),
+                ## experimental design
+                HTML('<br><hr size=\"5\">'),
+                downloadButton("exportTemplate", 'Export experimental design template')
             )
 
         })
@@ -382,15 +412,17 @@ shinyServer(
             if(!is.null(global.results$data)) return()
             if(!is.null(global.param$grp))
                 if(sum(is.na(global.param$grp)) == 0) return()
+
             ## get groups
             tabhead <- global.param$grp
             tabhead <- names(tabhead[which(is.na(tabhead))])
 
             ## number of assigned groups
             N.grp = global.param$N.grp + 1
-            ##global.param$N.grp = N.grp
 
             list(
+                ## upload template
+                fileInput("exp.file", "Upload experimental design file", accept=c('text/plain','.txt')), HTML('<p align=\"center\"><font size=\"3\" color=\"blue\"><b>or define below</b></font></p>'),
                 textInput(paste('label.grp', sep=''), paste('group', N.grp), value=paste('g', N.grp, sep='')),
                 checkboxGroupInput( "groups", paste("Select group", N.grp), tabhead),
                 actionButton( 'update.grp', 'Next')
@@ -401,14 +433,13 @@ shinyServer(
         ## filter type
         output$filter.type <- renderUI({
             if( (is.null(input$file) && (is.null(global.input$file )))| is.null(input$run.test)) return()
-            ##if(is.null( global.input$file) | is.null(input$run.test)) return()
             if(!is.null(input$run.test)) if(input$run.test == 0) return()
 
             list(selectInput('filter.type', 'Filter based on:', c('nom.p', 'adj.p', 'top.n', 'none'), selected='nom'))
         })
 
         #####################################
-        ##
+        ## select test
         output$list.groups <- renderUI({
 
             if( !global.param$grp.done ) return()
@@ -461,6 +492,7 @@ shinyServer(
 
                 ## group colors
                 grp.col <- rep(GRPCOLORS[1], length(grp))
+                ##names(grp.col) <- names(grp)
                 ##for(i in 2:global.param$N.grp) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
                 for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
                 global.param$grp.colors <- grp.col
@@ -478,8 +510,8 @@ shinyServer(
         ## test data set
         observeEvent( input$testdata, {
 
-           cat( getwd())
-           ## cat('jaaaa')
+            ##cat( getwd())
+            ## cat('jaaaa')
             tab <- read.table( '/local/shiny-server/modT/testdata.txt', sep='\t', header=T, stringsAsFactors=F, na.strings=NASTRINGS  )
 
             global.input$table <- tab
@@ -492,15 +524,6 @@ shinyServer(
         ## upload file
         observeEvent( input$file, {
 
-            ##if( !is.na(as.numeric(input$file)) ){
-            ##    tab <- read.table( 'testdata.txt', sep=',', header=T, stringsAsFactors=F, na.strings=NASTRINGS  )
-
-            ##    global.input$table <- tab
-            ##    rm(tab)
-
-
-            ##} else {
-              ##  cat('jaaaa')
                 ###########################################################
                 ## determine the separator
                 tab.sep=NULL
@@ -517,22 +540,53 @@ shinyServer(
                 tab <- read.table( input$file$datapath, sep=global.param$tabsep, header=T, stringsAsFactors=F, na.strings=NASTRINGS  )
                 ids <- make.unique(as.character(tab[, input$id.col.value]), sep='_')
                 tab[, input$id.col.value] <- ids
-                ## colnames(tab) <- sub('^X', '', colnames(tab))
+
+                ## store table
                 global.input$table <- tab
-                rm(tab)
-                ##global.input$file  <- TRUE
-            ##}
+
+                ## shorten column names and store together with the original names
+                colnames.tmp <- chopString(colnames(tab), STRLENGTH)
+                names(colnames.tmp) <- colnames(tab)
+                global.input$table.colnames <- colnames.tmp
+                rm(tab, colnames.tmp)
         })
 
+        ##################################################
+        ## upload experimental design file
+        observeEvent( input$exp.file, {
+
+            ## read the file
+            grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
+
+            ## extract all non-empty cells in the 'Experiment' column
+            grp.tmp <- grp.file[which(nchar(grp.file$Experiment) > 0 ), ]
+
+            ## class vector
+            grp=grp.tmp$Experiment
+            names(grp)=grp.tmp$Column.Name
+
+            ## update number of groups
+            global.param$N.grp <- length(unique( na.omit(grp)) )
+            ## store group assignment
+            global.param$grp <- grp
+            ## group colors
+            grp.col <- rep(GRPCOLORS[1], length(grp))
+            for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
+            global.param$grp.colors <- grp.col
+            ## group colors for figure legend
+            idx <- !duplicated(grp)
+            grp.col.legend = grp.col[idx]
+            names(grp.col.legend) <- grp[idx]
+            global.param$grp.colors.legend <- grp.col.legend
+
+            ## all done
+            global.param$grp.done = T
+
+        })
 
         ################################################
         ## once the 'run test' button was pressed...
         observeEvent(input$run.test, {
-
-            ##global.results <- NULL
-            ##volc <-  NULL
-
-            ## reset reactive variables
 
             ## determine which test should be performed
             test = input$which.test
@@ -557,13 +611,16 @@ shinyServer(
                 global.param$grp.comp <- groups.comp
             }
 
+            #############################################
+            ##   prepare the data matrix
+
             ## table
             tab <- global.input$table
             ## id column
             id.col = input$id.col.value
-
             ## all group labels
             groups=global.param$grp
+
 
 
             ##################################
@@ -579,7 +636,8 @@ shinyServer(
                         ## extract current groups
                         groups.tmp <- groups[grep(paste( unlist( strsplit(g, '\\.vs\\.')), collapse='|'  ) , groups) ]
 
-                        incProgress(count, detail=g)
+                        ## progress bar
+                        incProgress(1/length(unique(groups.comp)), detail=g)
 
                         ## extract table of current group
                         tab.group <- cbind(tab[, id.col], tab[, names(groups.tmp)])
@@ -608,7 +666,8 @@ shinyServer(
                     ## loop over groups
                     for(g in unique(groups.comp)){
 
-                        incProgress(count, detail=g)
+                        ## progress bar
+                        incProgress(1/length(unique(groups.comp)), detail=g)
 
                         ## extract table of current group
                         tab.group <- cbind(tab[, id.col], tab[, names(groups)[which(groups == g)]])
@@ -619,11 +678,12 @@ shinyServer(
                             res.comb <- res.tmp
                         else
                             res.comb <- merge(res.comb, res.tmp, by='id')
-                            ##res.comb <- cbind(res.comb, res.tmp)
 
                         count=count + 1
 
                     }
+                    ## add ids as rownames
+                    rownames(res.comb) <- res.comb$id
                 })
                 global.results$data$output <- res.comb
             }
@@ -715,6 +775,9 @@ shinyServer(
                 global.results$filter.cutoff <- input$adj.p
             }
 
+            ###################################
+            ## global FDR
+
             #################################
             ## no filter
             if(input$filter.type=='none'){
@@ -747,6 +810,19 @@ shinyServer(
                 write.table(  tab, file, sep='\t', quote=F, na='', row.names=F  )
             }
         )
+
+        #########################################
+        ## download experimental design template
+        output$exportTemplate <- downloadHandler(
+            filename = function(){ 'experimentalDesign.txt' },
+            content = function(file){
+                tab <- global.input$table
+                exp.design <- cbind(colnames(tab), rep('', ncol(tab)))
+                colnames(exp.design) <- c('Column.Name', 'Experiment')
+                write.table(  exp.design, file, sep='\t', quote=F, na='', row.names=F  )
+            }
+        )
+
 
         #####################################################################################
         ##
@@ -918,6 +994,9 @@ shinyServer(
 
             filter.res()
 
+            ## pch for significant points
+            sig.pch=18
+
             ## unfiltered
             res = as.data.frame( global.results$data$output )
             ##rownames(res) <- res[, input$id.col.value]
@@ -930,6 +1009,13 @@ shinyServer(
             logFC <- res[, paste('logFC.', group, sep='')]
             logPVal <- res[, paste('Log.P.Value.', group, sep='')]
 
+            ## index of missing values
+            rm.idx <- union( which(is.na(logFC)), which(is.na(logPVal)) )
+            if(length(rm.idx) > 0){
+                res <- res[-rm.idx, ]
+                logFC <- logFC[-rm.idx]
+                logPVal <- logPVal[-rm.idx]
+            }
 
             ## which filter?
             filter.str <- paste('filter:', global.results$filter.type, '\ncutoff:', global.results$filter.cutoff)
@@ -951,16 +1037,25 @@ shinyServer(
                 sig.idx = 1:length(logFC)
 
             ## colors
-            col <- rep(my.col2rgb('black', (input[[paste('opac.volcano',  group, sep='.')]]*255)/100), nrow(res))
-            names(col) = rownames(res)
+            ##col <- rep(my.col2rgb('black', (input[[paste('opac.volcano',  group, sep='.')]]*255)/100), nrow(res))
+            ##names(col) = rownames(res)
 
-            if(length(sig.idx) > 0)
-                col[sig.idx] <- my.col2rgb('darkred', (input[[paste('opac.volcano', group, sep='.')]]*255)/100 )
+            pch.vec=rep(19, nrow(res))
+            cex.vec=rep( input[[paste('cex.volcano', group, sep='.')]], nrow(res))
 
-            ##if(nrow(res.filt)>0){
-            ##    col[ rownames(res.filt) ] <- my.col2rgb('darkred', (input[[paste('opac.volcano', group, sep='.')]]*255)/100 )
-                ##col[ which( res[,'id']== res.filt[, 'id']) ] <- my.col2rgb('darkred', (input[[paste('opac.volcano', group, sep='.')]]*255)/100 )
-            ##}
+            if(length(sig.idx) > 0){
+                pch.vec[sig.idx] <- sig.pch
+                cex.vec[sig.idx] <- cex.vec[1]+1
+            }
+
+            ##    col[sig.idx] <- my.col2rgb('darkred', (input[[paste('opac.volcano', group, sep='.')]]*255)/100 )
+
+            ## remove NA
+
+
+
+            col=myColorRamp(c('black', 'grey20', 'darkred', 'red', 'deeppink'), na.omit(logPVal))
+
 
             ## limits
             xlim = max(abs(logFC), na.rm=T)
@@ -970,10 +1065,26 @@ shinyServer(
             ylim = max(logPVal, na.rm=T)
             ylim = c(0, ylim+.2*ylim)
 
+            ## plot
             par(mar=c(4,5,5,2))
-            plot(logFC, logPVal, col=col, xlim=xlim, ylim=ylim, pch=20, cex=input[[paste('cex.volcano', group, sep='.')]], xlab=expression(log(FC)), ylab=expression(-10*log[10](P-value)), cex.axis=1.8, cex.lab=1.8, main=group, cex.main=2)
+            plot.new()
+            plot.window( xlim=xlim, ylim=ylim, cex.axis=1.8, cex.lab=1.8, main=group, cex.main=2)
+            mtext(expression(log(FC)), side=1, cex=1.8, line=3)
+            mtext(expression(-10*log[10](P-value)), side=2, cex=1.8, line=3)
+            axis(1, cex.axis=1.8)
+            axis(2, las=2, cex.axis=1.8)
+
+            if( input[[paste('grid.volcano', group, sep='.')]] )
+                grid()
+            ##abline(h=-10*log(global.results$filter.cutoff, 10), col='grey', lwd=2, lty='dashed')
+            ##plot(logFC, logPVal, col=col, xlim=xlim, ylim=ylim, pch=pch.vec, cex=cex.vec, xlab=expression(log(FC)), ylab=expression(-10*log[10](P-value)), cex.axis=1.8, cex.lab=1.8, main=group, cex.main=2)
+            points(logFC, logPVal, col=col, pch=pch.vec, cex=cex.vec)
             ## filter
-            legend('top', bty='n', legend=paste(filter.str, '\nN=', sum(!is.na(logFC) & !is.na(logPVal)), sep=''))
+            abline(h=min(logPVal[sig.idx], na.rm=T), col='grey30', lwd=2, lty='dashed')
+            text( xlim[2]-(xlim[2]*.05), min(logPVal[sig.idx], na.rm=T), paste(global.results$filter.type, global.results$filter.cutoff, sep='='), pos=3, col='grey30')
+            ##text( xlim[2], min(logPVal[sig.idx], na.rm=T), paste(global.results$filter.type, global.results$filter.cutoff, sep='='), adj=c(-1,-1), col='grey')
+
+            legend('top', bty='n', legend=paste(filter.str, '\nN=', sum(!is.na(logFC) & !is.na(logPVal)), sep=''), cex=1.5)
             ## up/down
             ##legend('topleft', legend=paste('down:', sum()))
 
@@ -981,8 +1092,8 @@ shinyServer(
                 for(i2 in 1:length(unlist(volc[[paste('x', group, sep='.')]])))
                    text(unlist(volc[[paste('x', group, sep='.')]][i2]), unlist(volc[[paste('y', group, sep='.')]][i2]), unlist(volc[[paste('text', group, sep='.')]][i2]),pos=ifelse(volc[[paste('x', group, sep='.')]][i2] < 0, 2, 4), cex=input[[paste('cex.volcano.lab', group, sep='.')]])
             }
-            if( input[[paste('grid.volcano', group, sep='.')]] )
-                grid()
+            ##if( input[[paste('grid.volcano', group, sep='.')]] )
+            ##    grid()
         }
 
         #######################################################################################
@@ -1011,6 +1122,14 @@ shinyServer(
             ##grp.col <- rep('grey10', length(grp))
             ##grp.col[which(grp == input$label.g2)] <- 'darkblue'
 
+            ##########################################
+            ## order after groups
+            ord.idx <- order(grp)
+            grp <- grp[ord.idx]
+            tab <- tab[, ord.idx]
+            grp.col <- grp.col[ ord.idx]
+
+
             at.vec=1:ncol(tab)
             ##########################################
             ## plot
@@ -1021,9 +1140,57 @@ shinyServer(
             ##legend('top', legend=c(input$label.g1, input$label.g2), ncol=2, bty='n', border = c('grey10', 'darkblue'), fill='white', cex=1.5, lwd=3)
             mtext( paste('N=',unlist(apply(tab,2, function(x)sum(!is.na(x)))), sep=''), at=at.vec, side=4, las=2, adj=0, cex=.8)
             axis(1)
-            axis(2, at=at.vec, labels=colnames(tab), las=2)
+            axis(2, at=at.vec, labels=chopString(colnames(tab), STRLENGTH), las=2)
 
+        },
+        width = function(){ width=1000},
+        height= function(){ height=20*ncol( global.input$table) } )
+
+        ####################################################################
+        ## plotly boxplots
+        output$expr.boxplot.plotly <- renderPlotly({
+
+            if(is.null(global.results$data)) return()
+
+            ## dataset
+            tab <- global.input$table
+            ## id column
+            id.col <- input$id.col.value
+            ## table
+            tab <- tab[, setdiff(colnames(tab), id.col)]
+            ## get groups
+            ## grp <- global.results$data$groups
+            grp <- global.param$grp
+            ##grp.lab <- global.param$grp.label
+
+            grp.col <- global.param$grp.colors
+            grp.col.leg <- global.param$grp.colors.legend
+
+            ##########################################
+            ## convert to a data frame
+            exprs = unlist(tab)
+            column = group = rep('', length(exprs))
+            for(i in 1:ncol(tab)){
+                column[ max(1+((i-1)*nrow(tab))) : (((i)*nrow(tab))) ] = colnames(tab)[i]
+            }
+            for(i in 1:length(grp)){
+                group[which(column == names(grp)[i])] <- grp[i]
+            }
+
+            tab2 = data.frame(exprs, column, group)
+            rm(exprs, column, group)
+
+            ##########################################
+            ## plot
+            ##plot_ly(tab, x=exprs, group=column, type='box')
+            ##bp <- plot_ly(tab, x=exprs, color=group, type='box')
+            ## bp.l <- layout(bp, boxmode=column)
+
+            ##p=plot_ly(tab2, x=exprs, group=column, type='box', colors=grp.col) %>% layout(boxmode='group')
+            plot_ly(tab2, x=exprs, type='box', group=column, marker=list( color=grp.col) )
+            ##subplot(p)
         })
+
         ######################################################################################
         ##
         ##                                   Correlation
@@ -1031,7 +1198,8 @@ shinyServer(
         ######################################################################################
         output$expr.cor <- renderPlot({
             if(is.null(global.results$data)) return()
-            plotMultiScatter()
+            ##plotMultiScatter()
+            plotCorrMat(lower='pearson', upper='spearman')
         },
         width = function(){ input$pixColMS},
         height= function(){ input$pixRowMS}
@@ -1052,6 +1220,7 @@ shinyServer(
             grp.col <- rep('grey10', length(grp))
             grp.col[which(grp == input$label.g2)] <- 'darkblue'
 
+            colnames(tab) <- chopString(colnames(tab), STRLENGTH)
             ###############################
             ## plot
             withProgress({
@@ -1069,6 +1238,55 @@ shinyServer(
             }
         )
 
+        ###################################################
+        ## correlation matrix
+        ###################################################
+        plotCorrMat <- function(filename=NA, lower=c('pearson', 'spearman', 'kendall', 'pcor'), upper=c('pearson', 'spearman', 'kendall', 'pcor')){
+
+            ## dataset
+            tab <- global.input$table
+            ## id column
+            id.col <- input$id.col.value
+            ## class vector
+            grp <- sort(global.param$grp)
+            grp.col.legend <- global.param$grp.colors.legend
+
+            ## table
+            tab <- tab[, setdiff(colnames(tab), id.col)]
+            tab <- tab[, names(grp)]
+
+            ###########################
+            ## calculate correlations
+            cm.upper <- cor(tab, use='pairwise', method=match.arg(upper))
+            cm.lower <- cor(tab, use='pairwise', method=match.arg(lower))
+
+            ###########################
+            ## initialize correlation matrix
+            cm <- matrix(NA, ncol=ncol(cm.upper),nrow=nrow(cm.upper), dimnames=dimnames(cm.upper))
+            cm[ lower.tri(cm, diag=F) ] <- cm.lower[lower.tri(cm.lower, diag=F)]
+            cm[ upper.tri(cm, diag=F) ] <- cm.upper[upper.tri(cm.upper, diag=F)]
+
+
+            col=colorRampPalette(c('blue', 'grey80' , 'red'))
+
+            ## annotation of rows/columns
+            anno=data.frame(Group=grp)
+            anno.color=list(Group=grp.col.legend)
+
+            Rowv=F
+            Colv=F
+
+            ##setHook("grid.newpage", function() pushViewport(viewport(x=1,y=1,width=0.9, height=0.9, name="vp", just=c("right","top"))), action="prepend")
+            setHook("grid.newpage", function() pushViewport(viewport(x=1,y=1,width=0.9, height=0.9, name="vp", just=c("right","top"))))
+            pheatmap(cm, fontsize_row=10, fontsize_col=10,
+                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=col(100), filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', annotation_col=anno, annotation_colors=anno.color,  annotation_row=anno, display_numbers=T, fontsize_number=100/ncol(cm)+10)
+
+            grid.text(paste(match.arg(lower)), y=.995, x=.4, gp=gpar(fontsize=25))
+            grid.text(paste(match.arg(upper)), x=0.005, rot=90, gp=gpar(fontsize=25))
+            popViewport()
+
+        }
+
         ####################################################################################
         ##
         ##                                  Heatmap
@@ -1083,12 +1301,13 @@ shinyServer(
         )
         #######################################
         ## actual plot
-        plotHM <- function(){
+        plotHM <- function(filename=NA){
 
             ## groups
             ## grp = global.results$data$groups
             grp=global.param$grp
             grp.col <- global.param$grp.colors
+            grp.col.legend <- global.param$grp.colors.legend
 
             filter.res()
             res = global.results$filtered
@@ -1123,19 +1342,29 @@ shinyServer(
                 Rowv=Colv=FALSE
             }
 
+           ############################################
+           ## heatmap.2
+           ## heatmap.2(data.matrix(res), Rowv=Rowv, Colv=Colv, dendrogram=input$hm.clust, scale='row', col=rev(brewer.pal (11, "RdBu")), margins=c(15,15), density.info='density', keysize=input$keysize, cexRow=input$cexRow, cexCol=input$cexCol, trace=input$hm.trace, main=paste(filter.str, '\nN=', nrow(res),sep=''), key.title='', srtCol=input$srtCol, srtRow=input$srtRow, ColSideColors=grp.col, key=F)
 
-            ## heatmap
-            heatmap.2(data.matrix(res), Rowv=Rowv, Colv=Colv, dendrogram=input$hm.clust, scale='row', col=rev(brewer.pal (11, "RdBu")), margins=c(15,15), density.info='density', keysize=input$keysize, cexRow=input$cexRow, cexCol=input$cexCol, trace=input$hm.trace, main=paste(filter.str, '\nN=', nrow(res),sep=''), key.title='', srtCol=input$srtCol, srtRow=input$srtRow, ColSideColors=grp.col)
+
+           ##############################################
+           ## annotation of columns
+           anno.col=data.frame(Group=grp)
+           anno.col.color=list(Group=grp.col.legend)
+
+
+           ############################################
+           ## heatmap
+           pheatmap(res, fontsize_row=input$cexRow, fontsize_col=input$cexCol,
+                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=rev(brewer.pal (11, "RdBu")), filename=filename, main=paste(filter.str, '\nN=', nrow(res),sep=''), annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH))
         }
         ## download image
         output$downloadHM <- downloadHandler(
-            ##filter.res()
-            ##filename = paste('heatmap_', global.results$filter.type, '_', global.results$filter.cutoff, '.pdf', sep=''),
             filename =  paste( 'heatmap.pdf'),
             content = function(file){
-                pdf(file, height=input$pixRow*(11/800), width=input$pixCol*(11/800))
-                plotHM()
-                dev.off()
+                ##pdf(file, height=input$pixRow*(11/800), width=input$pixCol*(11/800))
+                plotHM(filename=file)
+                ##dev.off()
             }
         )
 
@@ -1153,12 +1382,37 @@ shinyServer(
             for(g in groups.comp){
 
                 pval <- res[, paste('P.Value', g, sep='.')]
-                hist(pval, breaks=50, col='grey', main=paste('Histogram of P-values\nN=', sum(!is.na(pval)), sep=''), xlab='P-value')
+                hist(pval, breaks=50, main=paste('Histogram of P-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='P-value', cex.main=3, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
                 legend('top', legend=g, cex=2)
             }
         },
         width = function(){ width=1000},
         height= function(){ height=500*length(unique(global.param$grp.comp))} )
+
+
+
+        ################################################################################
+        ## Histogram PLOTLY
+        output$pval.hist.plotly <- renderPlotly({
+
+            if(is.null(global.results$data)) return()
+            groups.comp <- unique(global.param$grp.comp)
+
+            res = global.results$data$output
+
+            ##par(mfrow=c(length(groups.comp),1))
+            for(g in groups.comp){
+
+                pval <- res[, paste('P.Value', g, sep='.')]
+
+
+                ##hist(pval, breaks=50, col='grey', main=paste('Histogram of P-values\nN=', sum(!is.na(pval)), sep=''), xlab='P-value')
+                ##legend('top', legend=g, cex=2)
+            }
+            plot_ly(x=pval, type = 'histogram')
+
+        })
+
 
         ######################################################################################
         ##
@@ -1167,12 +1421,29 @@ shinyServer(
         ######################################################################################
         output$pca <- renderPlot({
             if(is.null(global.results$data) | is.na(input$top.n)) return()
-            plotPCA()
+            pca=plotPCA()
 
         })
+
+        ##################################
+        ## plot_ly
+        output$pca.plotly <- renderPlotly({
+            if(is.null(global.results$data) | is.na(input$top.n)) return()
+            pca=plotPCA(plot=F)
+
+            pca.mat = data.frame(
+                PC1=pca$x[,1],
+                PC2=pca$x[,2]
+            )
+            rownames(pca.mat) <- rownames(pca$x)
+
+            plot_ly( pca.mat, x=PC1, y=PC2, type='scatter', mode='markers', marker=list(size=20, color=global.param$grp.colors), text=rownames(pca.mat) )
+
+        })
+
         #########################
         ## actual plot
-        plotPCA <- function(){
+        plotPCA <- function(plot=T){
 
             filter.res()
 
@@ -1180,18 +1451,11 @@ shinyServer(
 
             if(nrow(res) < 3) return()
 
-
-
             ## get groups
             grp <- global.param$grp
             ## mapping to colors
             grp.col <- global.param$grp.colors
             grp.col.leg <- global.param$grp.colors.legend
-
-            cat( names(grp) )
-
-            ## extract expression values
-            ##res[, 2:(length(grp)+1)]
 
             ## remove missing values
             rm.idx <- apply(res, 1, function(x) sum(is.na(x)) + sum(is.infinite(x)))
@@ -1200,7 +1464,8 @@ shinyServer(
             if(nrow(res) < 3) return()
 
             ## plot
-            pca <- my.prcomp(t(res[, names(grp)]), col=grp.col, plot=T, rgl=F, main='', cex.points=5, leg.vec=names(grp.col.leg), leg.col=grp.col.leg)
+            pca <- my.prcomp(t(res[, names(grp)]), col=grp.col, plot=plot, rgl=F, main='', cex.points=5, leg.vec=names(grp.col.leg), leg.col=grp.col.leg)
+            return(pca)
         }
         ## download PCA
         output$downloadPCA <- downloadHandler(
@@ -1208,50 +1473,10 @@ shinyServer(
             ##filename =  paste( 'pca.pdf'),
             content = function(file){
                 pdf(file, height=11, width=22)
-                plotPCA()
+                pca=plotPCA()
                 dev.off()
             }
         )
-
-
-        #####################################################################################
-        ##
-        ##                                RGL: 3D PCA
-        ##
-        ######################################################################################
-        ##output$pca <- renderWebGL({
-        ##    if(is.null(global.results$data) | is.na(input$top.n)) return()
-
-        ##    filter.res()
-
-        ##    res <- global.results$filtered
-
-          ##  if(nrow(res) < 3) return()
-
-            ## get groups
-            ##grp <- global.results$data$groups
-
-            ## mapping to colors
-            ##grp.col <- rep('darkgrey', length(grp))
-            ##grp.col[which(grp == input$label.g2)] <- 'darkblue'
-
-            ## extract expression values
-            ##res[, 2:(length(grp)+1)]
-
-            ## remove missing values
-            ##rm.idx <- apply(res, 1, function(x) sum(is.na(x)) + sum(is.infinite(x)))
-            ##rm.idx <- which(rm.idx > 0)
-            ##if(length(rm.idx)>0) res <- res[-rm.idx, ]
-            ##if(nrow(res) < 3) return()
-
-            ## plot
-            ##pca <- my.prcomp(t(res[, 2:(length(global.results$data$groups)+1)]), col=grp.col, plot=F, rgl=T,rgl.point.size=5)
-
-        ##})
-
-
-
-
 })
 
 

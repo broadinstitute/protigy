@@ -29,7 +29,7 @@ source('pheatmap.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.4.1dev"
+VER="0.4.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 400
 ## list of strings indicating missing data

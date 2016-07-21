@@ -78,8 +78,10 @@ shinyUI(
                           tags$br(),
                           htmlOutput('F5hint'),
                           tags$br(),
+
+
                           ##########################################################
-                          ## Email footer: work for Gmail only
+                          ## Email footer: works for Gmail only
                           ##########################################################
                           HTML(paste('<footer>Ran into problems?  <a href=\"https://mail.google.com/mail/?view=cm&fs=1&to=karsten@broadinstitute.org&su=Shiny%20modTv',VER,'%20problem&body=%0D%0A%0D%0A%0D%0A',paste(rep('-', 30), collapse=''),'%0D%0AMachine:', Sys.info()['nodename'],'%0D%0AApp:', APPNAME, '%0D%0AVersion:', VER, '%0D%0A','\" target=\"_blank\">Send me an email</a></footer>', sep=''))
 
@@ -104,8 +106,6 @@ shinyUI(
 
                    uiOutput('navbar')
                    ) ## end column
-
-
 
         ) ## end end fluidRow
 

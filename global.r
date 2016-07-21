@@ -1,7 +1,7 @@
 ################################################################################################################
 ## Filename: global.r
 ## Created: October 09, 2015
-## Author(s): Karsten Krug, Mani DR
+## Author(s): Karsten Krug
 ##
 ## Purpose: Shiny-app to perform differential expression analysis, primarily on proteomics data, to perform
 ##          simple data QC, to interactively browse through the results and to download high-quality result
@@ -18,17 +18,22 @@
 ## cran.pckg <- c('pheatmap', 'RColorBrewer', 'hexbin', 'Hmisc', 'grid', 'scatterplot3d', 'plotly', 'WriteXLS', 'reshape','nlme', 'BlandAltmanLeh', 'mice','mixtools', 'mclust')
 ## bioc.pgkg <- c( 'preprocessCore', 'limma')
 ##
+## changelog: 20160614 included 'na' to indicate missing values
+##                     outsourced Mani's code to a separate file 'modT.r'
 ################################################################################################################
+
+source('modT.r')
+source('pheatmap.r')
 
 #################################################################
 ## global parameters
 #################################################################
 ## version number
-VER=0.3
+VER="0.4.1dev"
 ## maximal filesize for upload
 MAXSIZEMB <<- 400
 ## list of strings indicating missing data
-NASTRINGS <<- c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?")
+NASTRINGS <<- c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na")
 ## speparator tested in the uplosded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
@@ -45,7 +50,9 @@ APPNAME <<- sub('.*/','',getwd())
 #################################################################
 library(shiny)
 ## heatmap
-library(pheatmap)
+##library(pheatmap)
+library(scales)
+library(gtable)
 ## moderated t-test
 library(limma)
 ## colors
@@ -69,6 +76,138 @@ library(preprocessCore)
 library (mice)
 library (mixtools)
 library (mclust)
+
+
+#################################################################################
+##     Heatmap of expression values combining all of the results from all tests
+##
+##
+##
+#################################################################################
+plotHM <- function(res,
+                   grp,
+                   grp.col,
+                   grp.col.legend,
+                   hm.clust,
+                   hm.title,
+                   hm.scale,
+                   style,
+                   filename=NA, cellwidth=NA, cellheight=NA, max.val=NA, fontsize_col, fontsize_row, ...){
+
+    ## convert to data matrix
+    res <- data.matrix(res)
+
+    #########################################
+    ## different 'styles' for different tests
+    ## - reorder columns
+    ## - gaps between experiments
+    if(style == 'One-sample mod T'){
+        res <- res[, names(grp[order(grp)])]
+        gaps_col=cumsum(table(grp[order(grp)]))
+        gapsize_col=20
+    }
+    if(style == 'Two-sample mod T'){
+        res <- res[, names(grp[order(grp)])]
+        gaps_col=NULL
+        gapsize_col=0
+    }
+    if(style == 'mod F' | style == 'none'){
+        res <- res[, names(grp[order(grp)])]
+        gaps_col=NULL
+        gapsize_col=0
+    }
+    #########################################
+    ## scaling
+    if(hm.scale == 'row')
+        res <- t(apply(res, 1, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T)))
+    if(hm.scale == 'column')
+        res <- apply(res, 2, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T))
+
+    ##########################################
+    ##          cluster
+    ## 20160309 NA handling
+    ##
+    ##########################################
+    na.idx.row <- na.idx.col <- NULL
+
+    ## column clustering
+    if(hm.clust == 'column'){
+        Rowv=FALSE
+        colv.dist = dist(t(res), method='euclidean', diag=T, upper=T)
+        na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
+        if(length(na.idx.col)> 0){
+            colv.dist <- colv.dist[-na.idx.col, ]
+            colv.dist <- colv.dist[, -na.idx.col]
+        }
+        Colv=hclust(as.dist(colv.dist), method='complete')
+    ## row clustering
+    } else if( hm.clust == 'row'){
+        rowv.dist <- as.matrix(dist(res, method='euclidean', diag=T, upper=T))
+        na.idx.row <- which(apply(as.matrix(rowv.dist), 1, function(x) sum(is.na(x))) > 0)
+        if(length(na.idx.row)> 0){
+            rowv.dist <- rowv.dist[-na.idx.row, ]
+            rowv.dist <- rowv.dist[, -na.idx.row]
+        }
+        Rowv=hclust(as.dist(rowv.dist), method='complete')
+        Colv=FALSE
+
+    ## row and column clustering
+    } else if(hm.clust == 'both'){
+
+        ## row clustering
+        rowv.dist <- as.matrix(dist(res, method='euclidean', diag=T, upper=T))
+        na.idx.row <- which(apply(as.matrix(rowv.dist), 1, function(x) sum(is.na(x))) > 0)
+        if(length(na.idx.row)> 0){
+            rowv.dist <- rowv.dist[-na.idx.row, ]
+            rowv.dist <- rowv.dist[, -na.idx.row]
+        }
+        Rowv=hclust(as.dist(rowv.dist), method='complete')
+
+        ## column clustering
+        colv.dist = dist(t(res), method='euclidean', diag=T, upper=T)
+        na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
+        if(length(na.idx.col)> 0){
+            colv.dist <- colv.dist[-na.idx.col, ]
+            colv.dist <- colv.dist[, -na.idx.col]
+        }
+        Colv=hclust(as.dist(colv.dist), method='complete')
+    } else {
+        Rowv=Colv=FALSE
+    }
+
+    #########################################
+    ## capping
+    if(!is.na(max.val)){
+        res[ res < -max.val ] <- -max.val
+        res[ res > max.val ] <- max.val
+    }
+    #########################################
+    ## min/max value
+    max.val = ceiling( max( abs(res), na.rm=T) )
+    min.val = -max.val
+
+    ##########################################
+    ## colors
+    color.breaks = seq( min.val, max.val, length.out=12 )
+    color.hm = rev(brewer.pal (length(color.breaks)-1, "RdBu"))
+
+    ##############################################
+    ## annotation of columns
+    anno.col=data.frame(Group=grp)
+    anno.col.color=list(Group=grp.col.legend)
+
+    ##############################################
+    ## heatmap title
+    ##hm.title = paste(hm.title, '\nsig / total: ', nrow(res), ' / ', ,sep='')
+    if(!is.null(na.idx.row) | !is.null(na.idx.col))
+        hm.title = paste(hm.title, '\nremoved rows / columns: ', length(na.idx.row), ' / ' , length(na.idx.col), sep='')
+
+    ############################################
+    ## plot the heatmap
+    pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
+             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), breaks=color.breaks, scale='none', cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, labels_row=chopString(rownames(res), STRLENGTH))
+}
+
 
 
 #################################################################################################
@@ -100,6 +239,9 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
         lim=max( abs( mat ), na.rm=T )
         lim=c(-lim, lim)
     }
+    ## update matrix
+    #mat[mat < lim[1]] <- NA
+    #mat[mat > lim[2]] <- NA
 
     ##cat(grp.col.legend, "\n", names(grp.col.legend), '\n\n')
 
@@ -153,6 +295,10 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
             dat <- data.frame(x=mat[,i], y=mat[,j])
             rownames(dat) <- rownames(mat)
 
+            ## filter according to xlim/ylim
+            ##dat$x[ which(dat$x < lim[1] | dat$x > lim[2]) ] <- NA
+            ##dat$y[ which(dat$y < lim[1] | dat$y > lim[2]) ] <- NA
+
             ## extract groups
             current.group <- unique(grp[names(grp)[c(i,j)]])
 
@@ -164,7 +310,8 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
             if(i < j){
 
                 ## hexbin
-                hex <- hexbin(dat$x, dat$y, hexbin)
+                ##hex <- hexbin(dat$x, dat$y, hexbin, xbnds=range(dat$x, na.rm=T), ybnds=range(dat$y, na.rm=T) )
+                hex <- hexbin(dat$x, dat$y, hexbin, xbnds=lim, ybnds=lim )
                 gghex <- data.frame(hcell2xy(hex), c = cut2(hex@count, g = hexcut))
                 p <- ggplot(gghex) + geom_hex(aes(x = x, y = y, fill = c) ,stat = "identity") + guides(fill=FALSE) + theme( plot.margin=unit(rep(0, 4), 'cm')) + xlab('') + ylab('') + xlim(lim[1], lim[2]) + ylim(lim[1], lim[2])
 
@@ -180,7 +327,7 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
                     dat.repro <- dat[not.valid.idx, ]
                     ##cat(not.valid.idx)
                     ##cat(dim(dat.repro))
-                    p = p + geom_point( aes(x=x, y=y ), data=dat.repro, colour=my.col2rgb('red', 100), size=.5)
+                    p = p + geom_point( aes(x=x, y=y ), data=dat.repro, colour=my.col2rgb('red', 50), size=.3)
                 }
             }
             ###########################
@@ -226,127 +373,6 @@ my.col2rgb <- function(color, alpha=80, maxColorValue=255){
     return(out)
 }
 
-#####################################################################################
-##
-##                        two sample moderated t-test
-##
-## - code written by mani dr
-## - code modified by karsten krug
-##   20151211 'label'
-#####################################################################################
-modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NULL,
-                              group.na.rm=FALSE, nastrings=c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?"), label=NULL) {
-
-    ## store group names
-    groups.org <- groups
-    groups <- as.numeric(as.factor(groups))
-
-    id <- d[ , id.col]
-
-    ## extract data columns
-    if (is.null (data.col)) data <- d [, setdiff (colnames (d), id.col)]
-    else data <- d [, make.names (data.col)]
-
-
-    ## moderated t test for 2 classes
-    design.mat <- cbind (ref=1, comparison=groups)
-    mod.t.result <- moderated.t (data, design.mat)
-
-    ## 20151211 kk
-    mod.t.result <- data.frame( mod.t.result, Log.P.Value=-10*log(mod.t.result$P.Value,10))
-
-    ## add label
-    if(!is.null(label))
-        colnames(mod.t.result) <- paste(colnames(mod.t.result), label, sep='.')
-
-    mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result) )
-    ##mod.t <- data.frame ( cbind (data.frame (id),  mod.t.result, data) )
-    rownames(mod.t) <- id ##make.unique(as.character(mod.t[, 1]), sep='_')
-    colnames(mod.t)[1] <- 'id'
-
-    ##write.csv (final.results, paste (output.prefix, ".csv", sep=''), row.names=FALSE)
-
-    ## write out / return results
-    final.results <- mod.t
-
-    ##invisible (final.results)
-    return( list(input=d, output=final.results, groups=groups.org) )
-}
-
-
-######################################################################################################
-##                               One-sample moderated t-test
-##
-## run moderated t-test, and plot results
-## mainly for iTRAQ, but can be used of other data
-##
-## code written by mani dr
-## code modified by karsten krug
-## 20151210 'label'
-######################################################################################################
-modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALSE,
-                       p.value.alpha=0.05, use.adj.pvalue=TRUE, apply.log=FALSE,
-                       na.rm=FALSE, nastrings=c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?"),
-                       plot=TRUE, pairs.plot.2rep=FALSE, limits=NULL, xlab="", ylab="", label='', ...) {
-  #
-  # data.file should contain one peptide in each row.
-  # The columns contain the normalized log-ratio from each replicate
-  # (technical or biological). The ratio is based on classes of interest
-  # that need to be distinguished: i.e., ratio = intensity_A / intensity_B;
-  # this test calculates the p-value for determining if peptide p is
-  # differentially regulated between classes A and B (i.e., if the log
-  # ratio is different from 0).
-  # While the standard scatter plot routine can only handle 2 replicates,
-  # a pairs plot is created when there are more than 2 replicates.
-  # The moderated t-test can be applied to any number of replicates.
-  # An id column can be optionally included in the data.file to track
-  # peptides (row numbers are used as id if a column is not specified).
-  #
-  # graphics can be controlled using ...
-  #  when using scatterhist (for 2 replicates), this can be arguments to points
-  #  when > 2 replicates are present, ... can include arguments to points in
-  #   addition to: plot.col, subset.col, hist.col, hist.breaks,
-  #                prefix (for correlation), cex.cor
-
-  id <- d[,id.col]
-  ##if ( any (duplicated (id)) ) stop ('IDs are not unique. Use fix.id=TRUE option')
-
-  # extract data columns
-  if (is.null (data.col)) data <- d [, setdiff (colnames (d), id.col)]
-  else data <- d [, make.names (data.col)]
-
-
-  # log transform is required
-  if (apply.log) data <- log2 (data)
-
-  # moderated t test
-  mod.t.result <- moderated.t (data)
-  if (use.adj.pvalue) mod.sig <- mod.t.result [,'adj.P.Val'] <= p.value.alpha
-  else  mod.sig <- mod.t.result [,'P.Value'] <= p.value.alpha
-  change <- apply (data, 1,
-                   function (x) {
-                     x <- x [is.finite (x)]
-                     ret.value <- '?'
-                     if ( all (x < 0) ) ret.value <- 'down'
-                     else if ( all (x > 0)) ret.value <- 'up'
-                     return (ret.value)
-                   })
-    ## 20151210 kk
-    mod.t.result <- data.frame( mod.t.result, change=change, significant=mod.sig, Log.P.Value=-10*log(mod.t.result$P.Value,10))
-
-    ## add label
-    if(!is.null(label))
-        colnames(mod.t.result) <- paste(colnames(mod.t.result), label, sep='.')
-
-    ##mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result, change=change, significant=mod.sig) )
-    mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result) )
-    colnames (mod.t)[1] <- id.col   # retain id.col (if provided)
-    rownames(mod.t) <- make.unique( as.character(mod.t[,1]), sep='_' )
-    colnames(mod.t)[1] <- 'id'
-
-    final.results <- mod.t
-    return( list(input=d, output=final.results) )
-}
 
 #############################################################################################
 ##
@@ -402,47 +428,6 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
     data.norm <- data.frame(ids, data.norm)
     colnames(data.norm)[1] <- id.col
     return(data.norm)
-}
-
-###########################################################################
-##
-##           Moderated t-test for significance testing
-##
-## code written by Mani DR
-## code modified by karsten krug
-##    - single function for one/two sample test
-##
-##########################################################################
-moderated.t <- function (data, design=NULL) {
-    ## data is a table with rows representing peptides/proteins/genes
-    ## and columns representing replicates
-
-    data.matrix <- data.frame (data)
-    ## the design matrix is expected to be:
-    ##    ref    comparison
-    ##     1         0
-    ##    1         0
-    ##         ...
-    ##     1         1
-    ##  where comparison has 0's and 1's corresponding
-    ##  to the column position of the 2 classes in data
-    ##  (see limma user manual section 13)
-
-
-    #############################################
-    ## two sample test
-    if(!is.null(design)){
-        m <- lmFit (data.matrix, design)
-        m <- eBayes (m)
-        sig <- topTable (m, coef=colnames (design)[2], number=nrow(data), sort.by='none')
-    } else {
-    #############################################
-    ## one sample test
-        m <- lmFit (data.matrix, method='robust')
-        m <- eBayes (m)
-        sig <- topTable (m, number=nrow(data), sort.by='none')
-    }
-  return (sig)
 }
 
 
@@ -625,90 +610,6 @@ my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
     return(list(table=tab, values.filtered=values.filt))
 }
 
-############################################################################################
-##
-##              Generalized reprodicibility filter for > 2 replicates
-##
-## written by Mani DR
-############################################################################################
-reproducibility.filter <- function (data, id.col='id', alpha=0.05) {
-  ##
-  ## Reproducibility Filter using lme4
-  ## Theory: MethComp book (pp 58-61). Comparing Clinical Measurement Methods by Bendix Carstensen
-  ## Implementation: MethComp book pg 142, but don't include item (=id) in the fixed effects
-  ## -- this is unnecessary for the application and makes computations very time consuming;
-  ## all we really need to assess reproducibility are the variances
-  ##
-  ## NB: using library (nlme) and lmer is much more convoluted since incorporating the
-  #      var-cov matrix stratified by replicate (=method) is not easy
-  #      (see https://stat.ethz.ch/pipermail/r-sig-mixed-models/2007q3/000248.html)
-  #      something like:
-  #        model <- lmer (y ~ rep + (rep1|id)+(rep2|id)+..., data=data.long)
-  #      is possible, but the above does not work for 2 replicates (gives same results for >2 reps)
-  #
-
-  d <- data [, setdiff (colnames (data), id.col)]     # data part of input
-  data.long <- melt (data.frame (data), id=id.col)    # convert to long format
-  colnames (data.long) <- c ('id', 'rep', 'y')
-  # keep column order in data so that (i,j) below correctly corresponds to columns
-  data.long [,'rep'] <- factor (data.long[,'rep'], levels=colnames (d))
-
-  # exclude missing data points (only missing measurements are removed instead of entire rows)
-  data.long <- data.long [ !is.na (data.long[,'y']), ]
-
-  # Model: y_mi = a_m + c_mi + e_mi,  c_mi ~ N(0,tau_m^2), e_mi ~ N(0, sigma_m^2)
-  # where m = method and i = item (=id)
-  # [Eq 5.2, pg 58, MethComp book]. Also see interpretation of effect on pg 59-61
-  model <- lme (y ~ rep,
-                random=list (id=pdIdent(~rep)),
-                weights=varIdent(form=~1|rep),
-                data=data.long)
-  n <- nlevels (data.long[,'rep'])
-  p <- length (unique (data.long[,'id']))
-  df <- p - 1    # approx df for confidence interval (p=# of independent items)
-
-  rep.all <- rep (TRUE, nrow (d))  # vector summarizing reproducibility of each input id
-  for (i in 1:(n-1)) {
-    for (j in (i+1):n) {
-      # variance of method_i - method_j: pg 58
-      # var (y_i0 - y_j0) = tau_i^2 + tau_i^2 + sigma_i^2 + sigma_j^2
-      # where tau is the sd of the between-item variation for a method
-      # and sigma is the sd of the within-item variation for the method
-      tau <- as.numeric (unlist (VarCorr(model)[c(i,j),'StdDev']))  # returns tau_i and tau_j
-      # VarCorr(model)[n+1,'StdDev'] is sigma_1 (ie sigma for method 1)
-      # for methods 2-n, coef (model$modelStruct$varStruct, uncons=F, allcoef=T) has the
-      #  multiplying factor to obtain sigma_m using sigma_1
-      sigma <- as.numeric (unlist (VarCorr(model)[n+1,'StdDev']))   #
-      sigma1 <- sigma * ifelse (i==1, 1, coef (model$modelStruct$varStruct, uncons=F, allcoef=T)[i-1])
-      sigma2 <- sigma * coef (model$modelStruct$varStruct, uncons=F, allcoef=T)[j-1]
-      total.sd <- sqrt (tau[1]^2 + tau[2]^2 + sigma1^2 + sigma2^2)
-
-      # bias of method_i - method_j: alpha_i - alpha_j
-      alpha1 <- ifelse (i==1, 0, fixef(model)[i])
-      alpha2 <- fixef (model)[j]
-      bias <- alpha1 - alpha2
-
-      # limits of agreement (assuming approx df = p-1)
-      t.crit <- qt ( (1-alpha/2), df ) * sqrt ( (p+1) / p )
-      ci.low <- bias - t.crit * total.sd
-      ci.high <- bias + t.crit * total.sd
-
-      # record reproducibility for method_i - method_j
-      rep.ij <- (d[,i] - d[,j]) >= ci.low & (d[,i] - d[,j]) <= ci.high
-      # if data is missing, assume that data is reproducible
-      rep.ij [ is.na (rep.ij) ] <- TRUE
-      rep.all <- rep.all & rep.ij
-
-      # print bias and LoA for sanity check
-      ##cat ('rep', i, ' - rep', j, ': bias=', bias, ' ci=(', ci.low, ',', ci.high, ')\n', sep='')
-    }
-  }
-    ## karsten krug 20160301
-    ## return rownames of data matrix
-    return(rep.all)
-    ##return( rownames(data)[ which(!rep.all) ] )
-}
-
 
 ##################################################################
 ## function to dynamically determine the height (in px) of the heatmap
@@ -754,82 +655,4 @@ makeBoxplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.la
     axis(1)
     axis(2, at=at.vec, labels=chopString(colnames(tab), STRLENGTH), las=2, cex=cex.lab)
 
-
-}
-###########################################################################################
-##
-##                    two-component mixture model normalization
-## written by Mani DR
-##
-##########################################################################################
-two.comp.normalize <- function (sample, type) {
-  #   1. For all sample types, fit a 2-component gaussian mixture model using normalmixEM.
-  #   2. For the bimodal samples, find the major mode M1 by kernel density estimation
-  #     2a. Fit the model with one component mean constrained to equal M1
-  #     2b. Normalize (standardize) samples using mean (M1) and resulting std. dev.
-  #   3. For unimodal samples, find the mode M using kernel density estimation
-  #     3a. Fit the model with mean for both components constrained to be equal to M
-  #     3b. Normalize (standardize) samples using mean M and smaller std. dev. from model fit
-
-  # WARNING:
-  # This code has a lot of hacks to fix the flakiness of normalmixEM, and the idiosyncracies
-  # of the actual data. Carefully re-examine code for new or altered input data
-
-  data <- sample [ !is.na (sample) ]
-  dens <- density (data, kernel='gaussian', bw='SJ')     # gaussian kernel with S-J bandwidth
-                                                         # (see Venalbles & Ripley, 2002, pg, 129)
-  # find major (highest) mode > -3 (to avoid problems with lower mode having higher density than higher mode)
-  x.range <- dens$x > -3
-  dens.x <- dens$x [x.range];  dens.y <- dens$y [x.range]
-  mode <- dens.x[which.max(dens.y)]
-  if (type=='bimodal') mean.constr <- c (NA, mode) else mean.constr <- c (mode, mode)
-  model <- normalmixEM (data, k=2, mean.constr=mean.constr)
-  model.rep <- normalmixEM (data, k=2, mean.constr=mean.constr)
-  model.alt <- Mclust (data, G=2, modelNames="V")
-  alt.mu <- model.alt$parameters$mean
-  alt.sd <- sqrt (model.alt$parameters$variance$sigmasq)
-  # find reproducible model fit that is close to Mclust fit
-  # if not, re-fit model -- without this condition
-  # normalmixEM produces one-off model fits
-  n.try <- 1
-  if (type=='unimodal') model.mode <- which(model$mu==mode)[which.min (model$sigma)]
-  else model.mode <- which(model$mu==mode)
-  model.other <- model.mode %% 2 + 1
-  alt.mode <- which.min(abs(model.alt$par$mean-mode)); alt.other <- alt.mode %% 2 + 1
-  while ( abs (model$mu[model.mode] - alt.mu[alt.mode]) > 3e-1 || abs (model$sigma[model.mode]-alt.sd[alt.mode]) > 3e-1 ||
-          model$sigma[model.mode] < 0.1 ||
-          (type=='bimodal' && (abs (model$mu[model.other] - alt.mu[alt.other]) > 1e1)) ||
-          !all (c (model$mu, model$sigma) - c (model.rep$mu, model.rep$sigma) < 1e-3) ) {
-    # if major mode (and SD of mode) is not within 0.3, or if the other mean (for bimodals only)
-    # is not within 1 of the Mclust result, try again
-    model <- normalmixEM (data, k=2, mean.constr=mean.constr)
-    model.rep <- normalmixEM (data, k=2, mean.constr=mean.constr)
-
-      if (n.try > 50){
-          return("No_success")
-          ##stop (paste ("Can't fit mixture model ... giving up\n"))
-      }
-    n.try <- n.try + 1
-  }
-
-
-  if (type=='bimodal') {
-    # sometimes (esp. in phosphoproteome) the minor (lower) mode can be larger than the major (higher) mode
-    # this situation is not possible in the unimodal samples
-    corrected.mode <- model$mu [which.max(model$mu)]
-    if (corrected.mode != mode) {
-      cat ('  Lower mode larger than higher mode\n')
-      mode <- corrected.mode
-    }
-  }
-  norm.mean <- mode
-  norm.sd <- ifelse (type=='bimodal', model$sigma[which(model$mu==mode)], min (model$sigma))
-
-  # normalize by standardizing
-  data <- data - norm.mean
-  data <- data / norm.sd
-
-  # return normalized data reorganized to original order
-  sample [ !is.na (sample) ] <- data
-  return ( list (norm.sample=sample, norm.mean=norm.mean, norm.sd=norm.sd, fit=unlist (c(model$mu, model$sigma))) )
 }

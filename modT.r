@@ -23,9 +23,13 @@
 modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NULL,
                               group.na.rm=FALSE, nastrings=c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?"), label=NULL) {
 
+    cat('\n-- modT.test.2class --\n')
+
     ## store group names
     groups.org <- groups
     groups <- as.numeric(as.factor(groups))
+
+    ##cat(groups.org, '\n', groups, '\n')
 
     id <- d[ , id.col]
 
@@ -96,6 +100,7 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
   #   addition to: plot.col, subset.col, hist.col, hist.breaks,
   #                prefix (for correlation), cex.cor
 
+     cat('\n-- modT.test\n --')
   id <- d[,id.col]
   ##if ( any (duplicated (id)) ) stop ('IDs are not unique. Use fix.id=TRUE option')
 
@@ -174,6 +179,8 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
     id <- id <- d[,id.col]
     data <-  d [, setdiff (colnames (d), id.col)]
 
+    cat('\n-- modF.test --\n')
+
   # create design matrix
   f <- factor (class.vector)
   design <- model.matrix ( ~ 0 + f )
@@ -212,6 +219,8 @@ moderated.t <- function (data, design=NULL) {
     ## data is a table with rows representing peptides/proteins/genes
     ## and columns representing replicates
 
+     cat('\n-- moderated.t --\n')
+
     data.matrix <- data.frame (data)
     ## the design matrix is expected to be:
     ##    ref    comparison
@@ -223,7 +232,7 @@ moderated.t <- function (data, design=NULL) {
     ##  to the column position of the 2 classes in data
     ##  (see limma user manual section 13)
 
-    cat('here1 ')
+    #cat('here1 ')
     ##save(data.matrix, file='data.matrix.RData')
     #############################################
     ## two sample test
@@ -234,13 +243,13 @@ moderated.t <- function (data, design=NULL) {
     } else {
     #############################################
     ## one sample test
-        cat('here2 ')
+        ##cat('here2 ')
         m <- lmFit (data.matrix, method='robust')
-        cat('here3 ')
+        ##cat('here3 ')
         m <- eBayes (m)
-        cat('here4 ')
+        ##at('here4 ')
         sig <- topTable (m, number=nrow(data), sort.by='none')
-        cat('here5 ')
+        ##cat('here5 ')
     }
   return (sig)
 }
@@ -249,7 +258,7 @@ moderated.t <- function (data, design=NULL) {
 ##
 ##              Generalized reprodicibility filter for > 2 replicates
 ##
-## written by Mani DR
+## written by D R Mani
 ############################################################################################
 reproducibility.filter <- function (data, id.col='id', alpha=0.05) {
   ##
@@ -332,7 +341,7 @@ reproducibility.filter <- function (data, id.col='id', alpha=0.05) {
 ###########################################################################################
 ##
 ##                    two-component mixture model normalization
-## written by Mani DR
+## written by D R Mani
 ##
 ##########################################################################################
 two.comp.normalize <- function (sample, type) {

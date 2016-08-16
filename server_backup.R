@@ -222,12 +222,19 @@ shinyServer(
         output$navbar <- renderUI({
 
             if(!global.param$analysis.run) return()
+            ##if(is.null(input$file) && is.null( global.input$file)) return()
+            ##if(is.null(input$file)) return()
+            ##if(is.null(input$id.col)) return()
+            ##if( !is.null(input$id.col))
+            ##    if( input$id.col == 0 ) return()
+            ##if(is.null(global.results$data)) return()
 
             ##############################################
             ## determine the number of group comparisons,
             ## e.g. for the number of volcano plots to draw
             ##############################################
             groups.comp <- unique(global.param$grp.comp)
+
 
             ################################################################################################################
             ##
@@ -295,7 +302,7 @@ shinyServer(
 
                                           fluidPage(
                                               fluidRow(
-                                                  column(1, numericInput( paste("cex.volcano",groups.comp[i], sep='.'), "Point size", value=2, min=1, step=1)),
+                                                  column(1, numericInput( paste("cex.volcano",groups.comp[i],sep='.'), "Point size", value=2, min=1, step=1)),
                                                   ##column(1, numericInput( paste("opac.volcano",groups.comp[i],sep='.'), "Opacity %", value=50, min=0, max=100, step=10)),
                                                   column(1, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=1, min=.1, step=.1)),
                                                   column(1, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=T)),
@@ -683,8 +690,6 @@ shinyServer(
             global.input.imp <- lapply(global.input, unclass)
             global.param.imp <- lapply(global.param, unclass)
             global.results.imp <- lapply(global.results, unclass)
-            volc.imp <-  lapply(volc, unclass)
-
             plotparams.imp <- list(
                 ## multiscatter
                 ms.max=input$ms.max,
@@ -693,7 +698,7 @@ shinyServer(
            )
 
 
-            save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=paste(global.param$session, '.RData', sep=''))
+            save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, file=paste(global.param$session, '.RData', sep=''))
         })
         ################################################################################################
         ##
@@ -733,6 +738,40 @@ shinyServer(
             ## set number of assinged groups
             global.param$N.grp <- 0
         })
+
+        ########################################
+        ## 4b) update group assignment
+       ## observeEvent( input$update.grp ,{
+##
+ ##           label.grp.tmp = input$label.grp
+ ##         grp.tmp = input$groups
+##
+##            ## current group assignment
+##            grp = global.param$grp
+##            ## update
+##            grp[ grp.tmp ] = label.grp.tmp
+##            global.param$grp <- grp
+##
+##            ## check if done
+##            if(sum(is.na(grp)) == 0){
+##                global.param$grp.done = T
+##                ##global.param$grp.label = unique(grp)
+##
+##                ## group colors
+##                grp.col <- rep(GRPCOLORS[1], length(grp))
+##                ##names(grp.col) <- names(grp)
+##                ##for(i in 2:global.param$N.grp) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
+##                for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
+##                global.param$grp.colors <- grp.col
+##                ## group colors unique, e.g. to plot in a legend
+##                idx <- !duplicated(grp)
+##                grp.col.legend = grp.col[idx]
+##                names(grp.col.legend) <- grp[idx]
+##                global.param$grp.colors.legend <- grp.col.legend
+##            }
+##            ## update number of groups
+##            global.param$N.grp = length(unique( na.omit(grp)) )
+##        })
 
         #################################################################################
         ##
@@ -782,18 +821,18 @@ shinyServer(
         #################################################################
         observeEvent(input$session.import, {
 
-            #################################
-            ## import workspace
             load( input$session.import$datapath )
 
-            #################################
             ## assign the importes values to the global reactive variables
             for(i in names(global.input.imp)){
                 global.input[[i]] <- global.input.imp[[i]]
+                ##cat(dim(global.input[[i]]), '\n')
+                ##cat(is.reactivevalues(global.input))
             }
             for(i in names(global.param.imp)){
                 global.param[[i]] <- global.param.imp[[i]]
                 cat(i,'\t',global.param[[i]], '\n')
+                ##cat(is.reactivevalues(global.param))
             }
             for(i in names(global.results.imp)){
                 global.results[[i]] <- global.results.imp[[i]]
@@ -801,24 +840,12 @@ shinyServer(
             for(i in names(plotparams.imp)){
                 plotparams[[i]] <- plotparams.imp[[i]]
             }
-            for(i in names(volc.imp)){
-                volc[[i]] <- volc.imp[[i]]
-            }
-            ##################################
-            ## set flags
+            ##cat(global.input$file, '\n')
+
             global.param$session.imported=T
             global.param$analysis.run=T
 
-            ##################################
-            ## clean up
-            rm(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp)
-
-            ###################################################################
-            ##            insert the panels for the volcanos
-            ###################################################################
-            if(!(global.param$which.test %in% c('mod F', 'none'))){
-                ins.volc()
-            }
+            ##View(global.input$table.org)
         })
 
 
@@ -933,8 +960,6 @@ shinyServer(
         ################################################################################
         observeEvent(input$run.test, {
 
-
-
             global.input$run.test <- input$run.test
             ##cat('run.test:', input$run.test, '\n')
 
@@ -979,6 +1004,7 @@ shinyServer(
 
             ###############################################
             ## specify which comparisons should be performed
+            ##if(test == 'One-sample mod T' | test == 'mod F'){
             if(test %in% c('One-sample mod T', 'mod F', 'none')){
                 ## each group separetely
                 groups.comp <- global.param$grp
@@ -1029,8 +1055,15 @@ shinyServer(
                 withProgress(message='Applying normalization...', {
                     tab <- normalize.data(tab, id.col, norm.data)
                     if(is.null(dim(tab))){
+                    ##if(tab[1,1])
+                        ##cat('dim  ',dim(tab), '\n',is.null(dim(tab)), '\n', tab, '\n')
+                        ##if(unlist(tab) == 'No_sucess'){
+                            ##View(tab)
                             error$msg <- 'Could not fit mixture model! Giving up...\n'
+                        ##input$run.test <- NULL
+                        ##break;
                             return()
+                        ##}
                     }
                     global.results$table.norm <- tab
                 })
@@ -1041,23 +1074,19 @@ shinyServer(
             ## - only for one-sample test
             ##
             ##############################################
-            if(repro.filt == 'yes'){
+            if(repro.filt == 'yes' & test == 'One-sample mod T'){
 
-                if( test == 'One-sample mod T'){
+                withProgress(message='Applying reproducibility filter',  {
+                    repro = my.reproducibility.filter(tab, id.col=id.col, groups, alpha=0.05)
+                    tab = repro$table
+                    ##View(repro$table)
 
-                    withProgress(message='Applying reproducibility filter',  {
-                        repro = my.reproducibility.filter(tab, id.col=id.col, groups, alpha=0.05)
-                        tab = repro$table
-                        ##View(repro$table)
-                    })
-                    ## store indices of filtered values in the original table
-                    global.results$repro.filt <- repro$values.filtered
-                    global.results$table.repro.filt <- tab
-
-                } else {
-                    global.param$repro.filt <- 'no'
-                }
+                })
+                ## store indices of filtered values in the original table
+                global.results$repro.filt <- repro$values.filtered
+                global.results$table.repro.filt <- tab
             }
+
             ########################################################################################
             ##
             ##                                     TEST
@@ -1254,29 +1283,17 @@ shinyServer(
             }
         })
 
-       ## observeEvent(input$filter.type, {global.param$filter.value=input$filter.value})
-
-        #######################################################################################################
+        ############################################################################
         ##
+        ##     filter the test results accross multiple groups
         ##
-        ##                   filter the test results accross multiple groups
-        ##
-        ##
-        ########################################################################################################
+        ############################################################################
         filter.res  <-  reactive({
-
-            cat('\n-- filter.res --\n')
-            cat('filter.type: ', global.param$filter.type, '\nfilter.value:', global.param$filter.value, '\n')
 
             groups.comp=unique(global.param$grp.comp)
 
             ## test results
             res <- data.frame(global.results$data$output)
-
-            ##if(!is.null(input$filter.type))
-            ##    global.param$filter.type=input$filter.type
-
-
 
             #################################
             ## top N
@@ -1292,16 +1309,15 @@ shinyServer(
 
                         ## order according to minimal p-value
                         res <- res[ order( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, min))  ), ]
-                        res <- res[ 1:input$filter.value.top.n, ]
+                        res <- res[ 1:input$top.n, ]
 
                         ## order according to FC
                         res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min))  ), ]
-
                         ## now separate for each group comparison
                         res.groups <- lapply(groups.comp, function(g){
                             res.filt=res[ which(!is.na(paste('P.Value.', g, sep='') )), ]
                             res.filt=res.filt[ order( res.filt[, paste('P.Value.', g, sep='') ], decreasing=F) , ]
-                            res.filt[1:input$filter.value.top.n, ]
+                            res.filt[1:input$top.n, ]
                         })
                         names(res.groups) <- groups.comp
 
@@ -1310,7 +1326,7 @@ shinyServer(
                     } else {
 
                         ## order according to
-                        res <- res[order(res[, 'P.Value'], decreasing=F)[1:input$filter.value.top.n], ]
+                        res <- res[order(res[, 'P.Value'], decreasing=F)[1:input$top.n], ]
 
                         res.groups <- list(res)
                         names(res.groups) <- paste(groups.comp, collapse='|')
@@ -1320,13 +1336,13 @@ shinyServer(
                     ## one comparison only
                 } else {
                      res <- res[order(res[, paste('P.Value.', groups.comp, sep='')]) , ]
-                     res <- res[1:input$filter.value.top.n, ]
+                     res <- res[1:input$top.n, ]
                      res <- res[order(res[, paste('logFC.', groups.comp, sep='')]) , ]
 
                      res.groups <- list(res)
                      names(res.groups) <- groups.comp
                 }
-                global.param$filter.value <- input$filter.value.top.n
+                global.results$filter.cutoff <- input$top.n
             }
             #################################
             ## nominal p-value
@@ -1340,17 +1356,17 @@ shinyServer(
                     ## one/two sample tests
                     if(global.param$which.test != 'mod F'){
 
-                        res <- res[ which( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, function(x) sum(x < input$filter.value.nom.p))) > 0), ]
+                        res <- res[ which( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, function(x) sum(x < input$p.val))) > 0), ]
                         res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min))  ), ]
                         ## now separate for each group comparison
                         res.groups <- lapply(groups.comp, function(g){
-                            res[ which( res[, paste('P.Value.', g, sep='')] < input$filter.value.nom.p) , ]
+                            res[ which( res[, paste('P.Value.', g, sep='')] < input$p.val) , ]
                         })
                         names(res.groups) <- groups.comp
                     #########################################
                     ## F test
                     } else {
-                        res <- res[which( res[, 'P.Value'] < input$filter.value.nom.p), ]
+                        res <- res[which( res[, 'P.Value'] < input$p.val), ]
 
                         res.groups <- list(res)
                         names(res.groups) <- paste(groups.comp, collapse='|')
@@ -1358,12 +1374,12 @@ shinyServer(
                 ##############################################
                 ## one group comparison
                 } else {
-                    res <- res[which(res[, paste('P.Value.', groups.comp, sep="")] < input$filter.value.nom.p), ]
+                    res <- res[which(res[, paste('P.Value.', groups.comp, sep="")] < input$p.val), ]
                     res <-  res[order(res[, paste('logFC.', groups.comp, sep="")]), ]
                     res.groups <- list(res)
                     names(res.groups) <- groups.comp
                 }
-                global.param$filter.value <- input$filter.value.nom.p
+                global.results$filter.cutoff <- input$p.val
             }
 
             #################################
@@ -1378,17 +1394,17 @@ shinyServer(
                     ## one/two sample tests
                     if(global.param$which.test != 'mod F'){
 
-                        res <- res[ which( unlist(apply( res[, grep('^adj.P.Val', colnames(res) )], 1, function(x) sum(as.numeric(x) < input$filter.value.adj.p ))) > 0), ]
+                        res <- res[ which( unlist(apply( res[, grep('^adj.P.Val', colnames(res) )], 1, function(x) sum(as.numeric(x) < input$adj.p ))) > 0), ]
                         res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min))  ), ]
                         ## now separate for each group comparison
                         res.groups <- lapply(groups.comp, function(g){
-                            res[ which( res[, paste('adj.P.Val.', g, sep='')] < input$filter.value.adj.p) , ]
+                            res[ which( res[, paste('adj.P.Val.', g, sep='')] < input$adj.p) , ]
                         })
                         names(res.groups) <- groups.comp
                     ###########################################
                     ## F-test
                     } else {
-                        res <- res[which( res[, 'adj.P.Val'] < input$filter.value.adj.p), ]
+                        res <- res[which( res[, 'adj.P.Val'] < input$adj.p), ]
 
                         res.groups <- list(res)
                         names(res.groups) <- paste(groups.comp, collapse='|')
@@ -1396,13 +1412,13 @@ shinyServer(
                 ##############################################################
                 ## one comparison
                 } else {
-                    res <- res[which(res[, paste('adj.P.Val.', groups.comp,sep='')] < input$filter.value.adj.p), ]
+                    res <- res[which(res[, paste('adj.P.Val.', groups.comp,sep='')] < input$adj.p), ]
                     res <-  res[order(res[, paste('logFC.', groups.comp, sep="")]), ]
                     res.groups <- list(res)
                     names(res.groups) <- groups.comp
                 }
 
-                global.param$filter.value <- input$filter.value.adj.p
+                global.results$filter.cutoff <- input$adj.p
             }
 
             ###################################
@@ -1411,7 +1427,7 @@ shinyServer(
             #################################
             ## no filter
             if(global.param$filter.type=='none'){
-                global.param$filter.value <- 'none'
+                global.results$filter.cutoff <- 'none'
                 res.groups <- lapply(groups.comp, function(g) res)
                 names(res.groups) <- groups.comp
             }
@@ -1419,7 +1435,7 @@ shinyServer(
             ###################################################
             ## global filter accross all experiments
             global.results$filtered <- res
-            ##global.param$filter.type <- input$filter.type
+            global.results$filter.type <- input$filter.type
             global.results$filtered.groups <- res.groups
 
         })
@@ -1498,23 +1514,22 @@ shinyServer(
         #####################################################################################
         output$summary.workflow <- renderTable({
 
-            if(is.null(global.results$data)) return(
-                                             )
+            if(is.null(global.results$data)) return()
             filter.res()
             ##cat(length(input$log.trans), '\n')
 
             ##cat(length(input$norm.data), '\n')
             wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, global.param$repro.filt,  global.param$which.test,
-                                   paste( global.param$filter.type, ' < ', global.param$filter.value) ))
+                                   paste( global.results$filter.type, ' < ', global.results$filter.cutoff) ))
             rownames(wf.tab) <- c('Log scale', 'Normalization', 'Reproduc.Filter', 'Test', 'Filter')
             colnames(wf.tab) <- 'Value'
 
             ## special case: no filter
-            if(global.param$filter.type == 'none')
+            if(global.results$filter.type == 'none')
                 wf.tab['Filter', 'Value'] <- 'none'
             ## special case: top N
-            if(global.param$filter.type == 'top.n')
-                wf.tab['Filter', 'Value'] <- paste('top', global.param$filter.value)
+            if(global.results$filter.type == 'top.n')
+                wf.tab['Filter', 'Value'] <- paste('top', global.results$filter.cutoff)
 
 
             wf.tab
@@ -1531,26 +1546,22 @@ shinyServer(
 
             ## extract results
             filter.res()
-
             res = global.results$filtered
-
             ## tested groups
             grp.comp=unique(global.param$grp.comp)
 
             ## extract filter type
-            ##filter.type=global.results$filter.type
-            ##filter.cutoff=global.results$filter.cutoff
-            filter.type=global.param$filter.type
-            filter.value=global.param$filter.value
+            filter.type=global.results$filter.type
+            filter.cutoff=global.results$filter.cutoff
 
             ######################################
             ## one/two sample mod T
             if(global.param$which.test != 'mod F'){
 
                 if(filter.type == 'adj.p')
-                    test.tab=unlist(lapply(paste('adj.P.Val', grp.comp, sep='.'), function(x) sum(res[, x] < filter.value) ))
+                    test.tab=unlist(lapply(paste('adj.P.Val', grp.comp, sep='.'), function(x) sum(res[, x] < filter.cutoff) ))
                 if(filter.type == 'nom.p')
-                    test.tab=unlist(lapply(paste('P.Value', grp.comp, sep='.'), function(x) sum(res[, x] < filter.value) ))
+                    test.tab=unlist(lapply(paste('^P.Value', grp.comp, sep='.'), function(x) sum(res[, x] < filter.cutoff) ))
                 if(filter.type == 'top.n')
                     return(NULL)
 
@@ -1566,9 +1577,9 @@ shinyServer(
             ## moderated F
             } else {
                 if(filter.type == 'adj.p')
-                    test.tab=data.frame(  sum(res[, 'adj.P.Val'] < filter.value) )
+                    test.tab=data.frame(  sum(res[, 'adj.P.Val'] < filter.cutoff) )
                 if(filter.type == 'nom.p')
-                    test.tab=data.frame(  sum(res[, 'P.Value'] < filter.value) )
+                    test.tab=data.frame(  sum(res[, 'P.Value'] < filter.cutoff) )
                 if(filter.type == 'top.n')
                     return(NULL)
                 if(filter.type == 'none')
@@ -1667,12 +1678,10 @@ shinyServer(
             if(nrow(tab) > 0){
                 ## add links to uniprot
                 ##up.id <- tab[, 'id']
-                ##up.id <- tab[, input$id.col]
-                up.id <- tab[, global.param$id.col.value]
+                up.id <- tab[, input$id.col]
                 up.link <- paste("<a href='http://www.uniprot.org/uniprot/", sub('(_|,|;).*', '', up.id),"' target='_blank'>", up.id, "</a>", sep='')
                 ##tab[, 'id'] <- up.link
-                ##tab[, input$id.col] <- up.link
-                tab[, global.param$id.col.value] <- up.link
+                tab[, input$id.col] <- up.link
             }
             tab
 
@@ -1707,7 +1716,7 @@ shinyServer(
                   ##########################
                   ## download button
                   output[[paste("downloadVolcano", grp.comp[my_i], sep='.')]] <- downloadHandler(
-                      filename = paste('volcano_', global.param$filter.type, '_', global.param$filter.value, '.pdf', sep=''),
+                      filename = paste('volcano_', global.results$filter.type, '_', global.results$filter.cutoff, '.pdf', sep=''),
                       ##filename =  paste( 'volcano_',grp.comp[my_i],'.pdf'),
                       content = function(file){
 
@@ -1815,7 +1824,7 @@ shinyServer(
 
             } ## end for loop
 
-        }) ## end 'ins.volc'
+        })
 
 
 
@@ -1824,8 +1833,6 @@ shinyServer(
         ##
         ################################################################
         plotVolcano <- function(group, max.logP = 100){
-
-            cat('\n-- plotVolcano --\n')
 
             ## apply filter
             filter.res()
@@ -1859,42 +1866,42 @@ shinyServer(
             }
 
             ## which filter?
-            filter.str <- paste('filter:', global.param$filter.type, '\ncutoff:', global.param$filter.value)
+            filter.str <- paste('filter:', global.results$filter.type, '\ncutoff:', global.results$filter.cutoff)
 
             ######################################################################
             ## extract significant proteins of current group/test
             ######################################################################
             ## one/two sample
             if( global.param$which.test != 'mod F'){
-                if(global.param$filter.type == 'top.n'){
+                if(global.results$filter.type == 'top.n'){
                     PVal <- res[, paste('P.Value.', group, sep='')]
-                    sig.idx = order(PVal, decreasing=F)[1:global.param$filter.value]
+                    sig.idx = order(PVal, decreasing=F)[1:global.results$filter.cutoff]
                 }
-                if(global.param$filter.type == 'nom.p'){
+                if(global.results$filter.type == 'nom.p'){
                     PVal <- res[, paste('P.Value.', group, sep='')]
-                    sig.idx = which(PVal <= global.param$filter.value)
+                    sig.idx = which(PVal <= global.results$filter.cutoff)
                 }
-                if(global.param$filter.type == 'adj.p'){
+                if(global.results$filter.type == 'adj.p'){
                     adjPVal <- res[, paste('adj.P.Val.', group, sep='')]
-                    sig.idx = which(adjPVal <= global.param$filter.value)
+                    sig.idx = which(adjPVal <= global.results$filter.cutoff)
                 }
             ######################################
             ## F-test
             } else {
-                if(global.param$filter.type == 'top.n'){
+                if(global.results$filter.type == 'top.n'){
                     PVal <- res[, paste('P.Value', sep='')]
-                    sig.idx = order(PVal, decreasing=F)[1:global.param$filter.value]
+                    sig.idx = order(PVal, decreasing=F)[1:global.results$filter.cutoff]
                 }
-                if(global.param$filter.type == 'nom.p'){
+                if(global.results$filter.type == 'nom.p'){
                     PVal <- res[, paste('P.Value', sep='')]
-                    sig.idx = which(PVal <= global.param$filter.value)
+                    sig.idx = which(PVal <= global.results$filter.cutoff)
                 }
-                if(global.param$filter.type == 'adj.p'){
+                if(global.results$filter.type == 'adj.p'){
                     adjPVal <- res[, paste('adj.P.Val', sep='')]
-                    sig.idx = which(adjPVal <= global.param$filter.value)
+                    sig.idx = which(adjPVal <= global.results$filter.cutoff)
                 }
             }
-            if(global.param$filter.type == 'none')
+            if(global.results$filter.type == 'none')
                 sig.idx = 1:length(logFC)
 
             pch.vec=rep(19, nrow(res))
@@ -1951,7 +1958,7 @@ shinyServer(
             ##points(logFC, logPVal, col=col)
             ## add filter
             abline(h=min(logPVal[sig.idx], na.rm=T), col='grey30', lwd=2, lty='dashed')
-            text( xlim[2]-(xlim[2]*.05), min(logPVal[sig.idx], na.rm=T), paste(global.param$filter.type, global.param$filter.value, sep='='), pos=3, col='grey30')
+            text( xlim[2]-(xlim[2]*.05), min(logPVal[sig.idx], na.rm=T), paste(global.results$filter.type, global.results$filter.cutoff, sep='='), pos=3, col='grey30')
             ## number of significant
             legend('top', bty='n', legend=paste(filter.str, '\nsig / tot: ', length(sig.idx),' / ', sum(!is.na(logFC) & !is.na(logPVal)), sep=''), cex=1.5)
 
@@ -2110,7 +2117,6 @@ shinyServer(
         ## correlation matrix
         ###################################################
         plotCorrMat <- function(filename=NA, lower=c('pearson', 'spearman', 'kendall', 'pcor'), upper=c('pearson', 'spearman', 'kendall', 'pcor'), trans=F, display_numbers=T){
-            cat('\n-- plotCorrMat --\n')
 
             ## dataset
             tab <- data.frame(global.input$table)
@@ -2205,7 +2211,7 @@ shinyServer(
 
             #######################################
             ## heatmap title
-            hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
+            hm.title <- paste('filter:', global.results$filter.type, ' / cutoff:', global.results$filter.cutoff, sep='')
             hm.title = paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
 
             #######################################
@@ -2251,7 +2257,7 @@ shinyServer(
 
                 #######################################
                 ## heatmap title
-                hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
+                hm.title <- paste('filter:', global.results$filter.type, ' / cutoff:', global.results$filter.cutoff, sep='')
                 hm.title = paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
 
                 #######################################
@@ -2261,7 +2267,7 @@ shinyServer(
                 if(input$hm.max){
                     withProgress({
                         setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=file, cellheight=min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
+                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=file, cellheight=min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered), max.val=input$hm.max.val)
                     })
                 } else {
                     withProgress({
@@ -2310,9 +2316,7 @@ shinyServer(
         ##
         ######################################################################################
         output$pca <- renderPlot({
-            if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
-
-            ##if(is.null(global.results$data)) return()
+            if(is.null(global.results$data) | is.na(input$top.n)) return()
 
               withProgress(message = 'PCA...',{
                     pca=plotPCA()
@@ -2325,7 +2329,7 @@ shinyServer(
         #####################################
         ## plot_ly: user defined components
         output$pcaxy.plotly <- renderPlotly({
-            if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+            if(is.null(global.results$data) | is.na(input$top.n) | is.null(global.results$pca)) return()
 
             pca <- global.results$pca
             pca.x <- as.numeric(sub('PC ','', input$pca.x))
@@ -2347,7 +2351,7 @@ shinyServer(
         ################################################
         ## 3d scatterplot
         output$pcaxyz.plotly <- renderPlotly({
-            if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+            if(is.null(global.results$data) | is.na(input$top.n) | is.null(global.results$pca)) return()
 
             pca <- global.results$pca
             pca.x <- as.numeric(sub('PC ','', input$pca.x))
@@ -2401,7 +2405,7 @@ shinyServer(
         #######################################################
         ## download PCA
         output$downloadPCA <- downloadHandler(
-            filename = paste('pca_', global.param$filter.type, '_', global.param$filter.value, '.pdf', sep=''),
+            filename = paste('pca_', global.results$filter.type, '_', global.results$filter.cutoff, '.pdf', sep=''),
             ##filename =  paste( 'pca.pdf'),
             content = function(file){
                 withProgress(message='Exporting PCA...',{
@@ -2418,7 +2422,7 @@ shinyServer(
         ## used for debugging purposes
         output$testplot <- renderPlot({
 
-            if(is.null(global.results$data) | is.na(input$filter.value)) return()
+            if(is.null(global.results$data) | is.na(input$top.n)) return()
 
             tab <- global.input$table
 

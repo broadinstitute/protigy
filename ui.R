@@ -45,6 +45,10 @@ shinyUI(
                           uiOutput("file.upload"),
 
                           ###############################
+                          ## import session
+                          uiOutput("import.session"),
+
+                          ###############################
                           ## test data set
                           ##uiOutput("file.testdata"),
 
@@ -65,12 +69,20 @@ shinyUI(
                           tags$br(),
                           uiOutput("filter.type"),
 
-                          ## nom p
-                          conditionalPanel(condition = "input['filter.type'] == 'nom.p' & input['run.test'] > '0'", numericInput( "p.val", "P-value filter", value=0.01, min=0, max=1, step=1e-3)),
-                          ## adj p
-                          conditionalPanel(condition = "input['filter.type'] == 'adj.p'", numericInput( "adj.p", "Corrected P-Value (FDR)", value=0.05, min=0, max=1, step=1e-3)),
                           ## top N
-                          conditionalPanel(condition = "input['filter.type'] == 'top.n'",  numericInput( "top.n", "Top N features", value=50, min=2, step=1)),
+                          ##conditionalPanel(condition = "input['filter.type'] == 'top.n'",  numericInput( "top.n", "Top N features", value=50, min=2, step=1)),
+                          conditionalPanel(condition = "input['filter.type'] == 'top.n'",  numericInput( "filter.value.top.n", "Top N features", value=50, min=2, step=1)),
+
+                          ## nom p
+                          ##conditionalPanel(condition = "input['filter.type'] == 'nom.p' & input['run.test'] > '0'", numericInput( "p.val", "P-value filter", value=0.01, min=0, max=1, step=1e-3)),
+                          conditionalPanel(condition = "input['filter.type'] == 'nom.p'", numericInput( "filter.value.nom.p", "P-value filter", value=0.01, min=0, max=1, step=1e-2)),
+                          ## adj p
+                          ##conditionalPanel(condition = "input['filter.type'] == 'adj.p'", numericInput( "adj.p", "Corrected P-Value (FDR)", value=0.05, min=0, max=1, step=1e-3)),
+                          conditionalPanel(condition = "input['filter.type'] == 'adj.p'", numericInput( "filter.value.adj.p", "Corrected P-Value (FDR)", value=0.05, min=0, max=1, step=1e-2)),
+
+                          ###############################
+                          ## export session
+                          uiOutput("export.session"),
 
 
                           ###############################
@@ -78,6 +90,7 @@ shinyUI(
                           tags$br(),
                           htmlOutput('F5hint'),
                           tags$br(),
+
 
 
                           ##########################################################

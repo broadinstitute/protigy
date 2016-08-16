@@ -29,12 +29,12 @@ source('pheatmap.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.4.1"
+VER="0.4.3"
 ## maximal filesize for upload
 MAXSIZEMB <<- 400
 ## list of strings indicating missing data
-NASTRINGS <<- c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na")
-## speparator tested in the uplosded file
+NASTRINGS <<- c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!")
+## speparator tested in the uploaded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
 GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"))
@@ -190,6 +190,7 @@ plotHM <- function(res,
     ## colors
     color.breaks = seq( min.val, max.val, length.out=12 )
     color.hm = rev(brewer.pal (length(color.breaks)-1, "RdBu"))
+    ##color.hm = rev(brewer.pal (length(color.breaks)-1, "Spectral"))
 
     ##############################################
     ## annotation of columns
@@ -205,7 +206,7 @@ plotHM <- function(res,
     ############################################
     ## plot the heatmap
     pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
-             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), breaks=color.breaks, scale='none', cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, labels_row=chopString(rownames(res), STRLENGTH))
+             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), breaks=color.breaks, scale='none', cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, labels_row=chopString(rownames(res), STRLENGTH), na_col='black')
 }
 
 
@@ -217,10 +218,6 @@ plotHM <- function(res,
 ## changelog: 2015116 implementation
 #################################################################################################
 my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman', 'kendall'), repro.filt=NULL, grp, grp.col.legend, define.max=F, max.val=3, min.val=-3){
-
-    ## sort table according to group vector
-    ##grp <- sort(grp)
-    ##mat <- mat[, names(grp)]
 
     ## cor method
     corm = match.arg(cor)
@@ -235,15 +232,9 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
         lim=c(min.val, max.val)
 
     } else{
-        ## determine x and y limits
         lim=max( abs( mat ), na.rm=T )
         lim=c(-lim, lim)
     }
-    ## update matrix
-    #mat[mat < lim[1]] <- NA
-    #mat[mat > lim[2]] <- NA
-
-    ##cat(grp.col.legend, "\n", names(grp.col.legend), '\n\n')
 
     ###########################################################################
     ## help function to set up the viewports
@@ -296,8 +287,8 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
             rownames(dat) <- rownames(mat)
 
             ## filter according to xlim/ylim
-            ##dat$x[ which(dat$x < lim[1] | dat$x > lim[2]) ] <- NA
-            ##dat$y[ which(dat$y < lim[1] | dat$y > lim[2]) ] <- NA
+            dat$x[ which(dat$x < lim[1] | dat$x > lim[2]) ] <- NA
+            dat$y[ which(dat$y < lim[1] | dat$y > lim[2]) ] <- NA
 
             ## extract groups
             current.group <- unique(grp[names(grp)[c(i,j)]])
@@ -581,6 +572,7 @@ my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
 
             if(length(not.repro.idx) > 0)
                 tab[not.repro.idx, gg.idx] <- NA
+
             values.filt[[gg]] <- not.repro.idx
         }
         ########################################
@@ -631,8 +623,12 @@ dynamicHeightHM <- function(n){
 ###################################################################
 makeBoxplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.lab=1.5, mar=c(4,15,2,6)){
 
+	 cat('\n-- makeBoxplot --\n')
+
     ## table
     tab <- tab[, setdiff(colnames(tab), id.col)]
+
+	##	cat(id.col)
 
     ##########################################
     ## order after groups

@@ -82,7 +82,13 @@ shinyUI(
 
                           ###############################
                           ## export session
-                          uiOutput("export.session"),
+                          ##uiOutput("export.session"),
+
+                          ###############################
+                          ## export ALL results, i.e. figures + tables
+                          ##uiOutput("export.all.results"),
+
+
 
 
                           ###############################

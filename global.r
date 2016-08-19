@@ -29,7 +29,7 @@ source('pheatmap.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.4.3"
+VER="0.4.4"
 ## maximal filesize for upload
 MAXSIZEMB <<- 400
 ## list of strings indicating missing data
@@ -40,10 +40,16 @@ SEPARATOR <<- c('\t', ',', ';')
 GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"))
 ## number of characters to display in plots/tables for column names
 STRLENGTH <<- 20
+## operating system
+OS <<- Sys.info()['sysname']
 ## temp directory to write the Excel file
-TMPDIR <<- ifelse(Sys.info()['sysname']=='Windows', "./", "/tmp/")
+##TMPDIR <<- ifelse(Sys.info()['sysname']=='Windows', "./", "/tmp/")
+TMPDIR <<- ifelse(OS=='Windows', "./", "/tmp/")
 ## app name
 APPNAME <<- sub('.*/','',getwd())
+## directory to store data files
+##DATADIR <<- ifelse(Sys.info()['sysname']=='Windows', "./", "/local/shiny-data/")
+DATADIR <<- ifelse(OS=='Windows', "./", "/local/shiny-data/")
 
 #################################################################
 ## load required packages
@@ -372,7 +378,7 @@ my.col2rgb <- function(color, alpha=80, maxColorValue=255){
 ## 20160235
 #############################################################################################
 normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-MAD', '2-component')){
-    ##cat('norm start\n')
+    cat('\n\n-- normalize data --\n\n')
 
     method = match.arg(method)
 
@@ -387,6 +393,7 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
         data.norm <- normalize.quantiles(data)
         rownames(data.norm) <- rownames(data)
         colnames(data.norm) <- paste( colnames(data))
+
 
         ## shift median to zero
         data.norm <- apply(data.norm, 2, function(x) x - median(x, na.rm=T))
@@ -406,13 +413,20 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
     ## 2-component normalization
     if(method == '2-component'){
         data.norm.list = apply(data, 2, two.comp.normalize, type="unimodal")
+        ##cat('\n\n here 1\n\nlength list:', length(data.norm.list), '\n')
+        ##save(data.norm.list, file='test.RData')
         ## check if successful
         for(i in 1:length(data.norm.list)){
+            ##cat('\ni=', i, '\n')
             if(length(data.norm.list[[i]]) == 1){
-                if(data.norm.list[[i]] == 'No_success')
-                    return('No_success')
+                if(data.norm.list[[i]] == 'No_success'){
+                    ##cat('\n\nno success\n\n')
+                    return(paste( colnames(data)[i] ))
+                }
             }
+            ##cat('\n length:', length(data.norm.list[[i]]), '\n')
         }
+        ##cat('\n\n here \n\n')
         data.norm = matrix( unlist(lapply(data.norm.list, function(x)x$norm.sample)), ncol=length(data.norm.list), dimnames=list(rownames(data), names(data.norm.list)) )
     }
     ## add id column
@@ -651,4 +665,45 @@ makeBoxplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.la
     axis(1)
     axis(2, at=at.vec, labels=chopString(colnames(tab), STRLENGTH), las=2, cex=cex.lab)
 
+}
+
+###################################################################
+##
+##       generate the profile plots under the 'QC' tab
+##
+###################################################################
+makeProfileplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.lab=1.5, mar=c(5,5,3,1), ... ){
+
+    cat('\n-- makeProfileplot --\n')
+
+    ## table
+    tab <- tab[, setdiff(colnames(tab), id.col)]
+
+    ##########################################
+    ## order after groups
+    ##ord.idx <- order(grp)
+    ##grp <- grp[ord.idx]
+    ##tab <- tab[, ord.idx]
+    ##grp.col <- grp.col[ ord.idx]
+
+
+    ##at.vec=1:ncol(tab)
+    xlim=max(abs(tab), na.rm=T)
+
+    ## caclulate densities
+    dens <- apply(tab, 2, density, na.rm=T)
+
+    ## ylim
+    ylim <- max(unlist(lapply(dens, function(x) max(x$y))))
+
+    ##########################################
+    ## plot
+    par(mar=mar)
+    for(i in 1:ncol(tab)){
+        if(i == 1)
+            plot(dens[[i]], xlab='expression', xlim=c(-xlim, xlim), ylim=c(0, ylim), col=my.col2rgb(grp.col[i], alpha=100), lwd=3, cex.axis=2, cex.lab=2, cex.main=1.5, ...)
+        else
+            lines(dens[[i]], col=my.col2rgb(grp.col[i], alpha=100), lwd=3)
+        legend('topright', legend=names(grp.col.leg), col=grp.col.leg, lty='solid', bty='n', cex=1.5, lwd=3)
+    }
 }

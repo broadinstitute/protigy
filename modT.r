@@ -387,7 +387,7 @@ two.comp.normalize <- function (sample, type) {
     model <- normalmixEM (data, k=2, mean.constr=mean.constr)
     model.rep <- normalmixEM (data, k=2, mean.constr=mean.constr)
 
-      if (n.try > 50){
+      if (n.try > 100){
           return("No_success")
           ##stop (paste ("Can't fit mixture model ... giving up\n"))
       }

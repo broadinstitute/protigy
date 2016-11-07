@@ -49,10 +49,10 @@ modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NU
     if(!is.null(label))
         colnames(mod.t.result) <- paste(colnames(mod.t.result), label, sep='.')
 
-    mod.t <- data.frame ( cbind (data.frame (id=id), data, mod.t.result) )
+    mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result) )
     ##mod.t <- data.frame ( cbind (data.frame (id),  mod.t.result, data) )
     rownames(mod.t) <- id ##make.unique(as.character(mod.t[, 1]), sep='_')
-    ##colnames(mod.t)[1] <- 'id'
+    colnames(mod.t)[1] <- 'id'
 
     ##write.csv (final.results, paste (output.prefix, ".csv", sep=''), row.names=FALSE)
 
@@ -100,7 +100,7 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
   #   addition to: plot.col, subset.col, hist.col, hist.breaks,
   #                prefix (for correlation), cex.cor
 
-     cat('\n-- modT.test --/n')
+     cat('\n-- modT.test\n --')
   id <- d[,id.col]
   ##if ( any (duplicated (id)) ) stop ('IDs are not unique. Use fix.id=TRUE option')
 
@@ -135,14 +135,12 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
         colnames(mod.t.result) <- paste(colnames(mod.t.result), label, sep='.')
 
     ##mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result, change=change, significant=mod.sig) )
-    mod.t <- data.frame ( cbind (data.frame (id=id), data, mod.t.result) )
-    ##colnames (mod.t)[1] <- id.col   # retain id.col (if provided)
-    ##rownames(mod.t) <- make.unique( as.character(mod.t[,1]), sep='_' )
-    rownames(mod.t) <- id
-   ## colnames(mod.t)[1] <- 'id'
+    mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result) )
+    colnames (mod.t)[1] <- id.col   # retain id.col (if provided)
+    rownames(mod.t) <- make.unique( as.character(mod.t[,1]), sep='_' )
+    colnames(mod.t)[1] <- 'id'
 
     final.results <- mod.t
-    cat('\n-- modT.test exit --/n')
     return( list(input=d, output=final.results) )
 }
 
@@ -195,9 +193,7 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
   if (use.adj.pvalue) mod.sig <- sig [,'adj.P.Val'] <= p.value.alpha
   else  mod.sig <- sig [,'P.Value'] <= p.value.alpha
   non.na.n <- apply (data, 1, function (x) { sum (is.finite (x)) })
-
-
-    mod.f <- data.frame ( cbind (id=id, sig, significant=mod.sig, total.n=non.na.n, Log.P.Value=-10*log(sig[,'P.Value'] ,10)) )
+  mod.f <- data.frame ( cbind (id=id, sig, significant=mod.sig, total.n=non.na.n, Log.P.Value=-10*log(sig[,'P.Value'] ,10)) )
 
     ##if(!is.null(label))
     ##    colnames(mod.f) <- paste(colnames(mod.f), label, sep='.')
@@ -205,7 +201,7 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
     final.results <- mod.f
     colnames(final.results) <- sub("^f", "logFC.", colnames(final.results))
 
-    cat('\n-- modF.test exit --\n')
+
     return( list( input=d, output=final.results, groups=class.vector)  )
   ##invisible (final.results)
 }
@@ -255,7 +251,6 @@ moderated.t <- function (data, design=NULL) {
         sig <- topTable (m, number=nrow(data), sort.by='none')
         ##cat('here5 ')
     }
-     cat('\n-- moderated.t exit --\n')
   return (sig)
 }
 
@@ -280,7 +275,6 @@ reproducibility.filter <- function (data, id.col='id', alpha=0.05) {
   #        model <- lmer (y ~ rep + (rep1|id)+(rep2|id)+..., data=data.long)
   #      is possible, but the above does not work for 2 replicates (gives same results for >2 reps)
   #
-    cat('\n-- reproducibility.filter --\n')
 
   d <- data [, setdiff (colnames (data), id.col)]     # data part of input
   data.long <- melt (data.frame (data), id=id.col)    # convert to long format
@@ -340,7 +334,6 @@ reproducibility.filter <- function (data, id.col='id', alpha=0.05) {
   }
     ## karsten krug 20160301
     ## return rownames of data matrix
-    cat('\n-- reproducibility.filter exit --\n')
     return(rep.all)
     ##return( rownames(data)[ which(!rep.all) ] )
 }
@@ -363,7 +356,6 @@ two.comp.normalize <- function (sample, type) {
   # WARNING:
   # This code has a lot of hacks to fix the flakiness of normalmixEM, and the idiosyncracies
   # of the actual data. Carefully re-examine code for new or altered input data
-    cat('\n-- two.comp.normalize --\n')
 
   data <- sample [ !is.na (sample) ]
   dens <- density (data, kernel='gaussian', bw='SJ')     # gaussian kernel with S-J bandwidth
@@ -420,9 +412,6 @@ two.comp.normalize <- function (sample, type) {
   data <- data / norm.sd
 
   # return normalized data reorganized to original order
-    sample [ !is.na (sample) ] <- data
-
-    cat('\n-- two.comp.normalize exit --\n')
-
+  sample [ !is.na (sample) ] <- data
   return ( list (norm.sample=sample, norm.mean=norm.mean, norm.sd=norm.sd, fit=unlist (c(model$mu, model$sigma))) )
 }

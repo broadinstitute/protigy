@@ -24,12 +24,14 @@
 
 source('modT.r')
 source('pheatmap.r')
+source('helptext.r')
+
 
 #################################################################
 ## global parameters
 #################################################################
 ## version number
-VER="0.5.0"
+VER="0.5.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 400
 ## list of strings indicating missing data
@@ -122,10 +124,10 @@ plotHM <- function(res,
     }
     #########################################
     ## scaling
-    if(hm.scale == 'row')
-        res <- t(apply(res, 1, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T)))
-    if(hm.scale == 'column')
-        res <- apply(res, 2, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T))
+    ## if(hm.scale == 'row')
+    ##     res <- t(apply(res, 1, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T)))
+    ## if(hm.scale == 'column')
+    ##     res <- apply(res, 2, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T))
 
     ##########################################
     ##          cluster
@@ -180,6 +182,14 @@ plotHM <- function(res,
     }
 
     #########################################
+    ## scaling
+    if(hm.scale == 'row')
+         res <- t(apply(res, 1, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T)))
+    if(hm.scale == 'column')
+         res <- apply(res, 2, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T))
+
+
+    #########################################
     ## capping
     if(!is.na(max.val)){
         res[ res < -max.val ] <- -max.val
@@ -204,13 +214,18 @@ plotHM <- function(res,
     ##############################################
     ## heatmap title
     ##hm.title = paste(hm.title, '\nsig / total: ', nrow(res), ' / ', ,sep='')
-    if(!is.null(na.idx.row) | !is.null(na.idx.col))
+    ##if(!is.null(na.idx.row) | !is.null(na.idx.col))
+    if(length(na.idx.row) > 0| length(na.idx.col) > 0)
         hm.title = paste(hm.title, '\nremoved rows / columns: ', length(na.idx.row), ' / ' , length(na.idx.col), sep='')
+
+
+    ## indicate scaling in the title
+    hm.title <- paste(hm.title, '\nscaling: ',hm.scale, sep='')
 
     ############################################
     ## plot the heatmap
     pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
-             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), breaks=color.breaks, scale='none', cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, labels_row=chopString(rownames(res), STRLENGTH), na_col='black')
+             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, labels_row=chopString(rownames(res), STRLENGTH), na_col='black', scale='none')
 }
 
 

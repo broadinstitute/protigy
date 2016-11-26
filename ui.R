@@ -135,12 +135,18 @@ shinyUI(
             column(9,
 
                    htmlOutput('error'),
-                   htmlOutput('help.start' ),
-                   htmlOutput('help.id.column' ),
-                   htmlOutput('help.exp.design' ),
-                   htmlOutput('help.test' ),
 
-                   htmlOutput('help.results'),
+                   printHTMLUI('getting.started'),
+                   printHTMLUI('change.log'),
+                   printHTMLUI('id.column'),
+                   printHTMLUI('exp.design'),
+                   printHTMLUI('analysis'),
+                   printHTMLUI('results'),
+
+                   ##htmlOutput('help.id.column' ),
+                   ##htmlOutput('help.exp.design' ),
+                   ##htmlOutput('help.test' ),
+                   ##htmlOutput('help.results'),
 
                    ## the actual content
                    uiOutput('navbar')

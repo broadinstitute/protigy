@@ -161,8 +161,6 @@ shinyServer(
             export.tab <- tabPanel('Export',
                                    if(!(global.results$export.results)){
                                        fluidPage(
-
-                                           fluidRow( column(3, h4('Session name:')), column(6, textInput( 'label', '', value=global.param$label, width=200)), column(3)),
                                            fluidRow( column(3, h4('Specify what to export:')), column(9)), ##column(3, checkboxInput('export.all', '(un)check all', value=T)), column(3)),
                                            fluidRow(
                                                column(3), column(3, checkboxInput('export.hm', 'Heatmap',value=T)), column(3, checkboxInput('export.box', 'Boxplots',value=T)), column(3)
@@ -182,7 +180,6 @@ shinyServer(
                                        )
                                    } else {
                                        fluidPage(
-                                           fluidRow( column(3, h4('Choose a label:')), column(6, textInput( 'label', '',value=global.param$label, width=200)), column(3)),
                                            fluidRow(column(3, h4('Specify what to export:')), column(9)),
                                            fluidRow(
                                                column(3), column(3, checkboxInput('export.hm', 'Heatmap',value=T)), column(3, checkboxInput('export.box', 'Boxplots',value=T)), column(3)
@@ -735,10 +732,6 @@ shinyServer(
             ##cat('User:', session$user, '\n')
             if(!is.null(error$msg)) return()
 
-            ## update label
-            global.param$label <- gsub('_| |,|;|\\:|\\+|\\*', '-', input$label)
-
-
             ###############################
             ## apply filter
             filter.res()
@@ -792,7 +785,7 @@ shinyServer(
             ############################################################
             ##                   volcanos
             ############################################################
-            if(input$export.volc & !(global.param$which.test %in% c('mod F', 'none'))){
+            if(input$export.volc & global.param$which.test != 'mod F'){
                 withProgress(message='Exporting', detail='volcano plot',{
                 fn.volc <- paste(global.param$session.dir, 'volcano.pdf', sep='/')
 
@@ -919,7 +912,7 @@ shinyServer(
             ############################################################
             ##                   p-values
             ############################################################
-            if(input$export.phist & global.param$which.test != 'none'){
+            if(input$export.phist){
                 withProgress(message='Exporting', detail='p-value histogram',{
                 fn.pval <- paste(global.param$session.dir, 'histogram_P-values.pdf', sep='/')
 
@@ -930,7 +923,7 @@ shinyServer(
 
                 ############################################
                 ## mod T
-                if(!(global.param$which.test %in% c('mod F'))){
+                if(global.param$which.test != 'mod F'){
                     par(mfrow=c(length(grp.comp),1))
                     for(g in grp.comp){
                         pval <- res.all[, paste('P.Value', g, sep='.')]
@@ -978,23 +971,17 @@ shinyServer(
             global.param.imp <- reactiveValuesToList(global.param)
             global.results.imp <- reactiveValuesToList(global.results)
             plotparams.imp <- reactiveValuesToList(plotparams)
-
             ## volcano coordinates
             volc.imp <-  reactiveValuesToList(volc)
 
             #################################
             ## save as R-object
-            ## no label present
-            if(is.null(global.param$label)){
-
+            if(is.null(global.param$label))
                 save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=paste(global.param$session.dir, 'session.RData', sep='/'))
-                fn.zip <- paste( gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
-            }
-            ## label present
-            if(!is.null(global.param$label) | nchar(global.param$label) == 0){
+
+            if(!is.null(global.param$label))
                 save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=paste(global.param$session.dir, paste(global.param$label,'_session.RData', sep=''), sep='/'))
-                fn.zip <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
-            }
+
 
             #########################################################
             ##   export parameters as small text file
@@ -1026,39 +1013,32 @@ shinyServer(
             ##            create an archive
             ##############################################################
             ## timestamp as filename
-	                ## file names to zip
+	    fn.zip <- paste( gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
+            ## file names to zip
 	    ##fn.all <- grep('pdf$|xlsx$|RData$|txt$',  dir(global.param$session.dir) , value=T)
 	    ##fn.all.abs <- grep('pdf$|xlsx$|RData$|txt$', dir(global.param$session.dir, full.names=T), value=T)
-            fn.all <- grep('pdf$|xlsx$|txt$|gct$',  dir(global.param$session.dir) , value=T)
-	    fn.all.abs <- grep('pdf$|xlsx$|txt$|gct$', dir(global.param$session.dir, full.names=T), value=T)
+            fn.all <- grep('pdf$|xlsx$|txt$',  dir(global.param$session.dir) , value=T)
+	    fn.all.abs <- grep('pdf$|xlsx$|txt$', dir(global.param$session.dir, full.names=T), value=T)
 
-            ## #################################################
-            ## handle special characters in file names
-            ## #################################################
-
-            ## for windows: "
-            fn.all.abs <- paste('"',fn.all.abs,'"', sep='')
-            ## unix/linux: '
-            fn.all <- paste('\'',fn.all,'\'', sep='')
-
-            ###################################################
             ## run command
 	    if(OS == 'Windows')
-                system( paste('zip -0 ', paste(global.param$session.dir, fn.zip, sep='/'), ' ', paste(fn.all.abs, collapse=' '),sep='') )
+                system( paste('zip -0 ', paste(global.param$session.dir, fn.zip, sep='/'), ' ', paste(fn.all.abs, collapse=' '), sep='') )
             else
-                system( paste('cd ', global.param$session.dir,' && zip -0 ', fn.zip, ' ', paste(fn.all, collapse=' '), sep='') )
-
+                system( paste('cd ',global.param$session.dir,' && zip -0 ', fn.zip, ' ', paste(fn.all, collapse=' '), sep='') )
             ## store file.name
 	    global.param$zip.name=fn.zip
             ## cat('test16\n')
 
              ###############################################################
              ## remove archived files
-	     file.remove(gsub('"|\'', '', fn.all.abs) )
+             ##file.remove(paste(global.param$session.dir, fn.all, sep=''))
+	     file.remove(fn.all.abs)
 
              ###############################################################
              ## flag export
              global.results$export.results=T
+
+	     ##cat(file=stderr(),'\n\n', paste(global.param$session.dir, global.param$zip.name, sep=''), '\n\n' )
 
              ## redirect to the same panel
              updateTabsetPanel(session, 'mainPage', selected='Export')
@@ -1165,10 +1145,7 @@ shinyServer(
                 if(nchar(label) > 10)
                     label <- chopString(label, 10, add.dots=F)
                 global.param$label <- label
-            } else {
-                global.param$label <- chopString( sub('.*/', '', fn) , 10, add.dots=F)
             }
-
 
             ## ################################
             ## GCT ?
@@ -1183,8 +1160,7 @@ shinyServer(
                 ## use the fourth row instead (should be data)
                 for(s in SEPARATOR){
 
-                    ##tab <- read.table(fn, sep=s, header=T, stringsAsFactors=F, nrows=1, skip=3)
-                    tab <- read.table(fn, sep=s, header=F, stringsAsFactors=F, nrows=1, skip=4)
+                    tab <- read.table(fn, sep=s, header=T, stringsAsFactors=F, nrows=1, skip=3)
 
                     if(length(tab) > 1){
                         global.param$tabsep <- s
@@ -1325,15 +1301,7 @@ shinyServer(
             ## reset error message
             error$msg <- NULL
 
-            #############################
-            ## copy file into sessions folder
-            fn <- paste0( global.param$session.dir, input$exp.file$name)
-            file.copy(input$exp.file$datapath, fn)
-
-
-            ############################
             ## read the file
-            ##grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
             grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
             Column.Name <- grp.file$Column.Name
             Experiment <- grp.file$Experiment
@@ -1341,21 +1309,6 @@ shinyServer(
             ###############################################################
             ## index on non-empty 'Experiment' rows
             exprs.idx <- which(nchar(Experiment) > 0 )
-
-
-            ##@###############################
-            ## update label
-            fn.split <- unlist(strsplit( sub('.*/', '', fn), '_'))
-            if(length(fn.split) > 1){
-                label <- fn.split[1]
-                if(nchar(label) > 10)
-                    label <- chopString(label, 10, add.dots=F)
-                global.param$label <- paste(global.param$label, label )
-            } else {
-                label <- chopString( sub('.*/', '', fn) , 10, add.dots=F)
-                global.param$label <- paste(global.param$label, label, sep='-')
-            }
-
 
             ###############################################################
             ##
@@ -2016,17 +1969,15 @@ shinyServer(
                                    paste( global.param$filter.type, ' < ', global.param$filter.value) ))
             wf.tab <- data.frame(id=c('Log scale', 'Normalization', 'Reproduc.Filter', 'Test', 'Filter'), wf.tab)
             rownames(wf.tab) <- c('Log scale', 'Normalization', 'Reproduc.Filter', 'Test', 'Filter')
-
+            colnames(wf.tab) <- c('', '')
 
             ## special case: no filter
             if(global.param$filter.type == 'none')
-                wf.tab['Filter', 2] <- 'none'
+                wf.tab['Filter', 'Value'] <- 'none'
             ## special case: top N
             if(global.param$filter.type == 'top.n')
                 wf.tab['Filter', 'Value'] <- paste('top', global.param$filter.value)
 
-
-            colnames(wf.tab) <- c('', '')
 
             wf.tab
 

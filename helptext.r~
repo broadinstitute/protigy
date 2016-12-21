@@ -34,16 +34,10 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
-<b>v0.5.3</b>
-<ul>
-<li>Minor fixes due to shiny update.</li>
-<li>User can now specify label names used to create file and session names when  exporting results. Initial values are taken from filenames of the input and experimental design file.</li>
-<li>Experimental design file is now part of the results.</li>
-</ul>
 <b>v0.5.2</b>
 <ul>
-<li>Rudimentary support of \'gct\' files, i.e. files can be imported by ignoring the first two lines (gct header). </li>
-<li>Figured out the issue with  the 2-sample T-test volcanos. The functions in \'limma\' always report fold changes group factor variable \'0\'. The original \'moderated.t\' alphabetically orders the class names and then converts class names to factors. First class name will become zero. I make sure that class names are alphabeticaly sorted before calling \'moderated.t\'.</li>
+<li>Rudimentary support of \'cgt\' files, i.e. files can be imported by ignoring the first two lines (gct header). </li>
+<li>Fixed the 2-sample T-test volcanos. The functions in \'limma\' always report fold changes </li>
 </ul>
 <b>v0.5.1</b>
 <ul>

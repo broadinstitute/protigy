@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.5.3"
+VER="0.5.2"
 ## maximal filesize for upload
 MAXSIZEMB <<- 400
 ## list of strings indicating missing data
@@ -49,7 +49,7 @@ TMPDIR <<- ifelse(OS=='Windows', "./", "/tmp/")
 ## app name
 APPNAME <<- sub('.*/','',getwd())
 ## directory to store data files
-DATADIR <<- ifelse(OS=='Windows', ".", "/local/shiny-data/")
+DATADIR <<- ifelse(OS=='Windows', "./", "/local/shiny-data/")
 
 #################################################################
 ## load required packages

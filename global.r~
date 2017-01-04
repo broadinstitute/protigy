@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.5.2"
+VER="0.6.0"
 ## maximal filesize for upload
 MAXSIZEMB <<- 400
 ## list of strings indicating missing data
@@ -49,12 +49,13 @@ TMPDIR <<- ifelse(OS=='Windows', "./", "/tmp/")
 ## app name
 APPNAME <<- sub('.*/','',getwd())
 ## directory to store data files
-DATADIR <<- ifelse(OS=='Windows', "./", "/local/shiny-data/")
+DATADIR <<- ifelse(OS=='Windows', ".", "/local/shiny-data/")
 
 #################################################################
 ## load required packages
 #################################################################
 library(shiny)
+library(shinydashboard)
 ## heatmap
 ##library(pheatmap)
 library(scales)
@@ -68,6 +69,7 @@ library(hexbin)
 library(Hmisc)
 library(grid)
 ## pca
+library(ChemometricsWithR)
 library(scatterplot3d)
 library(plotly)
 ## export
@@ -461,7 +463,7 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
 ##            20151208 legend
 ##            20161103 check number of rows (N), 2D plot only
 ##############################################################################
-my.prcomp <- function(x, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.points=3, rgl.point.size=30, main="PCA", leg.vec=NULL, leg.col=NULL, ...){
+my.prcomp <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.points=3, rgl.point.size=30, main="PCA", leg.vec=NULL, leg.col=NULL, ...){
 
     cex.font = 1.8
 
@@ -528,11 +530,71 @@ my.prcomp <- function(x, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.po
 }
 
 #####################################################
+##
+## calculate PCs and their variance variance
+## 
+## res - results after testing
+## grp - class vector, names are column names of input matrix
+#####################################################
+my.prcomp2 <- function(res, grp){
+  
+  ## remove missing values
+  rm.idx <- apply(res, 1, function(x) sum(is.na(x)) + sum(is.infinite(x)))
+  rm.idx <- which(rm.idx > 0)
+  if(length(rm.idx)>0) res <- res[-rm.idx, ]
+
+  ## extract expression data
+  res = res[, names(grp)] 
+  
+  ## perform pca
+  ##pca <- prcomp(x, scale=scale)
+  pca <- PCA(scale(t(res)))
+  
+  
+  return(pca)
+}
+#####################################################
+## visualize variances explained by PCA
+##
+## pca - pca object calculated by function PCA 
+##
+#####################################################
+plotPCAvar <- function(pca, pch=22, cex=2, lwd=2){
+  
+    col1='darkblue'
+    col2='red'
+  
+    ## extract the variances
+    pca.var.perc = pca$var/pca$totalvar*100 
+    pca.var.cum = cumsum(pca$var)/pca$totalvar*100
+
+    ## plot  
+    plot( pca.var.perc, type='b', pch=pch, col=col1, cex=cex, ylab='Percent variance', ylim=c(0,100),xlab='Principle Components', xaxt='n')
+    axis(1, at=1:ncol(pca$scores))
+    lines(pca.var.cum, lwd=lwd, pch=pch+1, cex=cex, col=col2, type='b')
+    legend('right', legend=c('Indiv. Var.', 'Cumulative Var,'), pch=c(pch, pch+1), lwd=lwd, col=c(col1, col2), bty='n', cex=1.3 )
+}
+
+#####################################################
+##
+##
+##
+#####################################################
+plotPCAloadings <- function(pca, topN, pc1, pc2, pc3){
+  
+  load = loadings(pca)[, c(pc1, pc2, pc3)]
+  
+  
+  
+}
+
+
+#####################################################
 ## color ramp
 ##
 ## ToDo: opacity!
 ####################################################
-myColorRamp <- function(colors, values, range=NULL) {
+myColorRamp <- function(colors, values, opac=1, range=NULL) {
 
     if(is.null(range))
         v <- (values - min(values))/diff(range(values))
@@ -540,7 +602,9 @@ myColorRamp <- function(colors, values, range=NULL) {
         v <- (values - min(values, na.rm=T))/diff( range )
 
     x <- colorRamp(colors)(v)
-    rgb(x[,1], x[,2], x[,3], maxColorValue = 255)
+    ## rgb(x[,1], x[,2], x[,3], maxColorValue = round(255*opac))
+    rgb(x[,1], x[,2], x[,3], alpha=opac*255, maxColorValue = 255)
+    ##unlist(apply(x, 1, function(xx) rgb(xx[1], xx[2], xx[3], alpha= maxColorValue=255) ))
 }
 
 #################################################

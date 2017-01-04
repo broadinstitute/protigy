@@ -34,6 +34,16 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.6.0</b>
+<ul>
+<li>Switched to Shiny Dashboards.</li>
+<li>Extented PCA analysis using the <i>ChemometricsWithR</i> R package.</li>
+</ul>
+<b>v0.5.4</b>
+<ul>
+<li>Filter values and plotting parameters are now restored after session import (except for volcano plot...).</li>
+<li>Changed visual style of volcano plots.</li>
+</ul>
 <b>v0.5.3</b>
 <ul>
 <li>Minor fixes due to shiny update.</li>
@@ -48,7 +58,7 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
 <b>v0.5.1</b>
 <ul>
 <li><mark>BUG: </mark>Reverted the indication of direction in volcano plots for <b>2-sample tests</b>. The direction was inferred from the sign of \'logFC\' returned by function \'topTable\' (limma) which cannot be used to do that.</li>
-<li>Updated shiny R package from 0.12/0.13.2 to 0.14 resulting in some minor changes in the <i>look and feel</i> of the app. Code needed some adaptions (navbarPage, navbarMenu) to run poperly with 0.14 version.</li>
+<li>Updated shiny R package from 0.12/0.13.2 to 0.14.2 resulting in some minor changes in the <i>look and feel</i> of the app. Code needed some adaptions (navbarPage, navbarMenu) to run poperly with 0.14.2 version.</li>
 <li>Outsourced HTML instructions to a separate file using Shiny-module framework.</li>
 <li>Changed how heatmap dimensions are determined to better show very large and very small heatmaps.</li>
 <li>Scaling of heatmap done after clustering.</li>
@@ -116,7 +126,6 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
 
         ## render HTML
         output$html <- renderText({
-            ##if(!is.null(input$file)) return()
             if(!is.null(global.input$file)) return()
 
             HTML(txt)

@@ -785,6 +785,7 @@ makeBoxplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.la
     axis(1)
     axis(2, at=at.vec, labels=chopString(colnames(tab), STRLENGTH), las=2, cex=cex.lab)
 
+    cat('\n-- makeBoxplot exit --\n')
 }
 
 ###################################################################

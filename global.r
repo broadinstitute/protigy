@@ -31,11 +31,11 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.6.0"
+VER="0.6.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 400
 ## list of strings indicating missing data
-NASTRINGS <<- c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!")
+NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!")
 ## speparator tested in the uploaded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
@@ -50,6 +50,12 @@ TMPDIR <<- ifelse(OS=='Windows', "./", "/tmp/")
 APPNAME <<- sub('.*/','',getwd())
 ## directory to store data files
 DATADIR <<- ifelse(OS=='Windows', ".", "/local/shiny-data/")
+
+## email for trouble shooting
+MAIL <<- 'karsten@broadinstitute.org'
+## URL to configuration app
+CONFAPP <<- 'http://shiny-proteomics.broadinstitute.org:3838/modTconf/'
+
 
 #################################################################
 ## load required packages
@@ -577,11 +583,36 @@ plotPCAvar <- function(pca, pch=22, cex=2, lwd=2){
 ##
 ##
 #####################################################
-plotPCAloadings <- function(pca, topN, pc1, pc2, pc3){
+plotPCAloadings <- function(pca, topn, pca.x, pca.y, pca.z){
 
-  load = loadings(pca)[, c(pc1, pc2, pc3)]
+    ##load = loadings(pca)[, c(pc1, pc2, pc3)]
+
+    ## ###################
+    ## extract loadings
+    load.pca.x <- pca$loadings[, pca.x]
+    load.pca.y <- pca$loadings[, pca.y]
+    load.pca.z <- pca$loadings[, pca.z]
+
+    n=length(load.pca.x)
+
+    ## ###################
+    ## choose top N
+    x <- rev(sort(abs( load.pca.x ), decreasing=T )[1:min(topn, n)])
+    y <- rev(sort(abs( load.pca.y ), decreasing=T )[1:min(topn, n)])
+    z <- rev(sort(abs( load.pca.z ), decreasing=T )[1:min(topn, n)])
 
 
+    ## ###################################################
+    ## base plotting system
+    par(mfrow=c(1,3))
+    barplot(x, horiz=T, main=paste('PC', pca.x), las=2, border='blue', space=0, col='grey95', ylab='Features', xlab='Absolute coefficient', names.arg=rev(1:length(x)))
+    text(rep(0, length(x)), 1:length(x)-.5, labels=names(x), pos=4)
+
+    barplot(y, horiz=T, main=paste('PC', pca.y), las=2, border='blue', space=0, col='grey95', axisnames=T, xlab='Absolute coefficient',names.arg=rev(1:length(x)))
+    text(rep(0, length(y)), 1:(length(y))-.5, labels=names(y), pos=4)
+
+    barplot(z, horiz=T, main=paste('PC', pca.z), las=2, border='blue', space=0, col='grey95', axisnames=T, xlab='Absolute coefficient', names.arg=rev(1:length(x)))
+    text(rep(0, length(z)), 1:(length(z))-.5, labels=names(z), pos=4)
 
 }
 
@@ -785,6 +816,7 @@ makeBoxplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.la
     axis(1)
     axis(2, at=at.vec, labels=chopString(colnames(tab), STRLENGTH), las=2, cex=cex.lab)
 
+    cat('\n-- makeBoxplot exit --\n')
 }
 
 ###################################################################

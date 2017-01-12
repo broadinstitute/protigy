@@ -25,18 +25,33 @@ shinyUI(
                  ##     tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
                  ## ),
 
+
+
         ############################################
         ## header
-        dashboardHeader( title=paste("modT (v",VER,")", sep=""),
+                  dashboardHeader( title=paste("modT (v",VER,")", sep=""),
 
-                                      tags$li(class = "dropdown",
-                                              a(href="http://www.broadinstitute.org/proteomics", target="_blank",
-                                                img(height = "50px", alt="Proteomics Logo", src="BroadProteomicsLogo.png"),
-                                                style = "padding-top:0px; padding-bottom:0px"
-                                                     )
-                                  )),
-        ##dashboardHeader( title= img(src="BroadProteomicsLogo.png", height = 50, align = "left")                                                   ),
+                        ## logged user
+                        dropdownMenuOutput('logged.user'),
+                        dropdownMenuOutput('logout'),
 
+                        ## E-mail
+                        tags$li(class = "dropdown",
+                                a(href=paste('https://mail.google.com/mail/?view=cm&fs=1&to=', MAIL,'&su=Shiny%20modTv',VER,'%20help&body=%0D%0A%0D%0A%0D%0A',paste(rep('-', 30), collapse=''),'%0D%0AMachine:', Sys.info()['nodename'],'%0D%0AApp:', APPNAME, '%0D%0AVersion:', VER, '%0D%0A', sep=''), target="_blank",
+                                  "Help me!",
+                                  img(src="help.jpg", height="20px", alt="Help"),  style = "padding-top:15px; padding-bottom:0px"
+                                  )
+                                ),
+                        ## logo
+                       tags$li(class = "dropdown",
+                                a(href="http://www.broadinstitute.org/proteomics", target="_blank",
+                                  img(height = "50px", alt="Proteomics Logo", src="BroadProteomicsLogo.png"),
+                                  style = "padding-top:0px; padding-bottom:0px"
+                                  )
+                                )),
+
+
+                       ##),
 
             ############################################################################
             ##
@@ -44,8 +59,9 @@ shinyUI(
             ##
             ############################################################################
         ##    column(3, fluidRow(wellPanel(
-        dashboardSidebar(
-          tags$head(tags$style(".wrapper {overflow: visible !important;}")),
+                  dashboardSidebar(
+                      tags$head(tags$style(HTML('.shiny-server-account { display: none; }'))),
+                      tags$head(tags$style(".wrapper {overflow: visible !important;}")),
 
                           ###############################
                           ## file upload
@@ -85,14 +101,14 @@ shinyUI(
                           ## F5 hint
                           tags$br(),
                           htmlOutput('F5hint'),
-                          tags$br(),
+                          tags$br()
 
 
 
                           ##########################################################
                           ## Email footer: works for Gmail only
                           ##########################################################
-                          HTML(paste('<footer>Ran into problems?  <a href=\"https://mail.google.com/mail/?view=cm&fs=1&to=karsten@broadinstitute.org&su=Shiny%20modTv',VER,'%20problem&body=%0D%0A%0D%0A%0D%0A',paste(rep('-', 30), collapse=''),'%0D%0AMachine:', Sys.info()['nodename'],'%0D%0AApp:', APPNAME, '%0D%0AVersion:', VER, '%0D%0A','\" target=\"_blank\">Send me an email</a></footer>', sep=''))
+                          ##HTML(paste('<footer>Ran into problems?  <a href=\"https://mail.google.com/mail/?view=cm&fs=1&to=karsten@broadinstitute.org&su=Shiny%20modTv',VER,'%20problem&body=%0D%0A%0D%0A%0D%0A',paste(rep('-', 30), collapse=''),'%0D%0AMachine:', Sys.info()['nodename'],'%0D%0AApp:', APPNAME, '%0D%0AVersion:', VER, '%0D%0A','\" target=\"_blank\">Send me an email</a></footer>', sep=''))
 
                ),
 

@@ -34,9 +34,14 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.6.1</b>
+<ul>
+<li>Session managment: Added possibility to delete saved sessions and to choose whether to save a session on the server in the first place.</li>
+<li>User role managment (alpha status): A project saved on the server has an owner and (optional) collaborators. Collaborators can \"see\" projects they are assigned to in the dropdown menu \"Saved sessions\".</li>
+</ul>
 <b>v0.6.0</b>
 <ul>
-<li>Switched to Shiny Dashboards.</li>
+<li>Switched to <a href="https://rstudio.github.io/shinydashboard/">Shiny Dashboards</a>.</li>
 <li>Extented PCA analysis using the <i>ChemometricsWithR</i> R package.</li>
 </ul>
 <b>v0.5.4</b>

@@ -27,8 +27,7 @@ modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NU
 
     ## store group names
     groups.org <- groups
-    ##groups <- as.numeric(as.factor(groups))
-    groups <- as.numeric(factor(groups, levels=sort(unique(groups)))) ## kk 20170106
+    groups <- as.numeric(as.factor(groups))
 
     ##cat(groups.org, '\n', groups, '\n')
 

@@ -59,9 +59,15 @@ shinyServer(
             which.test='One-sample mod T', ## specify test
             log.transform='none',        ## log transformation
             norm.data='none',            ## data normalization
-            repro.filt='no',              ## reproducibility filter
+
+            repro.filt='no',             ## reproducibility filter
+            repro.filt.val=0.001,
+            sd.filt='no',                ## sd filter
+            sd.filt.val=10,              ## remove lower 10 percent of features with lowest sd
+
             session.imported=F,          ## flag whether this is an imported session
-            session.import.init=F,              ## flag for initiate the session (used for to switch between default values for 'filter.value' and user=sepcified, i.e. after importing a session)
+
+            session.import.init=F,       ## flag for initiate the session (used for to switch between default values for 'filter.value' and user=sepcified, i.e. after importing a session)
             analysis.run=F,              ## flag whether the analysis has been run
 
             filter.type='adj.p',         ## default filter
@@ -241,6 +247,7 @@ shinyServer(
                                          column(width=6,
                                                 box(title="Session name:",
                                                     textInput( 'label', '', value=global.param$label, width=200),
+                                                    checkboxInput('export.save.session', 'Save as session', value=F),
                                                     status = "primary",
                                                     solidHeader = T,
                                                     width=NULL
@@ -280,12 +287,12 @@ shinyServer(
                                    } ## end else
                                    )
 
-            ############################################
+            ## ##########################################
             ## SUMMARY
             ##    some general numbers on the
             ##    uploaded data
             ##
-            ############################################
+            ## ##########################################
             summary.tab <-  tabPanel('Summary',
 
                                         fluidRow(
@@ -309,7 +316,7 @@ shinyServer(
                           ) ## end tab panel
 
 
-            ############################################
+            ## ##########################################
             ## VOLCANO
             ##      tabs for the volcano plots
             ## NOT for F test
@@ -865,20 +872,88 @@ shinyServer(
         })
 
 
-        #####################################
-        ## 6) UI select test
+        ## #####################################################################
+        ## UI: set up analysis
+        ##
+        ##
+        ## #####################################################################
         output$list.groups <- renderUI({
 
             if( !global.param$grp.done ) return()
 
-            list(
-                radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
-                radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected=global.param$repro.filt),
-                radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+            ####################################
+            ## initialize
+             if( is.null(input$sd.filt) && is.null(input$repro.filt)){
+                 list(
+                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                     radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected=global.param$repro.filt),
+                     radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected=global.param$sd.filt),
+                     radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
 
-                actionButton('run.test', 'Run analysis!')
-            )
+                     actionButton('run.test', 'Run analysis!')
+                 )
+             }
+
+
+            ## ##################################
+            ## none of the tests
+            else if( input$sd.filt == 'no' & input$repro.filt == 'no'){
+                list(
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                    radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected='no'),
+                    radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected='no'),
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+
+                    actionButton('run.test', 'Run analysis!')
+                )
+            }
+            ## ##################################
+            ## SD filt only
+            else if(  input$sd.filt == 'yes' && input$repro.filt == 'no'){
+                list(
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                    ##radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected='no'),
+                    radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected='yes'),
+                    sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+
+                    actionButton('run.test', 'Run analysis!')
+                )
+            }
+            ## ##################################
+            ## Repro filt only
+            else if(  input$sd.filt == 'no' && input$repro.filt == 'yes'){
+                list(
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                    radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected='yes'),
+                    selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
+                    ##radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected='no'),
+                    ##sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=10),
+                    ##radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
+                    actionButton('run.test', 'Run analysis!')
+                )
+            }
+            ## ##########################################################
+            ## else if(  input$sd.filt == 'yes' && input$repro.filt == 'yes'){
+            ##     list(
+            ##         radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+            ##         radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+            ##         radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected='yes'),
+            ##         selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=0.001),
+            ##         radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected='tes'),
+            ##         sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=10),
+            ##         radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+
+            ##         actionButton('run.test', 'Run analysis!')
+            ##     )
+            ## }
+
+
         })
 
         #############################################################################
@@ -978,13 +1053,15 @@ shinyServer(
             ############################################################
             if(input$export.pca){
 
-                withProgress(message='Exporting', detail='pca',{
-                fn.volc <- paste(global.param$session.dir, 'pca.pdf', sep='/')
-                pdf(fn.volc, height=5, width=15)
-                pca=plotPCA()
-                dev.off()
+                if(nrow(res) >  3 && ncol(res) > 2){
+                    withProgress(message='Exporting', detail='pca',{
+                        fn.volc <- paste(global.param$session.dir, 'pca.pdf', sep='/')
+                        pdf(fn.volc, height=5, width=15)
+                        pca=plotPCA()
+                        dev.off()
 
-                })
+                    })
+                }
             }
             ############################################################
             ##                    boxplots
@@ -1087,6 +1164,7 @@ shinyServer(
             ##                   p-values
             ############################################################
             if(input$export.phist & global.param$which.test != 'none'){
+
                 withProgress(message='Exporting', detail='p-value histogram',{
                 fn.pval <- paste(global.param$session.dir, 'histogram_P-values.pdf', sep='/')
 
@@ -1182,12 +1260,18 @@ shinyServer(
             ## no label present
             if(is.null(global.param$label)){
 
-                save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=paste(global.param$session.dir, 'session.RData', sep='/'))
+                fn.tmp <- paste(global.param$session.dir, paste('session', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep='/')
+
+                save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=fn.tmp)
                 fn.zip <- paste( gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
+
             }
             ## label present
             if(!is.null(global.param$label) | nchar(global.param$label) == 0){
-                save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=paste(global.param$session.dir, paste(global.param$label,'_session.RData', sep=''), sep='/'))
+
+                fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
+
+                save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=fn.tmp)
                 fn.zip <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
             }
 
@@ -1244,11 +1328,10 @@ shinyServer(
             ## cat('test16\n')
 
             ###############################################################
-            ## remove archived files
-            if(input$export.save.session)
-                file.remove(gsub('"|\'', '', fn.all.abs[-grep('\\.RData$', fn.all.abs)]) )
-            else
-                file.remove(gsub('"|\'', '', fn.all.abs) )
+            ## remove archived files: all files expect RData
+            file.remove(gsub('"|\'', '', fn.all.abs[-grep('\\.RData$', fn.all.abs)]) )
+            if(!input$export.save.session)
+                file.remove(fn.tmp)
 
              ###############################################################
              ## flag export
@@ -1745,6 +1828,9 @@ shinyServer(
             ## - needed to supress volcanos for mod F test
             global.param$which.test <- input$which.test
             global.param$repro.filt <- input$repro.filt
+            global.param$repro.filt.val <- input$repro.filt.val
+            global.param$sd.filt <- input$sd.filt
+            global.param$sd.filt.val <- input$sd.filt.val
             global.param$norm.data <- input$norm.data
             global.param$log.transform <- input$log.transform
 
@@ -1767,6 +1853,7 @@ shinyServer(
             ## all group labels
             groups=global.param$grp
             ##View(tab[, id.col])
+
             ###############################################
             ## initialize values for normalized and filtered matrix
             global.results$table.norm=NULL
@@ -1780,6 +1867,7 @@ shinyServer(
             test = global.param$which.test
             norm.data = global.param$norm.data
             repro.filt = global.param$repro.filt
+            sd.filt = global.param$repro.filt
             log.trans = global.param$log.transform
 
             ###############################################
@@ -1863,7 +1951,7 @@ shinyServer(
                 if( test == 'One-sample mod T'){
 
                     withProgress(message='Applying reproducibility filter',  {
-                        repro = my.reproducibility.filter(tab, id.col=id.col, groups, alpha=0.05)
+                        repro = my.reproducibility.filter(tab, id.col=id.col, groups, alpha=global.param$repro.filt.val)
                         tab = repro$table
                         ##View(repro$table)
                     })
@@ -1875,6 +1963,17 @@ shinyServer(
                     global.param$repro.filt <- 'no'
                 }
             }
+            ## #############################################
+            ##
+            ##   Standard deviation filter
+            ##
+            ## #############################################
+            if(sd.filt == 'yes'){
+
+
+
+            }
+
             ###############################################################################
             ##
             ##                                     TEST
@@ -3004,16 +3103,44 @@ shinyServer(
             setHook("grid.newpage", function() pushViewport(viewport(x=1,y=1,width=0.9, height=0.9, name="vp", just=c("right","top"))))
             if(trans)
                 pheatmap(cm, fontsize_row=10, fontsize_col=10,
-                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks)
+                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, width=12, height=12)
             else
                 pheatmap(cm, fontsize_row=10, fontsize_col=10,
-                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', annotation_col=anno, annotation_colors=anno.color,  annotation_row=anno, display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, gaps_col=gaps.column, gaps_row=gaps.row)
+                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', annotation_col=anno, annotation_colors=anno.color,  annotation_row=anno, display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, gaps_col=gaps.column, gaps_row=gaps.row, width=12, height=12)
             setHook("grid.newpage", NULL, "replace")
 
             ## add corr coeff
             grid.text(paste(match.arg(upper)), y=.995, x=.4, gp=gpar(fontsize=25))
             grid.text(paste(match.arg(lower)), x=-0.01, rot=90, gp=gpar(fontsize=25))
         }
+         ## ################################################################################
+        ## boxplots: correlations per group
+        ## ################################################################################
+        output$corr.box.group <- renderPlot({
+
+            if(is.null(global.results$data)) return()
+            if(!is.null(error$msg)) return()
+
+            ## dataset
+            tab <- data.frame(global.input$table)
+            ## id column
+            id.col <- global.param$id.col.value
+            ## class vector
+            grp <- sort(global.param$grp)
+            grp.col.legend <- global.param$grp.colors.legend
+
+            ## table
+            tab <- tab[, setdiff(colnames(tab), id.col)]
+            tab <- tab[, names(grp)]
+
+
+            if( is.null(global.results$cm) ) ## will always be NULL atm
+                cm <- cor(tab, use='pairwise', method='pearson')
+
+
+
+        })
+
 
 
         ####################################################################################

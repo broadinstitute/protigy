@@ -34,10 +34,26 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.6.2</b>
+<ul>
+<li>Increased number of colors by 60 (85 total).</li>
+<li>Correlation matrix: increased the size of exported heatmap to 12x12 inches.</li>
+<li>Multiscatter: increased number of digits to three.</li>
+</ul>
+<b>v0.6.1</b>
+<ul>
+<li>Session managment: Added possibility to delete saved sessions and to choose whether to save a session on the server in the first place.</li>
+<li>User role managment (alpha status): A project saved on the server has an owner and (optional) collaborators. Collaborators can \"see\" projects they are assigned to in the dropdown menu \"Saved sessions\".</li>
+</ul>
+<b>v0.6.0</b>
+<ul>
+<li>Switched to <a href="https://rstudio.github.io/shinydashboard/">Shiny Dashboards</a>.</li>
+<li>Extented PCA analysis using the <i>ChemometricsWithR</i> R package.</li>
+</ul>
 <b>v0.5.4</b>
 <ul>
 <li>Filter values and plotting parameters are now restored after session import (except for volcano plot...).</li>
-<li>Slight visual modifications of volcano plots.</li>
+<li>Changed visual style of volcano plots.</li>
 </ul>
 <b>v0.5.3</b>
 <ul>
@@ -121,7 +137,6 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
 
         ## render HTML
         output$html <- renderText({
-            ##if(!is.null(input$file)) return()
             if(!is.null(global.input$file)) return()
 
             HTML(txt)

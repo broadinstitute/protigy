@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.6.1"
+VER="0.6.2"
 ## maximal filesize for upload
 MAXSIZEMB <<- 400
 ## list of strings indicating missing data
@@ -39,7 +39,7 @@ NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na",
 ## speparator tested in the uploaded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
-GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"))
+GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
 ## number of characters to display in plots/tables for column names
 STRLENGTH <<- 20
 ## operating system
@@ -285,7 +285,9 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
             if(matchidx$row < matchidx$col){
                 numb = plots[[i]]
                 col='black'
-                size = min(max(abs(90*as.numeric(numb)), 25), 50)
+                ## dynamic font size for correlations
+                ##size = min(max(abs(90*as.numeric(numb)), 25), 50)
+                size = min(max(abs(90*as.numeric(numb)), 25), 40)
                 grid.rect(width=unit(.85, 'npc'), height=unit(.85, 'npc'), vp=vp, gp=gpar(fill='grey95', col='transparent'))
                 grid.text(numb, vp=vp, gp=gpar(fontsize=size, col=col))
             } else {
@@ -357,7 +359,7 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
             if(i > j){
                 cortmp = cm[i,j]
 
-                p=paste(round(cortmp,2))
+                p=paste(round(cortmp, 3))
 
             }
 
@@ -661,6 +663,16 @@ chopString <- function(string, nChar=10, add.dots=T)
 
 }
 
+## ######################################################################
+## 20170223
+##
+##                  Standart deviation filter
+##
+## ######################################################################
+sd.filter <- function(tab, id.col, perc){
+
+
+}
 
 ########################################################################
 ## 20160224
@@ -674,8 +686,10 @@ chopString <- function(string, nChar=10, add.dots=T)
 ########################################################################
 my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
 
+    alpha <- as.numeric(alpha)
+
     ## extract groups
-    groups = unique(grp.vec)
+    groups <- unique(grp.vec)
 
     ## list to store index of filtered values per group
     values.filt <- vector('list', length(groups))
@@ -715,7 +729,8 @@ my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
         if( length(gg.idx) == 2 ){
 
             ## Bland-Altman
-            ba <-  bland.altman.stats(as.numeric( as.character( tab[, gg.idx[1] ]) ), as.numeric( as.character( tab[,  gg.idx[2] ] )), two=3.290527 )
+            ##ba <-  bland.altman.stats(as.numeric( as.character( tab[, gg.idx[1] ]) ), as.numeric( as.character( tab[,  gg.idx[2] ] )), two=3.290527 )
+            ba <-  bland.altman.stats(as.numeric( as.character( tab[, gg.idx[1] ]) ), as.numeric( as.character( tab[,  gg.idx[2] ] )), two=qnorm(1-alpha/2) )
             ## calculate diffs on my own..
             my.diffs <- tab[, gg.idx[1]] - tab[, gg.idx[2]]
             ## index of outliers

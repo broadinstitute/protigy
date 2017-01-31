@@ -669,7 +669,12 @@ chopString <- function(string, nChar=10, add.dots=T)
 ##                  Standart deviation filter
 ##
 ## ######################################################################
+sd.filter <- function(tab, id.col, perc){
 
+    ## calculate sd across all measurements
+    
+
+}
 
 ########################################################################
 ## 20160224
@@ -683,8 +688,10 @@ chopString <- function(string, nChar=10, add.dots=T)
 ########################################################################
 my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
 
+    alpha <- as.numeric(alpha)
+
     ## extract groups
-    groups = unique(grp.vec)
+    groups <- unique(grp.vec)
 
     ## list to store index of filtered values per group
     values.filt <- vector('list', length(groups))
@@ -724,7 +731,8 @@ my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
         if( length(gg.idx) == 2 ){
 
             ## Bland-Altman
-            ba <-  bland.altman.stats(as.numeric( as.character( tab[, gg.idx[1] ]) ), as.numeric( as.character( tab[,  gg.idx[2] ] )), two=3.290527 )
+            ##ba <-  bland.altman.stats(as.numeric( as.character( tab[, gg.idx[1] ]) ), as.numeric( as.character( tab[,  gg.idx[2] ] )), two=3.290527 )
+            ba <-  bland.altman.stats(as.numeric( as.character( tab[, gg.idx[1] ]) ), as.numeric( as.character( tab[,  gg.idx[2] ] )), two=qnorm(1-alpha/2) )
             ## calculate diffs on my own..
             my.diffs <- tab[, gg.idx[1]] - tab[, gg.idx[2]]
             ## index of outliers

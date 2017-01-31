@@ -34,6 +34,16 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.6.2</b>
+<ul>
+<li>UI elements for setting up an anlysis workflow are now dynamically generated, e.g. if reproducibility filter is chosen, onnly "One-sample modT" or "none" can be chosen.</li>
+<li>Reproducibility filter: users can choose bewteen (predefined) alpha-values.</li>
+<li>Increased number of colors by 60 (85 total).</li>
+<li>Correlation matrix: increased the size of exported heatmap to 12x12 inches.</li>
+<li>Multiscatter: increased number of digits to three.</li>
+<li>Some more error handling when exporting analysis results.</li>
+<li>Previously saved sessions are not deleted anymore, if checkbox "save session" is not enabled.</li>
+</ul>
 <b>v0.6.1</b>
 <ul>
 <li>Session managment: Added possibility to delete saved sessions and to choose whether to save a session on the server in the first place.</li>

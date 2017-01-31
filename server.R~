@@ -60,8 +60,12 @@ shinyServer(
             log.transform='none',        ## log transformation
             norm.data='none',            ## data normalization
             repro.filt='no',              ## reproducibility filter
+            sd.filt='no',                ## sd filter
+
+            sd.filt.val=10,               ## remove lower 10 percent of features with lowest sd
             session.imported=F,          ## flag whether this is an imported session
-            session.import.init=F,              ## flag for initiate the session (used for to switch between default values for 'filter.value' and user=sepcified, i.e. after importing a session)
+
+            session.import.init=F,       ## flag for initiate the session (used for to switch between default values for 'filter.value' and user=sepcified, i.e. after importing a session)
             analysis.run=F,              ## flag whether the analysis has been run
 
             filter.type='adj.p',         ## default filter
@@ -79,7 +83,7 @@ shinyServer(
             ms.max.val=4,
 
             ## volcano
-            volc.ps=2,    ## point size
+            volc.ps=1,    ## point size
             volc.ls=1,    ## label size
             volc.grid=T,  ## grid
             volc.maxp=100,## max. -log10 p-value
@@ -95,6 +99,7 @@ shinyServer(
             pca.x='PC 1',
             pca.y='PC 2',
             pca.z='PC 3',
+            pca.load.topn=20,
 
             ## correlation matrix
             cm.upper='pearson',
@@ -132,6 +137,44 @@ shinyServer(
             HTML(paste('<p align=\"center\"><font size=\"5\" color=\"red\">', error$msg,'</font></p>'))
         })
 
+        ## #########################################################
+        ## toggle all option for export
+        ## #########################################################
+        observeEvent(input$export.toggle.all, {
+
+            updateCheckboxInput(session, "export.hm", "Heatmap", value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.box', 'Boxplots', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.volc', 'Volcano plot', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.phist', 'P-value histogram', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.pca', 'PCA', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.ms', 'Multiscatter', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.excel', 'Excel sheet', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.cm', 'Correlation matrix', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.profile', 'Profile plot', value=!input$export.toggle.all)
+
+        })
+
+        ## ########################################################
+        ## logged user
+        output$logged.user <-renderMenu({
+
+            if(is.null(session$user)) return()
+
+            user <- session$user
+            ##user='test'
+
+            notificationItem(user, shiny::icon("users", "fa-1x", lib='glyphicon'), status='info') ##, icon='users', status='info', text='test'),
+          ##  notificationItem(user, shiny::icon("users"), status='info') ##, icon='users', status='info', text='test'),
+
+
+        })
+        ## #########################################################
+        ## logout user
+        output$logout <- renderMenu({
+            if(is.null(session$user)) return()
+            notificationItem('Logout', icon=shiny::icon("sign-out", "fa-1x"), status='info', href="__logout__")
+        })
+
         ################################################################################
         ##
         ##                                navigation bar
@@ -153,23 +196,6 @@ shinyServer(
             ##
             ################################################################################################################
 
-            ## ############################################################
-            ##
-            ## tab to manage exported sessions
-            ##
-            ## ############################################################
-            
-            # manage.sessions.tab <- tabPanel('Manage sessions',{
-            # 
-            #     fluidPage(
-            #         fluidRow(
-            # 
-            #         )
-            #     )
-            # 
-            # }
-            # )
-
             ###############################################################
             ## EXPORT tab
             ## - export all figures/tables at once and generate a zip file
@@ -177,103 +203,117 @@ shinyServer(
             ###############################################################
             export.tab <- tabPanel('Export',
                                    if(!(global.results$export.results)){
-                                      fluidPage(
                                       fluidRow(
-  
                                          column(width=6,
-                                         box(title="Session name:",
-                                              textInput( 'label', '', value=global.param$label, width=200), 
-                                              status = "primary",
-                                             solidHeader = T,
-                                             width=NULL
-                                             )
-                                         ),
+                                                box(title="Session name:",
+                                                    textInput( 'label', '', value=global.param$label, width=200),
+                                                    checkboxInput('export.save.session', 'Save as session', value=F),
+                                                    status = "primary",
+                                                    solidHeader = T,
+                                                    width=NULL
+                                                    ),
+
+                                                box(title="Export results", actionButton('export.results', 'Export (.zip)'),
+                                                    status = "primary",
+                                                    solidHeader = T,
+                                                    width=NULL)
+                                                ),
                                          column(width=6,
-                                         box(title="Specify what to export:",
-                                             checkboxInput('export.hm', 'Heatmap',value=T),
-                                             checkboxInput('export.box', 'Boxplots',value=T),
-                                             checkboxInput('export.volc', 'Volcano plot',value=T),
-                                             checkboxInput('export.phist', 'P-value histogram',value=T),
-                                             checkboxInput('export.pca', 'PCA',value=T),
-                                             checkboxInput('export.ms', 'Multiscatter',value=T),
-                                             checkboxInput('export.excel', 'Excel sheet',value=T),
-                                             checkboxInput('export.cm', 'Correlation matrix',value=T),
-                                             checkboxInput('export.profile', 'Profile plot',value=T), 
-                                             
-                                             status = "primary",
-                                             solidHeader = T,
-                                             width=NULL
-                                             
-                                             )
-                                         )
-                                       ), 
-                                     fluidRow(column(width=6,
-                                         
-                                         box(title="Export results", actionButton('export.results', 'Export (.zip)'), 
-                                             status = "primary",
-                                             solidHeader = T,
-                                             width=NULL)
-                                           ##fluidRow(box(column(3, h4('Export results:')), column(3, actionButton('export.results', 'Export (.zip)')), column(6)))
-                                       ))
-                                   )
-                                     
-                                   } else {
-                                       fluidPage(
-                                           fluidRow( column(3, h4('Choose a label:')), column(6, textInput( 'label', '',value=global.param$label, width=200)), column(3)),
-                                           fluidRow(column(3, h4('Specify what to export:')), column(9)),
-                                           fluidRow(
-                                               column(3), column(3, checkboxInput('export.hm', 'Heatmap',value=T)), column(3, checkboxInput('export.box', 'Boxplots',value=T)), column(3)
-                                           ),
-                                           fluidRow(
-                                               column(3), column(3, checkboxInput('export.volc', 'Volcano plot',value=T)), column(3, checkboxInput('export.phist', 'P-value histogram',value=T)), column(3)
-                                           ),
-                                           fluidRow(
-                                               column(3), column(3, checkboxInput('export.pca', 'PCA',value=T) ), column(3, checkboxInput('export.ms', 'Multiscatter',value=T)), column(3)
-                                           ),
-                                           fluidRow(column(3), column(3, checkboxInput('export.excel', 'Excel sheet',value=T)), column(3, checkboxInput('export.cm', 'Correlation matrix',value=T)), column(3)),
-                                           tags$br(),
-                                           tags$hr(),
-                                           tags$br(),
-                                           fluidRow(column(3, h4('Export results:')), column(3, actionButton('export.results', 'Export (.zip)')), column(6)),
-                                           tags$br(),
-                                           tags$br(),
-                                           fluidRow(column(3, h4('Download results:')), column(3, downloadButton('download.results', 'Download (.zip)')), column(6)),
-                                           tags$br()
+                                                box(title="Specify what to export:",
+                                                    checkboxInput('export.toggle.all', 'Toggle all', value=F),
+                                                    tags$hr(),
+                                                    checkboxInput('export.hm', 'Heatmap',value=T),
+                                                    checkboxInput('export.box', 'Boxplots',value=T),
+                                                    checkboxInput('export.volc', 'Volcano plot',value=T),
+                                                    checkboxInput('export.phist', 'P-value histogram',value=T),
+                                                    checkboxInput('export.pca', 'PCA',value=T),
+                                                    checkboxInput('export.ms', 'Multiscatter',value=T),
+                                                    checkboxInput('export.excel', 'Excel sheet',value=T),
+                                                    checkboxInput('export.cm', 'Correlation matrix',value=T),
+                                                    checkboxInput('export.profile', 'Profile plot',value=T),
+
+                                                    status = "primary",
+                                                    solidHeader = T,
+                                                    width=NULL
+
+                                                    )
+                                                )
                                        )
 
-                                   }
+                                   } else {
+                                       fluidRow(
+                                         column(width=6,
+                                                box(title="Session name:",
+                                                    textInput( 'label', '', value=global.param$label, width=200),
+                                                    status = "primary",
+                                                    solidHeader = T,
+                                                    width=NULL
+                                                    ),
+
+                                                box(title="Export results", actionButton('export.results', 'Export (.zip)'),
+                                                    status = "primary",
+                                                    solidHeader = T,
+                                                    width=NULL),
+
+                                                box(title='Download results', downloadButton('download.results', 'Download (.zip)'),
+                                                    status = "primary",
+                                                    solidHeader = T,
+                                                    width=NULL)
+                                                ),
+                                         column(width=6,
+                                                box(title="Specify what to export:",
+                                                    checkboxInput('export.toggle.all', 'Toggle all', value=F),
+                                                    tags$hr(),
+                                                    checkboxInput('export.hm', 'Heatmap',value=T),
+                                                    checkboxInput('export.box', 'Boxplots',value=T),
+                                                    checkboxInput('export.volc', 'Volcano plot',value=T),
+                                                    checkboxInput('export.phist', 'P-value histogram',value=T),
+                                                    checkboxInput('export.pca', 'PCA',value=T),
+                                                    checkboxInput('export.ms', 'Multiscatter',value=T),
+                                                    checkboxInput('export.excel', 'Excel sheet',value=T),
+                                                    checkboxInput('export.cm', 'Correlation matrix',value=T),
+                                                    checkboxInput('export.profile', 'Profile plot',value=T),
+
+                                                    status = "primary",
+                                                    solidHeader = T,
+                                                    width=NULL
+
+                                                    )
+                                                )
+                                       )
+                                   } ## end else
                                    )
 
-            ############################################
+            ## ##########################################
             ## SUMMARY
             ##    some general numbers on the
             ##    uploaded data
             ##
-            ############################################
+            ## ##########################################
             summary.tab <-  tabPanel('Summary',
-                                   
+
                                         fluidRow(
                                         box(title="Dataset:", solidHeader = T, status = "primary", width = 4,
                                           tableOutput('summary.data')),
-                                      
+
                                         box(title="Workflow:", solidHeader = T, status = "primary",width = 4,
                                           tableOutput('summary.workflow')),
-                                      
+
                                         box(title="Test results:", solidHeader = T, status = "primary",width = 4,
                                           tableOutput('summary.test'))
                                       ),
                                     fluidRow(
                                       box(title="Non-missing values:", solidHeader = T, status = "primary",width = 12,
                                           plotlyOutput('summary.nonmissing.data'))
-                                    ), 
+                                    ),
                                     fluidRow(
-                                     box(title="Non-missing values:", solidHeader = T, status = "primary",width = 12,    
+                                     box(title="Non-missing values:", solidHeader = T, status = "primary",width = 12,
                                           plotlyOutput('summary.missing.data.row'))
                                     )
                           ) ## end tab panel
-                                
 
-            ############################################
+
+            ## ##########################################
             ## VOLCANO
             ##      tabs for the volcano plots
             ## NOT for F test
@@ -288,28 +328,28 @@ shinyServer(
                                             fluidRow(
                                             box( title='', status = 'primary', solidHeader = F, width=12,
                                             fluidRow(
-                                             
-                                                   
+
+
                                                   column(3, numericInput( paste("cex.volcano",groups.comp[i], sep='.'), "Point size", value=plotparams$volc.ps, min=1, step=1)),
                                                   ##column(1, numericInput( paste("opac.volcano",groups.comp[i],sep='.'), "Opacity %", value=50, min=0, max=100, step=10)),
                                                   column(3, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=plotparams$volc.ls, min=.1, step=.1)),
                                                   column(3, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=plotparams$volc.grid)),
-                                                  column(3, numericInput("max.logP", "Max. Log10(P-value)", value=plotparams$volc.maxp, min=20, max=100, step=10) )
-                                                  
+                                                  column(3, numericInput("max.logP", "Max. Log10(P-value)", value=plotparams$volc.maxp, min=20, max=300, step=10) )
+
                                                   ##column(1, downloadButton(paste('downloadVolcano', groups.comp[i],sep='.'), 'Download (pdf)'))
                                               ))),
                                             fluidRow(
-                                            
+
                                               column(width=8, box( width=NULL,  title='Volcano plot', status = 'primary', solidHeader = T,
                                                  ##plotOutput( paste("volcano",groups.comp[i], sep='.'), width=600, height=600, click=paste('plot_click', groups.comp[i], sep='.'), hover=hoverOpts(id=paste('plot_hover', groups.comp[i], sep='.'), delay=10) )
                                                  plotOutput( paste("volcano",groups.comp[i], sep='.'), height=600, click=paste('plot_click', groups.comp[i], sep='.'), hover=hoverOpts(id=paste('plot_hover', groups.comp[i], sep='.'), delay=10) )
-                                                 
+
                                                  )),
-                                              column(width=4, box(width=NULL,  title='Click a point', status = 'primary', solidHeader = T,
+                                              column(width=4, box(width=NULL,  title='Selected points', status = 'primary', solidHeader = T,
                                                      tableOutput(paste('volc.tab.selected', groups.comp[i], sep='.'))
                                               )))
                                           )
-                                        
+
                                         ) ## end tabPanel
                 } ## end for i
            ## } ## end if not mod F
@@ -318,171 +358,96 @@ shinyServer(
             ## HEATMAP
             ##
             ############################################
-            hm.tab <-  tabPanel('Heatmap',
-                                    fluidPage(
-                                      fluidRow(
-                                        ##box(title='Select Principle Components', status = 'primary', solidHeader = T,
-                                            column(2, h4('Column labels')),
-                                            column(2, h4('Row labels')),
-                                            column(8)
-                                            ##column(9),
-                                            ##column(1, h4('Export'))
-                                          ##)
+                hm.tab <-  tabPanel('Heatmap',
+
+                                    box(title='Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
+                                        fluidRow(
+                                        column(2, numericInput( "cexCol", "Size", value=12, min=1, step=1)),
+                                        column(2, numericInput( "cexRow", "Size", value=8, min=1, step=1)),
+                                        column(2, selectInput( "hm.scale", "Scale", c("row","column","none"), selected=plotparams$hm.scale)),
+                                        column(2, selectInput( "hm.clust", "Cluster", c("column","row","both","none"), selected=ifelse(global.param$which.test != "mod F", "none" ,"both"))),
+                                        column(2, checkboxInput('hm.max', 'Cap values', value=plotparams$hm.max)),
+                                        column(2, numericInput( "hm.max.val", "Max. value", value=plotparams$hm.max.val, step=1, min=2))
                                         ),
                                         fluidRow(
-                                            column(2, numericInput( "cexCol", "Size", value=12, min=1, step=1)),
-                                            column(2, numericInput( "cexRow", "Size", value=8, min=1, step=1)),
-                                            column(2, selectInput( "hm.scale", "Scale", c("row","column","none"), selected=plotparams$hm.scale)),
-                                            column(2, selectInput( "hm.clust", "Cluster", c("column","row","both","none"), selected=ifelse(global.param$which.test != "mod F", "none" ,"both"))),
-                                            ##column(2),
-                                            column(1, checkboxInput('hm.max', 'Cap values', value=plotparams$hm.max)),
-                                            column(2, numericInput( "hm.max.val", "Max. value", value=plotparams$hm.max.val, step=1, min=2)),
-                                            column(1)
-                                        ),
-                                        tags$br(),
-                                        tags$hr(),
-                                        tags$br(),
-                                        fluidRow(
-                                            column(12, align='center', plotOutput("HM") )
-                                        ),
-                                        tags$br(),
-                                        tags$hr(),
-                                        tags$br()
+                                         column(12, align='center', plotOutput("HM", height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ), width=dynamicWidthHM(length(global.param$grp))) )
+                                        )
                                     )
-                                )
+            )
 
             #############################################
             ## PCA
             ##
             #############################################
-            ##pca.tab <- vector('list', 3)
-            # pca.tab <- tabPanel('PCA', 
-            #                     fluidPage(
-            #                       
-            #                            ## 2D
-            #                       fluidRow(
-            #                         column(12, align='center',
-            #                         box( title='Select Principle Components', status = 'primary', solidHeader = T,
-            #                           fluidRow(
-            #                             column(4,selectInput('pca.x', 'x-axis', paste('PC', 1:10), selected=plotparams$pca.x)),  
-            #                             column(4,selectInput('pca.y', 'y-axis', paste('PC', 1:10), selected=plotparams$pca.y)),  
-            #                             column(4,selectInput('pca.z', 'z-axis', paste('PC', 1:10), selected=plotparams$pca.z))
-            #                           )
-            #                         
-            #                         )
-            #                       )),
-            #                       fluidRow(
-            #                         box( title='2D', status = 'primary', solidHeader = T, width = 1000, height = 700,
-            #                           column(12, align='center', plotlyOutput("pcaxy.plotly", width=600, height=600))
-            #                         )
-            #                       ), ##tags$hr(),
-            #                       fluidRow(
-            #                         box( title='3D', status = 'primary', solidHeader = T, width = 800, height = 900,     
-            #                            column(12, align='center', plotlyOutput("pcaxyz.plotly", width=800, height=800))
-            #                         )
-            #                       ),
-            #                       fluidRow(
-            #                         box(title='Figure to download', status = 'primary', solidHeader = T, width = 1200, height = 400,
-            #                          column(12, align='center', plotOutput("pca", width=900, height=300)) 
-            #                         )
-            #                       )
-            #                     )
-            #                     
-            #                     
-            # )
-            # 
+
             pca.tab2 <- vector('list', 3)
-            pca.tab2[[1]] <- tabPanel('Run PCA',
-                    fluidRow(
-          
-                      
+            ## ##################################################
+            ## Run PCA
+            ## ##################################################
+            pca.tab2[[1]] <- tabPanel('Run me first',
+             fluidRow(
+
                       box(title='Summary', status='primary', solidHeader = T, htmlOutput('run.pca')),
-                      
+
                       box(title='Variance', status='primary', solidHeader = T, plotOutput('pca.var'))
-                    )                    
+                    )
             )
-            
+            ## ##################################################
+            ## PC plots
+            ## ##################################################
             pca.tab2[[2]] <- tabPanel('PC plots',
                                       fluidPage(
-                                
+
                                           fluidRow(
-                                            box( title = 'Select principle components', status='primary', solidHeader = T, align='center', 
-                                              ##column(3),
-                                              column(4, selectInput('pca.x', 'x-axis', paste('PC', 1:10)), selected=plotparams$pca.x),
-                                              column(4, selectInput('pca.y', 'y-axis', paste('PC', 1:10), selected=plotparams$pca.y)), 
-                                              column(4, selectInput('pca.z', 'z-axis', paste('PC', 1:10), selected=plotparams$pca.z))
-                                              ##column(3)
+                                            box( title = 'Select principle components', status='primary', solidHeader = T, align='center',
+                                              column(width=4, selectInput('pca.x', 'x-axis', paste('PC', 1:10)), selected=plotparams$pca.x),
+                                              column(width=4, selectInput('pca.y', 'y-axis', paste('PC', 1:10), selected=plotparams$pca.y)),
+                                              column(width=4, selectInput('pca.z', 'z-axis', paste('PC', 1:10), selected=plotparams$pca.z))
                                             )
                                           ),
                                           fluidRow(
                                             box( title='2D', status = 'primary', solidHeader = T, width = 1000, height = 700,
                                                  column(12, align='center', plotlyOutput("pcaxy.plotly", width=600, height=600))
                                             )
-                                          ), ##tags$hr(),
+                                          ),
+
                                           fluidRow(
-                                            box( title='3D', status = 'primary', solidHeader = T, width = 800, height = 900,     
+                                            box( title='3D', status = 'primary', solidHeader = T, width = 800, height = 900,
                                                  column(12, align='center', plotlyOutput("pcaxyz.plotly", width=800, height=800))
                                             )
                                           ),
+
+
                                           fluidRow(
                                             box(title='Figure to download', status = 'primary', solidHeader = T, width = 1200, height = 400,
-                                                column(12, align='center', plotOutput("pca", width=900, height=300)) 
+                                                column(12, align='center', plotOutput("pca", width=900, height=300))
                                             )
                                           )
-                                          
+
 
                                       )
-            )
+                                      )
+            ## ####################################################################
+            ## Loadings plot
+            ## ####################################################################
             pca.tab2[[3]] <- tabPanel('Loadings',
                                       fluidPage(
-                                        
                                         fluidRow(
-                                          
-                                          box(title='Loadings',
-                                              plotlyOutput("pca.loadings")
-                                                           )
-                                          
+                                            column(width=12,
+                                            box(title='Loadings', solidHeader=T, status='primary', width=1000,## height=min( nrow(global.results$filtered), plotparams$pca.load.topn )*20+50,
+                                                sliderInput("pca.load.topn", "Choose number of loadings", 1, 100, 20),
+                                                plotOutput("pca.loadings")##, width=1000, height=min(nrow(global.results$filtered), plotparams$pca.load.topn )*20 )
+                                              ))
+
                                         )
                                       )
             )
-            
-            
-            #############################
-            ## plotly
-            # pca.tab[[1]] <- tabPanel('Interactive',
-            #                       fluidPage(
-            #                         #############################################
-            #                         ## 2D
-            #                         fluidRow(column(2, selectInput('pca.x', 'x-axis', paste('PC', 1:10)), selected=plotparams$pca.x), column(2, selectInput('pca.y', 'y-axis', paste('PC', 1:10), selected=plotparams$pca.y)), column(2, selectInput('pca.z', 'z-axis', paste('PC', 1:10), selected=plotparams$pca.z)), column(6) ),
-            #                         fluidRow(column(12, align='center', plotlyOutput("pcaxy.plotly", width=600, height=600))),
-            #                         tags$hr(),
-            #                         #############################################
-            #                         ## 3D
-            #                         fluidRow(column(12, align='center', plotlyOutput("pcaxyz.plotly", width=800, height=800)) ),
-            #                         tags$br()
-            #                        )
-            #                     )
-            # 
-            # #######################################
-            # ## static
-            # pca.tab[[2]] <- tabPanel('Static',
-            #                          fluidPage(
-            #                            
-            #                            ##############################################
-            #                            ## static figure
-            #                            fluidRow( column(12, h3('Static figure:'))),
-            #                            fluidRow( column(12, align='center', plotOutput("pca", width=1200, height=400) ) )
-            #                            
-            #                            ##tags$br(),
-            #                            ##tags$hr()
-            #                          )
-            # )
-            # 
 
-            #############################################
+
+            ## ###########################################
             ## TABLE
             ##
-            #############################################
+            ## ###########################################
             table.tab <- tabPanel('Table',
                      fluidPage(
                          fluidRow(column(12, tags$h3('Result table (filtered):'))),
@@ -502,12 +467,24 @@ shinyServer(
             ##qc.tabs[['Boxplots']] <- tabPanel('Boxplots',
             qc.tabs[[1]] <- tabPanel('Boxplots',
                                               fluidPage(
-                                                  fluidRow( column(12, plotOutput("expr.boxplot", width=1200, height=max( 30*(ncol( global.input$table)+2), 500)))),
-                                                  tags$br(),tags$hr(),tags$br(),
-                                                  if(!is.null(global.results$table.norm)) fluidRow(column(12, plotOutput("expr.boxplot.norm", width=1200, height=max( 30*(ncol( global.input$table)+2), 500)))),
-                                                  tags$br()
+                                                  fluidRow(
+
+                                                      box(title="Before normalization", solidHeader=T, status="primary",
+                                                          column(width=12, plotOutput("expr.boxplot", width="100%", height=max( 30*(ncol( global.input$table)+2), 500)))
+                                                          ),
+                                                      if(!is.null(global.results$table.norm)){
+                                                          box(title="After normalization", solidHeader=T, status="primary",
+                                                          column(width=12, plotOutput("expr.boxplot.norm", width="100%", height=max( 30*(ncol( global.input$table)+2), 500)))
+                                                          )
+                                                     }
+
+                                                      ##tags$br(),tags$hr(),tags$br(),
+                                                      ##if(!is.null(global.results$table.norm)) fluidRow(column(12, plotOutput("expr.boxplot.norm", width=1200, height=max( 30*(ncol( global.input$table)+2), 500)))),
+                                                      )
+                                                  ##tags$br()
                                               )
                                               )
+
             ###########################
             ## profile plots
             ##qc.tabs[['Profile plots']] <- tabPanel('Profile plots',
@@ -515,15 +492,21 @@ shinyServer(
 
                                                        if(is.null(global.results$table.norm)){
                                                            fluidPage(
-                                                               tags$br(),
-                                                                fluidRow( column(12, plotOutput("expr.profile", width=600, height=600)))
+                                                               fluidRow(
+                                                                   box(title="Before normalization", solidHeader=T, status="primary",
+                                                                       column(width=12, plotOutput("expr.profile"))
+                                                               ))
                                                             )
                                                        } else {
                                                            fluidPage(
-                                                               tags$br(),
+
                                                                fluidRow(
-                                                                   column(6, plotOutput("expr.profile", width=600, height=600)),
-                                                                   column(6, plotOutput("expr.profile.norm", width=600, height=600))
+                                                                   box(title="Before normalization", solidHeader=T, status="primary",
+                                                                      column(width=12, plotOutput("expr.profile"))
+                                                                      ),
+                                                                   box(title="After normalization", solidHeader=T, status="primary",
+                                                                       column(width=12,plotOutput("expr.profile.norm"))
+                                                                       )
                                                                )
                                                            )
                                                        }
@@ -535,7 +518,9 @@ shinyServer(
             qc.tabs[[3]] <- tabPanel('P-values',
                                               fluidPage(
                                                   fluidRow(
-                                                      column(12, plotOutput("pval.hist"))
+                                                      box(title="Distribution of P-values", solidHeader=T, status="primary", width=1000, height=600*ifelse( global.param$which.test != 'mod F', length(unique(global.param$grp.comp)), 1 ),
+                                                          column(12, plotOutput("pval.hist"))
+                                                          )
                                                   )
                                               )
                                               )
@@ -545,22 +530,21 @@ shinyServer(
             qc.tabs[[4]] <- tabPanel('Multi scatter',
                                                    fluidPage(
                                                        fluidRow(
-                                                           ##column(2, checkboxInput('ms.max', 'Define limits', value=plotparams$ms.max)),
-                                                           ##column(2, numericInput( "ms.min.val", "min.", value=plotparams$ms.min.val, step=1)),
-                                                           ##column(2, numericInput( "ms.max.val", "max.", value=plotparams$ms.max.val, step=1)),
-                                                           column(2, checkboxInput('ms.max', 'Define limits', value=FALSE)),
-                                                           column(2, numericInput( "ms.min.val", "min.", value=-4, step=1)),
-                                                           column(2, numericInput( "ms.max.val", "max.", value=4, step=1)),
+                                                           box(title="Parameters", solidHeader=T, status="primary",
+                                                               column(2, checkboxInput('ms.max', 'Define limits', value=FALSE)),
+                                                               column(2, numericInput( "ms.min.val", "min.", value=-4, step=1)),
+                                                               column(2, numericInput( "ms.max.val", "max.", value=4, step=1)),
+                                                               column(6)
+                                                               )
+                                                       ),
+                                                       fluidRow(
+                                                           box(title='Multiscatter', solidHeader=T, status="primary", width=100*(ncol(data.frame(global.input$table))-1), height=130*(ncol(data.frame(global.input$table))-1),
+                                                               column(12, plotOutput("multi.scatter"))
+                                                               )
+                                                       )
+                                                   )
 
-                                                      column(6))
-                                                  ),
-                                                  tags$br(),tags$hr(),tags$br(),
-                                                  fluidPage(
-                                                      fluidRow(
-                                                          column(12, plotOutput("multi.scatter"))                                                      )
-                                                  )
-                                                  )
-
+                                     )
              ###########################
              ## correlation matrix
              ## qc.tabs[['Correlation matrix']] <- tabPanel('Correlation matrix',
@@ -568,16 +552,16 @@ shinyServer(
 
                                                          fluidPage(
                                                              fluidRow(
-                                                                 column(3,  selectInput( "cm.upper", "Upper triangle", c("pearson","spearman","kendall"), selected=plotparams$cm.upper)),
-                                                                 column(3,  selectInput( "cm.lower", "Lower triangle", c("pearson","spearman","kendall"), selected=plotparams$cm.lower)),
-                                                                 column(1,  checkboxInput('cm.numb', 'Show numbers', value=plotparams$cm.numb)),
-                                                                 column(5)
-                                                             )
-                                                         ),
-                                                         tags$br(),tags$hr(),tags$br(),
-                                                         fluidPage(
+                                                                 box(title='Parameters', solidHeader=T, status="primary",
+                                                                     column(3,  selectInput( "cm.upper", "Upper triangle", c("pearson","spearman","kendall"), selected=plotparams$cm.upper)),
+                                                                     column(3,  selectInput( "cm.lower", "Lower triangle", c("pearson","spearman","kendall"), selected=plotparams$cm.lower)),
+                                                                     column(1,  checkboxInput('cm.numb', 'Show numbers', value=plotparams$cm.numb)),
+                                                                     column(5))
+                                                             ),
                                                              fluidRow(
-                                                                 column(12, plotOutput("correlation.matrix"))
+                                                                 box(title='Correlation matrix', solidHeader=T, status="primary", width=1200, height=1000,
+                                                                     column(12, plotOutput("correlation.matrix"))
+                                                                 )
                                                              )
                                                          )
                                                          )
@@ -637,8 +621,8 @@ shinyServer(
                        ##              insert PCA
                        #######################################
                        ##pca.tab,
-                       navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]]),
-                       
+                       navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
+
                        #######################################
                        ##           insert table preview
                        #######################################
@@ -664,10 +648,12 @@ shinyServer(
         ##
         #########################################################################################
 
-        ######################################
+        ## #########################################################################
+        ##
         ## 1) UI file upload
-        ## - entry point
+        ## - entry point for the app
         ## - session id is generated here
+        ## - search path to browse saved sessions
         ##
         output$file.upload <- renderUI({
 
@@ -683,9 +669,50 @@ shinyServer(
             if(is.null(global.param$session))
                 global.param$session <- paste(paste(letters[sample(26, 5)], collapse=''), paste(sample(100,5), collapse=''), sep='')
 
-            ## user id
-            if(is.null(global.param$user))
+             ##user.roles <- read.delim('conf/user-roles.txt', stringsAsFactors=F)
+             ##View(user.roles)
+
+            ## ##############################################
+            ## authenticated session
+            ##if(is.null(global.param$user)){
+            if(!is.null(session$user)){
+
+                ## ########################################
+                ## user name
                 global.param$user <- sub('@.*', '', session$user) ## to avoid problems...
+
+                ## ########################################
+                ## default search path
+                search.path <- c()
+                search.path[1] <- paste(DATADIR, global.param$user, sep='')
+
+                ## #########################################
+                ## parse 'user_roles.txt'
+                ## #########################################
+                user.roles <- read.delim('/local/shiny-server/modTdev/conf/user-roles.txt', stringsAsFactors=F)
+                ##user.roles <- read.delim( file.path('conf', 'user-roles.txt'), stringsAsFactors=F)
+
+                ## check whether the user appears as collaborator in a project
+                idx <- grep( paste('(^|;)', session$user, '($|;)', sep=''), user.roles$collaborator)
+
+                ## if so add the project path to the search path
+                if(length(idx) > 0){
+                    ##search.path <- c()
+                    for(i in 1:length(idx)){
+                        tmp <- grep( paste(user.roles$project[ idx[i] ], '_session.RData', sep='' ),
+                                    dir(paste(DATADIR, sub('@.*', '', user.roles$owner[idx[i]]), sep=''), full.names=T, recursive=T), value=T)
+                        search.path[i+1] <- sub('^(.*/).*' , '\\1', tmp)
+
+                    }
+                }
+
+                ##cat(search.path)
+
+                ## #########################################
+                ##
+                ##global.param$search.path <- paste(DATADIR, global.param$user, sep='')
+                global.param$search.path <- search.path
+            }
 
             ##########################################
             ## upload form
@@ -723,21 +750,38 @@ shinyServer(
             if(is.null(global.param$user)) return()
             if(length(global.param$user)==0) return()
 
+            ## #########################################
+            ##
+            ##search.path <- paste(DATADIR, global.param$user, sep='')
+            search.path <-  global.param$search.path
+
+            saved.sessions <- list()
+            for(i in 1:length(search.path))
+                saved.sessions[[i]] <- grep( '_session.RData', dir( search.path[i], full.names=T, recursive=T ), value=T )
+            saved.sessions <- unlist(saved.sessions)
+
+
             ## subfolders in user directory
-            saved.sessions <- grep( '_session.RData', dir( paste(DATADIR, global.param$user, sep=''), full.names=T, recursive=T ), value=T )
+            ##saved.sessions <- grep( '_session.RData', dir( global.param$search.path, full.names=T, recursive=T ), value=T )
 
             ## don't show the panel if there is no saved session
             if(length(saved.sessions) == 0) return()
 
             ## get the time stamp of the files
-            names(saved.sessions) <-  paste( sub('_.*','', sub('.*/','',saved.sessions)), file.info(saved.sessions)$ctime, sep='_' )
+            time.tmp <- file.info(saved.sessions)$ctime
+            names(saved.sessions) <-  paste( sub('_.*','', sub('.*/','',saved.sessions)), time.tmp, sep='_' )
+
+            ## order by time
+            saved.sessions <- saved.sessions[ order(time.tmp) ]
 
             ## store saved sessions
             global.param$saved.sessions <- saved.sessions
 
             list(
-                selectInput('session.browse', paste('Saved sessions (', sub('_at_','@',global.param$user),')',sep=''), choices=sort(names(saved.sessions))),
-                actionButton('session.browse.import', 'Import')
+                selectInput('session.browse', paste('My saved sessions',sep=''), choices=names(saved.sessions)),
+                ##selectInput('session.browse', paste('Saved sessions (', sub('_at_','@',global.param$user),')',sep=''), choices=sort(names(saved.sessions))),
+                actionButton('session.browse.import', 'Import'),
+                actionButton('session.manage', 'Manage sessions', onclick =paste("window.open('", CONFAPP,"', 'newwindow', 'width=500 height=600'); return false;", sep=''))
             )
         })
 
@@ -764,7 +808,8 @@ shinyServer(
             ## radio button to pick id column
             list(
                 ## experimental design
-                downloadButton("exportTemplate", 'Export experimental design template'),
+                HTML('<font size=\"3\"><b>Export experimental design file:</b></font><br>'),
+                downloadButton("exportTemplate", 'Export'),
                 HTML('<br><hr size=\"5\">'),
                 radioButtons( "id.col.value", "Choose ID column", tab.colnames),
                 actionButton("id.col", 'OK')
@@ -812,43 +857,74 @@ shinyServer(
         output$filter.value <- renderUI({
 
           if(!global.param$analysis.run) return()
-        
-          
+
+
           res <- list(
                   conditionalPanel(condition = "input['filter.type'] == 'top.n'", numericInput( "filter.value.top.n", "Top N features", value=50, min=2, step=1)),
                   conditionalPanel(condition = "input['filter.type'] == 'nom.p'", numericInput( "filter.value.nom.p", "P-value filter", value=0.01, min=0, max=1, step=1e-2)),
                   conditionalPanel(condition = "input['filter.type'] == 'adj.p'", numericInput( "filter.value.adj.p", "Corrected P-Value (FDR)", value=0.05, min=0, max=1, step=1e-2))
                 )
-          
+
           res
         })
 
 
-        #####################################
-        ## 6) UI select test
+        ## #####################################################################
+        ## UI: set up analysis
+        ##
+        ##
+        ## #####################################################################
         output$list.groups <- renderUI({
 
             if( !global.param$grp.done ) return()
 
-            list(
-                radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
-                radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected=global.param$repro.filt),
-                radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+            if( is.null(input$sd.filt)){
+                list(
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                    radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected=global.param$repro.filt),
+                    radioButtons('sd.filt', 'Exclude low variance features from testing (alpha)', choices=c('yes', 'no'), selected=global.param$sd.filt),
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
 
-                actionButton('run.test', 'Run analysis!')
-            )
+                    actionButton('run.test', 'Run analysis!')
+                )
+            }
+            else if( input$sd.filt == 'no'){
+                list(
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                    radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected=global.param$repro.filt),
+                    radioButtons('sd.filt', 'Exclude low variance features from testing (NOT WORKING)', choices=c('yes', 'no'), selected='no'),
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+
+                    actionButton('run.test', 'Run analysis!')
+                )
+            }
+            else if(  input$sd.filt == 'yes'){
+                list(
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                    radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected=global.param$repro.filt),
+                    radioButtons('sd.filt', 'Exclude low variance features from testing (NOT WORKING)', choices=c('yes', 'no'), selected='yes'),
+                    sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=10),
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+
+                    actionButton('run.test', 'Run analysis!')
+                )
+            }
+
+
         })
 
         #############################################################################
-        ## observer 
+        ## observer
         ##                      perform PCA analysis
         ##
         #############################################################################
         ##observeEvent(input$run.pca, {
-    
-    
-    
+
+
+
         ##})
         #############################################################################
         ## observer
@@ -1103,11 +1179,11 @@ shinyServer(
             global.input.imp <- reactiveValuesToList(global.input)
             global.param.imp <- reactiveValuesToList(global.param)
             global.results.imp <- reactiveValuesToList(global.results)
-            
+
             #########################################################
             ## save current plotting parameters
             #########################################################
-            
+
             ## heatmap
             plotparams$hm.scale <- input$hm.scale
             plotparams$hm.clust <- input$hm.clust
@@ -1127,15 +1203,15 @@ shinyServer(
             plotparams$cm.upper <- input$cm.upper
             plotparams$cm.lower <- input$cm.lower
             plotparams$cm.numb <- input$cm.numb
-            
+
             ## convert to list
             plotparams.imp <- reactiveValuesToList(plotparams)
 
             ## volcano coordinates
             volc.imp <-  reactiveValuesToList(volc)
 
-            
-            
+
+
             #################################
             ## save as R-object
             ## no label present
@@ -1179,10 +1255,6 @@ shinyServer(
             ##############################################################
             ##            create an archive
             ##############################################################
-            ## timestamp as filename
-	                ## file names to zip
-	    ##fn.all <- grep('pdf$|xlsx$|RData$|txt$',  dir(global.param$session.dir) , value=T)
-	    ##fn.all.abs <- grep('pdf$|xlsx$|RData$|txt$', dir(global.param$session.dir, full.names=T), value=T)
             fn.all <- grep('pdf$|xlsx$|txt$|gct$|RData$',  dir(global.param$session.dir) , value=T, ignore.case=T)
 	    fn.all.abs <- grep('pdf$|xlsx$|txt$|gct$|RData$', dir(global.param$session.dir, full.names=T, ignore.case=T), value=T)
 
@@ -1206,9 +1278,12 @@ shinyServer(
 	    global.param$zip.name=fn.zip
             ## cat('test16\n')
 
-             ###############################################################
-             ## remove archived files
-	     file.remove(gsub('"|\'', '', fn.all.abs[-grep('\\.RData$', fn.all.abs)]) )
+            ###############################################################
+            ## remove archived files
+            if(input$export.save.session)
+                file.remove(gsub('"|\'', '', fn.all.abs[-grep('\\.RData$', fn.all.abs)]) )
+            else
+                file.remove(gsub('"|\'', '', fn.all.abs) )
 
              ###############################################################
              ## flag export
@@ -1224,9 +1299,9 @@ shinyServer(
         ##                             Do the actual computation
         ##
         ###################################################################################
-      
-        
-        
+
+
+
         ###############################################
         ## 4) initialize group assignment
         observeEvent( input$id.col ,{
@@ -1410,11 +1485,11 @@ shinyServer(
             if(global.param$filter.type == 'adj.p'){
                 updateNumericInput(session, inputId='filter.value.adj.p', value=global.param$filter.value)
             }
-          
+
           ## ##############################################################
           ##                 update plotting parameters
           ## ##############################################################
-          
+
           ## heatmap
           updateNumericInput(session, inputId='hm.cexCol', value=plotparams$hm.cexCol)
           updateNumericInput(session, inputId='hm.cexRow', value=plotparams$hm.cexRow)
@@ -1423,22 +1498,22 @@ shinyServer(
           updateNumericInput(session, inputId='hm.max.val', value=plotparams$hm.max.val)
           updateCheckboxInput(session, inputId='hm.max', value=plotparams$hm.max)
           ## hm clust missing
-          
+
           ## PCA
           updateSelectInput(session, inputId='pca.x', selected=plotparams$pca.x)
           updateSelectInput(session, inputId='pca.y', selected=plotparams$pca.y)
           updateSelectInput(session, inputId='pca.z', selected=plotparams$pca.z)
-          
+
           ## multiscatter
           updateCheckboxInput(session, inputId='ms.max', value=plotparams$ms.max)
           updateNumericInput(session, inputId='ms.max.val', value=plotparams$ms.max.val)
           updateNumericInput(session, inputId='ms.min.val', value=plotparams$ms.min.val)
-          
+
           ## correlation matrix
           updateCheckboxInput(session, inputId='cm.numb', value=plotparams$cm.numb)
           updateSelectInput(session, inputId='cm.upper', selected=plotparams$cm.upper)
           updateSelectInput(session, inputId='cm.lower', selected=plotparams$cm.lower)
-          
+
 
             ##################################
             ## set flags
@@ -1460,6 +1535,7 @@ shinyServer(
                 ins.volc()
             }
         })
+
 
         ##@###############################################################
         ##
@@ -1749,7 +1825,7 @@ shinyServer(
                 global.param$grp.comp <- groups.comp
             }
             ## #############################################
-            ##
+            ## pairwise combinations for 2-sample test
             if(test == 'Two-sample mod T'){
 
                 ## all pairwise combinations
@@ -1834,6 +1910,17 @@ shinyServer(
                     global.param$repro.filt <- 'no'
                 }
             }
+            ## #############################################
+            ##
+            ##   Standard deviation filter
+            ##
+            ## #############################################
+            if(sd.filt == 'yes'){
+
+
+
+            }
+
             ###############################################################################
             ##
             ##                                     TEST
@@ -2003,26 +2090,9 @@ shinyServer(
             if(!(global.param$which.test %in% c('mod F', 'none'))){
                 ins.volc()
             }
-            
+
            ## run.pca()
         })
-
-        ###################################################################################
-        ##                              reactive PCA
-        ###################################################################################
-        ##run.pca <- reactive({
-        
-        ##observe(global.results$filtered, {
-          
-    ##      cat('\n-- run.pca --\n')
-          
-          ##res <- filter.res()
-          
-    ##      global.results$pca <- my.prcomp2(global.results$filtered)
-          
-  ##        cat('\n-- exit: run.pca --\n')
-          
-    ##    })
 
         ###################################################################################
         ##
@@ -2204,7 +2274,6 @@ shinyServer(
         ## - append timestamp to zip-file
         ##
         #############################################################
-
 
         ## download handler for zip-file
         output$download.results <- downloadHandler(
@@ -2488,41 +2557,6 @@ shinyServer(
                   output[[paste("volcano", grp.comp[my_i], sep='.')]] <- renderPlot({
                       plotVolcano( grp.comp[my_i], max.logP=input$max.logP )
                   })
-
-                  ##########################
-                  ## download button
-                  output[[paste("downloadVolcano", grp.comp[my_i], sep='.')]] <- downloadHandler(
-                      filename = paste('volcano_', global.param$filter.type, '_', global.param$filter.value, '.pdf', sep=''),
-                      ##filename =  paste( 'volcano_',grp.comp[my_i],'.pdf'),
-                      content = function(file){
-
-                          pdf(file, height=11, width=11)
-
-                          for(j in 1:length(grp.comp)){
-                              local({
-                                  my_j=j
-                                  plotVolcano(grp.comp[my_j], max.logP=input$max.logP)
-                              })
-                          }
-                          dev.off()
-                      }
-                  ) ## end download handler
-
-                  ## ##################################
-                  ## ## info table
-                  ## output[[paste('info', grp.comp[my_i], sep='.')]] <-  renderTable({
-                  ##     if(is.null(global.results$data)) return()
-                  ##     res <- as.data.frame( global.results$data$output )
-                  ##     text.tmp <- nearPoints(res, input[[paste('plot_hover', grp.comp[my_i], sep='.')]], threshold=10, maxpoints =  1, xvar=paste('logFC', grp.comp[my_i], sep='.'), yvar=paste('Log.P.Value', grp.comp[my_i], sep='.'))
-                  ##     text.tmp <- text.tmp[, c('id', paste('logFC', grp.comp[my_i], sep='.'), paste('P.Value',grp.comp[my_i], sep='.'), paste('adj.P.Val', grp.comp[my_i], sep='.'))]
-                  ##     rownames(text.tmp) <- NULL
-                  ##     if( nrow(text.tmp) == 1 )
-                  ##         text.tmp
-                  ##     else{
-                  ##         text.tmp[1, ] <- rep(' ', ncol(text.tmp))
-                  ##         text.tmp
-                  ##     }
-                  ## })
 
                   ##################################
                   ## observe clicks
@@ -2840,14 +2874,12 @@ shinyServer(
             ## group colors
             grp.col <- global.param$grp.colors
             grp.col.leg <- global.param$grp.colors.legend
-               withProgress({
-                   setProgress(message = 'Processing...', detail= 'Generating Boxplots')
-                   makeBoxplot(tab, id.col.value, grp, grp.col, grp.col.leg)
-               })
-        } ##,
-        ##width = function(){ width=1000},
-        ##height= function(){ height=max( 30*(ncol( global.input$table)+2), 500) } )
-        )
+               ##withProgress({
+               ##    setProgress(message = 'Processing...', detail= 'Generating Boxplots')
+            makeBoxplot(tab, id.col.value, grp, grp.col, grp.col.leg)
+               ##})
+        })
+
         #################################################
         ## with normalization
         output$expr.boxplot.norm <- renderPlot({
@@ -2866,11 +2898,9 @@ shinyServer(
             grp.col <- global.param$grp.colors
             grp.col.leg <- global.param$grp.colors.legend
 
-            makeBoxplot(tab, id.col.value, grp, grp.col, grp.col.leg, legend=F)
-        }##,
-        ##width = function(){ width=1000},
-        ##height= function(){ height=max( 30*(ncol( global.input$table)+2), 500) } )
-        )
+            makeBoxplot(tab, id.col.value, grp, grp.col, grp.col.leg, legend=T)
+        })
+
         ######################################################################################
         ##
         ##                                   Correlation
@@ -3020,30 +3050,45 @@ shinyServer(
             setHook("grid.newpage", function() pushViewport(viewport(x=1,y=1,width=0.9, height=0.9, name="vp", just=c("right","top"))))
             if(trans)
                 pheatmap(cm, fontsize_row=10, fontsize_col=10,
-                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks)
+                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, width=12, height=12)
             else
                 pheatmap(cm, fontsize_row=10, fontsize_col=10,
-                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', annotation_col=anno, annotation_colors=anno.color,  annotation_row=anno, display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, gaps_col=gaps.column, gaps_row=gaps.row)
+                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', annotation_col=anno, annotation_colors=anno.color,  annotation_row=anno, display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, gaps_col=gaps.column, gaps_row=gaps.row, width=12, height=12)
             setHook("grid.newpage", NULL, "replace")
 
             ## add corr coeff
             grid.text(paste(match.arg(upper)), y=.995, x=.4, gp=gpar(fontsize=25))
             grid.text(paste(match.arg(lower)), x=-0.01, rot=90, gp=gpar(fontsize=25))
         }
+         ## ################################################################################
+        ## boxplots: correlations per group
+        ## ################################################################################
+        output$corr.box.group <- renderPlot({
 
-        ##################################################################
-        ## download correlation matrix
-        ##output$downloadCM <- downloadHandler(
-        ##    filename =  paste( 'corrmat_', paste(unique(c(input$cm.lower, input$cm.upper)), collapse='_'), '.pdf', sep=''),
-        ##    content = function(file){
-        ##        pdf(file, height=1000*(11/800), width=1200*(11/800))
-        ##         withProgress({
-        ##             setProgress(message = 'Processing...', detail= 'Generating Correlation Matrix')
-        ##             plotCorrMat(filename=NA, lower=input$cm.lower, upper=input$cm.upper)
-        ##         })
-        ##        dev.off()
-        ##    }
-       ## )
+            if(is.null(global.results$data)) return()
+            if(!is.null(error$msg)) return()
+
+            ## dataset
+            tab <- data.frame(global.input$table)
+            ## id column
+            id.col <- global.param$id.col.value
+            ## class vector
+            grp <- sort(global.param$grp)
+            grp.col.legend <- global.param$grp.colors.legend
+
+            ## table
+            tab <- tab[, setdiff(colnames(tab), id.col)]
+            tab <- tab[, names(grp)]
+
+
+            if( is.null(global.results$cm) ) ## will always be NULL atm
+                cm <- cor(tab, use='pairwise', method='pearson')
+
+
+
+        })
+
+
 
         ####################################################################################
         ##
@@ -3064,7 +3109,7 @@ shinyServer(
             ## require at least three significant hits
             ##if(nrow(res) < 3) return()
             validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
-            
+
             #######################################
             ## heatmap title
             hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
@@ -3077,13 +3122,14 @@ shinyServer(
             ##@#####################################
             ##  dimensions depending on no. rows/columns
             ## cell width
-            cw <- 40
-            if(ncol(res) <  6)
-                cw <- 60
-            if(ncol(res) > 40)
-                cw <- 20
-            if(ncol(res) > 60)
-                cw <- 10
+            ##cw <- 40
+            ##if(ncol(res) <  6)
+            ##    cw <- 60
+            ##if(ncol(res) > 40)
+            ##    cw <- 20
+            ##if(ncol(res) > 60)
+            ##    cw <- 10
+            cw <- cwHM(ncol(res))
 
             ######################################
             ## plot
@@ -3102,13 +3148,12 @@ shinyServer(
             }
         },
         width = function(){
-            N.col=length(global.param$grp)
-            if(N.col > 40) cw=25
-            if(N.col > 60) cw=12
-            if(N.col <= 40) cw=50
-            if(N.col < 6) cw=60
-            return(max(cw * N.col, 1000))
-            ##max(  ifelse( length(global.param$grp)<40, 50, 25)*length(global.param$grp), 1000)
+            ##if(N.col > 40) cw=25
+            ##if(N.col > 60) cw=12
+            ##if(N.col <= 40) cw=50
+            ##if(N.col < 6) cw=60
+            width=dynamicWidthHM(length(global.param$grp))
+            return(width)
         },
         height= function(){
             ##filter.res()
@@ -3135,14 +3180,14 @@ shinyServer(
                 for(g in groups.comp){
 
                     pval <- res[, paste('P.Value', g, sep='.')]
-                    hist(pval, breaks=50, main=paste('Histogram of P-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='P-value', cex.main=3, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
+                    hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='P-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
                     legend('top', legend=g, cex=2)
                 }
             ############################################
             ## mod F
             } else {
                 pval <- res[, paste('P.Value')]
-                hist(pval, breaks=50, main=paste('Histogram of P-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='P-value', cex.main=3, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
+                hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='P-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
                 ##legend('top', legend=paste(groups), cex=2)
             }
 
@@ -3159,117 +3204,78 @@ shinyServer(
             if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
 
             filter.res()
-          
+
             res <- global.results$filtered
-          
+
             validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
-            
+
             grp <- global.param$grp
-            
+
             ## run PCA
             withProgress(message = 'PCA...',{
                     pca=my.prcomp2( res, grp )
                   })
-              
+
             ## store results
             global.results$pca <- pca
-           
-            ## short summary, same as 'PCA' is generating   
+
+            ## short summary, same as 'PCA' is generating
             txt = paste('<p>PCA model of a mean-centered and scaled matrix of ',length(grp), ' by ', nrow(pca$loadings), '.</p>')
             txt = paste(txt, '<p>Number of PCs to cover 90% of the variance:', min(which((cumsum(pca$var)/pca$totalvar) > .9)), '.</p>')
             ##txt = paste(txt, sum())
-                   
+
             HTML(txt)
-            ##print( paste()  ) 
-                   
+            ##print( paste()  )
+
         })
-        
-        
+
+
         ################################################
         ## PCA variance plots
         output$pca.var <- renderPlot({
-      
-          if(is.null(global.results$pca)) return()
-          
-          pca <- global.results$pca
-          
-          plotPCAvar(pca)
-          
-        })
-        
-        ################################################
-        ## PCA loadings
-        output$pca.loadings <- renderPlot({
-           
-          ##validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
-          if(is.null(global.results$pca)) return()
-          
-          pca <- global.results$pca
-          
-          pc1 <- as.numeric(sub('PC ','', input$pca.x))
-          pc2 <- as.numeric(sub('PC ','', input$pca.y))
-          pc3 <- as.numeric(sub('PC ','', input$pca.z))
-          
-          
-          plotPCAloadings(pca, 10, pc1, pc2, pc3)
-          
-          
-        })
-        
 
-        #####################################
-        ## plot_ly: user defined components
-        # output$pcaxy.plotly <- renderPlotly({
-        #     if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
-        #     if(!is.null(error$msg)) return()
-        # 
-        #     pca <- global.results$pca
-        #     pca.x <- as.numeric(sub('PC ','', input$pca.x))
-        #     pca.y <- as.numeric(sub('PC ','', input$pca.y))
-        # 
-        #     pca.mat = data.frame(
-        #         PC1=pca$x[, pca.x],
-        #         PC2=pca$x[, pca.y]
-        #     )
-        #     rownames(pca.mat) <- rownames(pca$x)
-        # 
-        # 
-        #     p <- plot_ly( x=pca.mat$PC1, y=pca.mat$PC2, type='scatter', mode='markers', marker=list(size=20, color=global.param$grp.colors), text=rownames(pca.mat) )
-        #     p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, sep=''), xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)) )
-        # 
-        # })
+          if(is.null(global.results$pca)) return()
+
+          pca <- global.results$pca
+
+          plotPCAvar(pca)
+
+        })
+
+        ## ###########################################################
+        ## PCA plotly 2D scatter
         output$pcaxy.plotly <- renderPlotly({
           if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
           ##if(!is.null(error$msg)) return()
-          
+
           pca <- global.results$pca
           pca.x <- as.numeric(sub('PC ','', input$pca.x))
           pca.y <- as.numeric(sub('PC ','', input$pca.y))
-          
+
           pca.mat = data.frame(
             PC1=pca$scores[, pca.x],
             PC2=pca$scores[, pca.y]
           )
           rownames(pca.mat) <- rownames(pca$scores)
-          
-          
+
+
           p <- plot_ly( x=pca.mat$PC1, y=pca.mat$PC2, type='scatter', mode='markers', marker=list(size=20, color=global.param$grp.colors), text=rownames(pca.mat) )
           p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, sep=''), xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)) )
-          
+
         })
-        
+
         ################################################
-        ## 3d scatterplot
+        ## PCA plotly 3D scatterplot
         output$pcaxyz.plotly <- renderPlotly({
             if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
             ##if(!is.null(error$msg)) return()
-          
-            validate(need(length(global.param$grp) < 3, 'Cannot generate 3D plots from data with dimension < 3.'))
-            
+
+            validate(need(length(global.param$grp) >= 3, 'Cannot generate 3D plots from data with dimension < 3.'))
+
             ##if(length(global.param$grp) < 3) return()
 
             pca <- global.results$pca
-            
+
             pca.x <- as.numeric(sub('PC ','', input$pca.x))
             pca.y <- as.numeric(sub('PC ','', input$pca.y))
             pca.z <- as.numeric(sub('PC ','', input$pca.z))
@@ -3289,19 +3295,25 @@ shinyServer(
         })
         ####################################################
         ## PCA loadings
-        output$pca.loadings <- renderPlotly({
-          
+        output$pca.loadings <- renderPlot({
+
           if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
           if(!is.null(error$msg)) return()
           if(length(global.param$grp) < 3) return()
-          
+
           pca <- global.results$pca
-          
+
           pca.x <- as.numeric(sub('PC ','', input$pca.x))
           pca.y <- as.numeric(sub('PC ','', input$pca.y))
           pca.z <- as.numeric(sub('PC ','', input$pca.z))
-          
-        })
+
+
+          topn=input$pca.load.topn
+
+
+          plotPCAloadings( pca, topn, pca.x, pca.y, pca.z )
+
+       })
 
         ###############################################
         ## static PCA plot
@@ -3309,15 +3321,15 @@ shinyServer(
         plotPCA <- function(pca.x, pca.y, pca.z, plot=T){
 
             filter.res()
-          
+
             res <- global.results$filtered
 
             ##View(res)
 
             ## require at least three rows
-            
+
             validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
-            
+
             ##if(nrow(res) < 3) return()
 
             ## get groups

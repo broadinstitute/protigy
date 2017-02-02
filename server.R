@@ -59,10 +59,11 @@ shinyServer(
             which.test='One-sample mod T', ## specify test
             log.transform='none',        ## log transformation
             norm.data='none',            ## data normalization
+            filt.data='none',            ## data filtering
 
-            repro.filt='no',             ## reproducibility filter
+            ##repro.filt='no',           ## reproducibility filter
             repro.filt.val=0.001,
-            sd.filt='no',                ## sd filter
+            ##sd.filt='no',              ## sd filter
             sd.filt.val=10,              ## remove lower 10 percent of features with lowest sd
 
             session.imported=F,          ## flag whether this is an imported session
@@ -881,63 +882,116 @@ shinyServer(
 
             if( !global.param$grp.done ) return()
 
+               ##cat('tets:', input$filt.data, ' test end\n')
             ####################################
             ## initialize
-             if( is.null(input$sd.filt) && is.null(input$repro.filt)){
-                 list(
+            if( is.null(input$filt.data)){
+                list(
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
-                     radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected=global.param$repro.filt),
-                     radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected=global.param$sd.filt),
+
+                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected=global.param$filt.data),
+
+                     ##radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected=global.param$sd.filt),
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
 
                      actionButton('run.test', 'Run analysis!')
-                 )
-             }
+                )
+            }
+            ## ###################################################
+            ## no filter
+            else if(input$filt.data == 'none'){
 
+                list(
+                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+
+                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='none'),
+
+                     radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected='One-sample mod T'),
+
+                     actionButton('run.test', 'Run analysis!')
+                )
+            }
+
+            ## ###################################################
+            ## Reproducibility filter
+            else if(input$filt.data == 'Reproducibility'){
+
+                list(
+                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+
+                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='Reproducibility'),
+                     selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
+
+                     radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
+
+                     actionButton('run.test', 'Run analysis!')
+                )
+            }
+
+            ## ###################################################
+            ## StdDev filter
+            else if(input$filt.data == 'StdDev'){
+
+                list(
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+
+                    radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='StdDev'),
+                    sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
+
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected='One-sample mod T'),
+                    actionButton('run.test', 'Run analysis!')
+                )
+            }
+                ## } else {
+
+           ## }
 
             ## ##################################
             ## none of the tests
-            else if( input$sd.filt == 'no' & input$repro.filt == 'no'){
-                list(
-                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
-                    radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected='no'),
-                    radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected='no'),
-                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+            ## else if( input$sd.filt == 'no' & input$repro.filt == 'no'){
+            ##     list(
+            ##         radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+            ##         radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+            ##         radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected='no'),
+            ##         radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected='no'),
+            ##         radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
 
-                    actionButton('run.test', 'Run analysis!')
-                )
-            }
-            ## ##################################
-            ## SD filt only
-            else if(  input$sd.filt == 'yes' && input$repro.filt == 'no'){
-                list(
-                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
-                    ##radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected='no'),
-                    radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected='yes'),
-                    sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
-                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+            ##         actionButton('run.test', 'Run analysis!')
+            ##     )
+            ## }
+            ## ## ##################################
+            ## ## SD filt only
+            ## else if(  input$sd.filt == 'yes' && input$repro.filt == 'no'){
+            ##     list(
+            ##         radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+            ##         radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+            ##         ##radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected='no'),
+            ##         radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected='yes'),
+            ##         sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
+            ##         radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
 
-                    actionButton('run.test', 'Run analysis!')
-                )
-            }
-            ## ##################################
-            ## Repro filt only
-            else if(  input$sd.filt == 'no' && input$repro.filt == 'yes'){
-                list(
-                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
-                    radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected='yes'),
-                    selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
-                    ##radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected='no'),
-                    ##sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=10),
-                    ##radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
-                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
-                    actionButton('run.test', 'Run analysis!')
-                )
-            }
+            ##         actionButton('run.test', 'Run analysis!')
+            ##     )
+            ## }
+            ## ## ##################################
+            ## ## Repro filt only
+            ## else if(  input$sd.filt == 'no' && input$repro.filt == 'yes'){
+            ##     list(
+            ##         radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+            ##         radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+            ##         radioButtons('repro.filt', 'Reproducibility filter (beta)', choices=c('yes', 'no'), selected='yes'),
+            ##         selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
+            ##         ##radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected='no'),
+            ##         ##sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=10),
+            ##         ##radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+            ##         radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
+            ##         actionButton('run.test', 'Run analysis!')
+            ##     )
+            ## }
             ## ##########################################################
             ## else if(  input$sd.filt == 'yes' && input$repro.filt == 'yes'){
             ##     list(
@@ -1153,10 +1207,14 @@ shinyServer(
             ############################################################
             if(input$export.ms){
                 withProgress(message='Exporting', detail='multiscatter',{
-                fn.ms <- paste(global.param$session.dir, 'multiscatter.pdf', sep='/')
-                pdf(fn.ms, height=120*ncol(global.input$table)*(11/800), width=120*ncol(global.input$table)*(11/800))
-                plotMultiScatter( define.max=input$ms.max, min.val=input$ms.min.val, max.val=input$ms.max.val )
-                dev.off()
+
+
+                    fn.ms <- paste(global.param$session.dir, 'multiscatter.pdf', sep='/')
+                    pdf(fn.ms, height=120*ncol(global.input$table)*(11/800), width=120*ncol(global.input$table)*(11/800))
+
+                    ##my.multiscatter(tab, repro.filt=global.results$filtered.values, grp=grp,  grp.col.legend=global.param$grp.colors.legend, define.max=define.max, max.val=max.val, min.val=min.val)
+                    plotMultiScatter( define.max=input$ms.max, min.val=input$ms.min.val, max.val=input$ms.max.val )
+                    dev.off()
                 })
             }
 
@@ -1416,7 +1474,6 @@ shinyServer(
             ## generate session ID and prepare data
             ## directory
             #########################################
-
             ## ## if there is an user ID...
             if(!is.null( global.param$user )){
                  ## create user directory, if not present already
@@ -1431,12 +1488,12 @@ shinyServer(
             ## ## create directory on server to store the results
             dir.create(global.param$session.dir)
 
-            ##############################################
+            ## ############################################
             ## copy the input file to the session folder
             fn <- paste0( global.param$session.dir, input$file$name)
             file.copy(input$file$datapath, fn)
 
-            ##@###############################
+            ## ###############################
             ## generate label
             fn.split <- unlist(strsplit( sub('.*/', '', fn), '_'))
             if(length(fn.split) > 1){
@@ -1767,7 +1824,6 @@ shinyServer(
             if(length(grp.anno)>0)
                 global.input$table.anno <- global.input$table[ , grp.anno]
 
-            ##cat('test')
             ##################################
             ## EXPRESSION
             ## - extract all non-empty cells in the 'Experiment' column
@@ -1827,9 +1883,8 @@ shinyServer(
             ## - store which test has been used
             ## - needed to supress volcanos for mod F test
             global.param$which.test <- input$which.test
-            global.param$repro.filt <- input$repro.filt
+            global.param$filt.data <- input$filt.data
             global.param$repro.filt.val <- input$repro.filt.val
-            global.param$sd.filt <- input$sd.filt
             global.param$sd.filt.val <- input$sd.filt.val
             global.param$norm.data <- input$norm.data
             global.param$log.transform <- input$log.transform
@@ -1856,19 +1911,25 @@ shinyServer(
 
             ###############################################
             ## initialize values for normalized and filtered matrix
+            global.results$table.log=NULL
             global.results$table.norm=NULL
             global.results$table.repro.filt=NULL
+            global.results$table.sd.filt=NULL
+            global.results$values.filtered=NULL
             global.results$pca=NULL
-            global.results$table.log=NULL
-            global.results$repro.filt=NULL
 
-            ###############################################
-            ## determine which test should be performed
+            ## ##############################################################################
+            ##
+            ##           set up the analysis pipeline
+            ##
+            ## ##############################################################################
             test = global.param$which.test
             norm.data = global.param$norm.data
-            repro.filt = global.param$repro.filt
-            sd.filt = global.param$repro.filt
+            filt.data = global.param$filt.data
+            repro.filt.val = global.param$repro.filt.val
+            sd.filt.val = global.param$sd.filt.val;
             log.trans = global.param$log.transform
+
 
             ###############################################
             ## specify which comparisons should be performed
@@ -1888,6 +1949,7 @@ shinyServer(
                 count=1
                 for(i in 1:(length(groups.unique)-1))
                     for(j in (i+1):length(groups.unique)){
+                        ## order alphabetically
                         groups.tmp <- sort( groups.unique[c(i,j)] )
                         ##groups.comp[count] <- paste(groups.unique[i], groups.unique[j], sep='.vs.')
                         groups.comp[count] <- paste(groups.tmp[1], groups.tmp[2], sep='.vs.')
@@ -1919,9 +1981,11 @@ shinyServer(
                 global.results$table.log <- tab
             }
 
-            #############################################
+            ## ###########################################
+            ##
             ## normalization
-            #############################################
+            ##
+            ## ###########################################
             if(norm.data != 'none'){
                 ##tab.org = tab
                 withProgress(message='Applying normalization...', {
@@ -1940,41 +2004,47 @@ shinyServer(
                     }
                 })
             }
-            ##############################################
+            ## ############################################
             ##
             ## reproducibility filter
             ## - only for one-sample test
             ##
-            ##############################################
-            if(repro.filt == 'yes'){
-
-                if( test == 'One-sample mod T'){
+            ## ############################################
+            if(filt.data == 'Reproducibility'){
 
                     withProgress(message='Applying reproducibility filter',  {
                         repro = my.reproducibility.filter(tab, id.col=id.col, groups, alpha=global.param$repro.filt.val)
+
+
                         tab = repro$table
                         ##View(repro$table)
                     })
                     ## store indices of filtered values in the original table
-                    global.results$repro.filt <- repro$values.filtered
-                    global.results$table.repro.filt <- tab
+                    global.results$values.filtered <- repro$values.filtered
+                    global.results$table.filt <- tab
 
-                } else {
-                    global.param$repro.filt <- 'no'
-                }
             }
             ## #############################################
             ##
             ##   Standard deviation filter
             ##
             ## #############################################
-            if(sd.filt == 'yes'){
+            if(filt.data == 'StdDev'){
+
+                 withProgress(message='Applying StdDev filter',  {
+                        filt.tmp = sd.filter(tab, id.col=id.col, groups, sd.perc=global.param$sd.filt.val)
+                        tab = filt.tmp$table
+                        ##View(repro$table)
+                    })
+                    ## store indices of filtered values in the original table
+                    global.results$values.filtered <- filt.tmp$values.filtered
+                    global.results$table.filt <- tab
 
 
 
             }
 
-            ###############################################################################
+            ## #############################################################################
             ##
             ##                                     TEST
             ##
@@ -2093,7 +2163,7 @@ shinyServer(
             ##################################
             ## moderated F test
             if(test == 'mod F'){
-                cat('test F...')
+                ##cat('test F...')
                 withProgress(message='moderated F-test', value=0, {
 
                         res.comb <- modF.test( tab, id.col=id.col, class.vector=groups, nastrings=NASTRINGS, na.rm=FALSE)$output
@@ -2122,6 +2192,7 @@ shinyServer(
             ##
             ###################################################################
             if(test == 'none'){
+
                 ###########################################
                 ## store data matrix as test results
                 ## - values are log
@@ -2395,10 +2466,28 @@ shinyServer(
 
 
             ##cat(length(input$norm.data), '\n')
-            wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, global.param$repro.filt,  global.param$which.test,
-                                   paste( global.param$filter.type, ' < ', global.param$filter.value) ))
-            wf.tab <- data.frame(id=c('Log scale', 'Normalization', 'Reproduc.Filter', 'Test', 'Filter'), wf.tab)
-            rownames(wf.tab) <- c('Log scale', 'Normalization', 'Reproduc.Filter', 'Test', 'Filter')
+            if(global.param$filt.data == 'Reproducibility'){
+                wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, paste( global.param$filt.data, ' (alpha=',global.param$repro.filt.val, ')',sep=''), global.param$which.test,
+                                       paste( global.param$filter.type, ' < ', global.param$filter.value) ))
+                wf.tab <- data.frame(id=c('Log scale', 'Normalization', 'Filter data', 'Test', 'Filter results'), wf.tab)
+                ##rownames(wf.tab) <- c('Log scale', 'Normalization', 'Filter', 'Test', 'Filter')
+                rownames(wf.tab) <- wf.tab$id
+            }
+            if(global.param$filt.data == 'StdDev'){
+                wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, paste( global.param$filt.data, ' (SD=',global.param$sd.filt.val, '%)',sep=''), global.param$which.test,
+                                       paste( global.param$filter.type, ' < ', global.param$filter.value) ))
+                wf.tab <- data.frame(id=c('Log scale', 'Normalization', 'Filter data', 'Test', 'Filter results'), wf.tab)
+                ##rownames(wf.tab) <- c('Log scale', 'Normalization', 'Filter', 'Test', 'Filter')
+                rownames(wf.tab) <- wf.tab$id
+            }
+
+            if(global.param$filt.data == 'none'){
+                wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, paste( global.param$filt.data, sep=''), global.param$which.test,
+                                       paste( global.param$filter.type, ' < ', global.param$filter.value) ))
+                wf.tab <- data.frame(id=c('Log scale', 'Normalization', 'Filter data', 'Test', 'Filter results'), wf.tab)
+                ##rownames(wf.tab) <- c('Log scale', 'Normalization', 'Filter', 'Test', 'Filter')
+                rownames(wf.tab) <- wf.tab$id
+            }
 
 
             ## special case: no filter
@@ -3009,7 +3098,7 @@ shinyServer(
             ## plot
             withProgress({
                 setProgress(message = 'Processing...', detail= 'Calculating correlations')
-                my.multiscatter(tab, repro.filt=global.results$repro.filt, grp=grp,  grp.col.legend=global.param$grp.colors.legend, define.max=define.max, max.val=max.val, min.val=min.val)
+                my.multiscatter(tab, repro.filt=global.results$values.filtered, grp=grp,  grp.col.legend=global.param$grp.colors.legend, define.max=define.max, max.val=max.val, min.val=min.val)
             })
         }
         ################################

@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.6.2"
+VER="0.6.3"
 ## maximal filesize for upload
 MAXSIZEMB <<- 400
 ## list of strings indicating missing data
@@ -39,7 +39,8 @@ NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na",
 ## speparator tested in the uploaded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
-GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
+##GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
+GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"))
 ## number of characters to display in plots/tables for column names
 STRLENGTH <<- 20
 ## operating system
@@ -669,10 +670,47 @@ chopString <- function(string, nChar=10, add.dots=T)
 ##                  Standart deviation filter
 ##
 ## ######################################################################
-sd.filter <- function(tab, id.col, perc){
+sd.filter <- function(tab, grp.vec, id.col, sd.perc){
 
+    perc <- as.numeric(sd.perc)
 
+    ## extract groups
+    groups <- unique(grp.vec)
+
+    ## list to store index of filtered values per group
+    ##values.filt <- vector('list', length(groups))
+    ##names(values.filt) <- groups
+
+    ## ##########################################
+    ## get expression data
+    ids=tab[, id.col]
+    tab=tab[, names(grp.vec)]
+
+    ## #########################################
+    ## calculate sd across all measurements
+    sd.tab <- apply(tab, 1, sd, na.rm=T)
+
+    ## #########################################
+    ## determine percentile value used to filter
+    sd.perc.val <- quantile(sd.tab, sd.perc/100, na.rm=T)
+
+    ## #########################################
+    ## index of values to filter
+    filt.idx <- which(sd.tab < sd.perc.val)
+    not.filt.idx <- which(sd.tab >= sd.perc.val)
+
+    ##tab[filt.idx, ] <- NA
+
+    tab <- data.frame(ids, tab)
+    colnames(tab)[1] <- id.col
+
+    View(tab)
+    values.filt <- lapply(groups, function(x) filt.idx)
+
+    return(list(table=tab, values.filtered=values.filt))
 }
+
+
 
 ########################################################################
 ## 20160224
@@ -698,7 +736,7 @@ my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
     ## add rownames to tab
     ##rownames(tab) <- tab[, id.col]
 
-    tab.repro.filter <- tab
+    ##tab.repro.filter <- tab
    ## View(tab.repro.filter)
 
     ############################################

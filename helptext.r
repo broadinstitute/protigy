@@ -34,6 +34,12 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.6.3</b>
+<ul>
+<li>Commited to GitHub for debugging purposes. Do not use this verion!</li>
+<li>Re-organization of UI elements when setting up the analysis.</li>
+<li>Implementation of SD filter across all samples.</li>
+</ul>
 <b>v0.6.2</b>
 <ul>
 <li>UI elements for setting up an anlysis workflow are now dynamically generated, e.g. if reproducibility filter is chosen, onnly "One-sample modT" or "none" can be chosen.</li>

@@ -18,8 +18,8 @@
 ## cran.pckg <- c('pheatmap', 'RColorBrewer', 'hexbin', 'Hmisc', 'grid', 'scatterplot3d', 'plotly', 'WriteXLS', 'reshape','nlme', 'BlandAltmanLeh', 'mice','mixtools', 'mclust')
 ## bioc.pgkg <- c( 'preprocessCore', 'limma')
 ##
-## changelog: 20160614 included 'na' to indicate missing values
-##                     outsourced Mani's code to a separate file 'modT.r'
+## changelog: 20160614 - included 'na' to indicate missing values
+##                     - outsourced Mani's code to a separate file 'modT.r'
 ################################################################################################################
 
 source('modT.r')
@@ -31,16 +31,16 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.6.3"
+VER="0.6.4"
 ## maximal filesize for upload
-MAXSIZEMB <<- 400
+MAXSIZEMB <<- 500
 ## list of strings indicating missing data
 NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!")
 ## speparator tested in the uploaded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
-##GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
-GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"))
+GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
+##GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"))
 ## number of characters to display in plots/tables for column names
 STRLENGTH <<- 20
 ## operating system
@@ -49,6 +49,8 @@ OS <<- Sys.info()['sysname']
 TMPDIR <<- ifelse(OS=='Windows', "./", "/tmp/")
 ## app name
 APPNAME <<- sub('.*/','',getwd())
+## aoo directory
+APPDIR <<- getwd()
 ## directory to store data files
 DATADIR <<- ifelse(OS=='Windows', ".", "/local/shiny-data/")
 
@@ -107,6 +109,8 @@ plotHM <- function(res,
                    hm.title,
                    hm.scale,
                    style,
+                   hc.method='ward',
+                   hc.dist='euclidean',
                    filename=NA, cellwidth=NA, cellheight=NA, max.val=NA, fontsize_col, fontsize_row, ...){
 
     ## convert to data matrix
@@ -148,44 +152,44 @@ plotHM <- function(res,
     ## column clustering
     if(hm.clust == 'column'){
         Rowv=FALSE
-        colv.dist = dist(t(res), method='euclidean', diag=T, upper=T)
+        colv.dist = dist(t(res), method=hc.dist, diag=T, upper=T)
         na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
         if(length(na.idx.col)> 0){
             colv.dist <- colv.dist[-na.idx.col, ]
             colv.dist <- colv.dist[, -na.idx.col]
         }
-        Colv=hclust(as.dist(colv.dist), method='complete')
+        Colv=hclust(as.dist(colv.dist), method=hc.method)
     ## row clustering
     } else if( hm.clust == 'row'){
-        rowv.dist <- as.matrix(dist(res, method='euclidean', diag=T, upper=T))
+        rowv.dist <- as.matrix(dist(res, method=hc.dist, diag=T, upper=T))
         na.idx.row <- which(apply(as.matrix(rowv.dist), 1, function(x) sum(is.na(x))) > 0)
         if(length(na.idx.row)> 0){
             rowv.dist <- rowv.dist[-na.idx.row, ]
             rowv.dist <- rowv.dist[, -na.idx.row]
         }
-        Rowv=hclust(as.dist(rowv.dist), method='complete')
+        Rowv=hclust(as.dist(rowv.dist), method=hc.method)
         Colv=FALSE
 
     ## row and column clustering
     } else if(hm.clust == 'both'){
 
         ## row clustering
-        rowv.dist <- as.matrix(dist(res, method='euclidean', diag=T, upper=T))
+        rowv.dist <- as.matrix(dist(res, method=hc.dist, diag=T, upper=T))
         na.idx.row <- which(apply(as.matrix(rowv.dist), 1, function(x) sum(is.na(x))) > 0)
         if(length(na.idx.row)> 0){
             rowv.dist <- rowv.dist[-na.idx.row, ]
             rowv.dist <- rowv.dist[, -na.idx.row]
         }
-        Rowv=hclust(as.dist(rowv.dist), method='complete')
+        Rowv=hclust(as.dist(rowv.dist), method=hc.method)
 
         ## column clustering
-        colv.dist = dist(t(res), method='euclidean', diag=T, upper=T)
+        colv.dist = dist(t(res), method=hc.dist, diag=T, upper=T)
         na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
         if(length(na.idx.col)> 0){
             colv.dist <- colv.dist[-na.idx.col, ]
             colv.dist <- colv.dist[, -na.idx.col]
         }
-        Colv=hclust(as.dist(colv.dist), method='complete')
+        Colv=hclust(as.dist(colv.dist), method=hc.method)
     } else {
         Rowv=Colv=FALSE
     }
@@ -684,7 +688,7 @@ sd.filter <- function(tab, grp.vec, id.col, sd.perc){
     ## ##########################################
     ## get expression data
     ids=tab[, id.col]
-    tab=tab[, names(grp.vec)]
+    ##tab=tab[, names(grp.vec)]
 
     ## #########################################
     ## calculate sd across all measurements
@@ -699,12 +703,12 @@ sd.filter <- function(tab, grp.vec, id.col, sd.perc){
     filt.idx <- which(sd.tab < sd.perc.val)
     not.filt.idx <- which(sd.tab >= sd.perc.val)
 
-    ##tab[filt.idx, ] <- NA
+    tab[filt.idx, ] <- NA
 
     tab <- data.frame(ids, tab)
     colnames(tab)[1] <- id.col
 
-    View(tab)
+    ##View(tab)
     values.filt <- lapply(groups, function(x) filt.idx)
 
     return(list(table=tab, values.filtered=values.filt))

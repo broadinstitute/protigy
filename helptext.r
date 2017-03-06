@@ -34,6 +34,13 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.6.4</b>
+<ul>
+<li>Summary tab: number of significant hits are now reported correctly.</li>
+<li>Summary tab: Missing value distribution after log-transformation shown correctly.</li>
+<li>Changed cluster method from \'complete\' to \'ward\'.</li>
+<li>Fixed a bug that happend if a project is defined and shared in \'user-roles.txt\' but has been deleted from the server.</li>
+</ul>
 <b>v0.6.3</b>
 <ul>
 <li>Commited to GitHub for debugging purposes. Do not use this verion!</li>

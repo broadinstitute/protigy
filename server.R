@@ -1,7 +1,7 @@
 ################################################################################################################
 ## Filename: server.r
 ## Created: October 09, 2015
-## Author(s): Karsten Krug
+## Author(s): Karsten Krug, Ozan Aygun
 ##
 ## Purpose: Shiny-app to perform differential expression analysis, primarily on proteomics data, to perform
 ##          simple data QC, to interactively browse through the results and to download high-quality result
@@ -143,6 +143,7 @@ shinyServer(
             updateCheckboxInput(session, 'export.volc', 'Volcano plot', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.phist', 'P-value histogram', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.pca', 'PCA', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.pca.loadings', "PCA loadings (xls)",value =!input$export.toggle.all)
             updateCheckboxInput(session, 'export.ms', 'Multiscatter', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.excel', 'Excel sheet', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.cm', 'Correlation matrix', value=!input$export.toggle.all)
@@ -223,6 +224,7 @@ shinyServer(
                                                     checkboxInput('export.volc', 'Volcano plot',value=T),
                                                     checkboxInput('export.phist', 'P-value histogram',value=T),
                                                     checkboxInput('export.pca', 'PCA',value=T),
+                                                    checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
                                                     checkboxInput('export.ms', 'Multiscatter',value=T),
                                                     checkboxInput('export.excel', 'Excel sheet',value=T),
                                                     checkboxInput('export.cm', 'Correlation matrix',value=T),
@@ -265,6 +267,7 @@ shinyServer(
                                                     checkboxInput('export.volc', 'Volcano plot',value=T),
                                                     checkboxInput('export.phist', 'P-value histogram',value=T),
                                                     checkboxInput('export.pca', 'PCA',value=T),
+                                                    checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
                                                     checkboxInput('export.ms', 'Multiscatter',value=T),
                                                     checkboxInput('export.excel', 'Excel sheet',value=T),
                                                     checkboxInput('export.cm', 'Correlation matrix',value=T),
@@ -433,7 +436,11 @@ shinyServer(
                                             box(title='Loadings', solidHeader=T, status='primary', width=1000,## height=min( nrow(global.results$filtered), plotparams$pca.load.topn )*20+50,
                                                 sliderInput("pca.load.topn", "Choose number of loadings", 1, 100, 20),
                                                 plotOutput("pca.loadings")##, width=1000, height=min(nrow(global.results$filtered), plotparams$pca.load.topn )*20 )
-                                              ))
+                                              ),
+                                            box(title = "PCA loadings scatterplots",solidHeader = T, status = 'primary',width = 1000,
+                                                background = "navy",
+                                                plotOutput("scatter.pca.loadings")
+                                                ))
 
                                         )
                                       )
@@ -985,6 +992,32 @@ shinyServer(
                 dev.off()
 
                 })
+            }
+            
+            
+            ############################################################
+            ##                 PCA Loadings as excel sheet
+            ############################################################
+            
+            if(input$export.pca.loadings){
+                    withProgress(message='Exporting', detail='PCA loadings as Excel sheet',{
+                    if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+                    if(!is.null(error$msg)) return()
+                    if(length(global.param$grp) < 3) return()
+
+                    pca <- global.results$pca
+                    pca.loadings <- as.data.frame(pca$loadings)
+
+                    ## generate_filename
+                    fn.tmp <- sub(' ','_', paste(global.param$session.dir, '/', 'pcaLoadings_', sub(' ', '_',global.param$which.test),  ifelse(global.param$log.transform != 'none', paste('_', global.param$log.transform, sep=''), '_'), ifelse(global.param$norm.data != 'none', paste('_', global.param$norm.data, sep=''), '_'), ifelse(input$repro.filt=='yes', paste('_reprofilt', sep=''), '_'), sub(' .*', '', Sys.time()),".xlsx", sep=''))
+                    global.param$pcaloadings.ExcelFileName <- fn.tmp
+                    ## Excel
+                    WriteXLS("pca.loadings", ExcelFileName= fn.tmp, SheetNames= "pcaLoadings", row.names=T, BoldHeaderRow=T, AutoFilter=T)
+  
+                    cat("-- writing pca_loadings --")
+
+                    })
+                    
             }
             ############################################################
             ##                    boxplots
@@ -2315,6 +2348,8 @@ shinyServer(
             wf.tab
 
         })
+        
+        
         ###################################################################################
         ##
         ##                summary test results
@@ -3240,7 +3275,25 @@ shinyServer(
           plotPCAloadings( pca, topn, pca.x, pca.y, pca.z )
 
        })
-
+        
+        ####################################################
+        ##  PCA loadings as a scatter
+        ####################################################
+        output$scatter.pca.loadings <- renderPlot({
+        
+        if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+        if(!is.null(error$msg)) return()
+        if(length(global.param$grp) < 3) return()
+                
+        pca <- global.results$pca
+        pca.x <- as.numeric(sub('PC ','', input$pca.x))
+        pca.y <- as.numeric(sub('PC ','', input$pca.y))
+        pca.z <- as.numeric(sub('PC ','', input$pca.z))
+        topn=input$pca.load.topn 
+        
+        scatterPlotPCAloadings( pca, topn, pca.x, pca.y, pca.z )
+                      
+        })
         ###############################################
         ## static PCA plot
         ###############################################

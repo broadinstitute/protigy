@@ -1,0 +1,15 @@
+.sidebar {
+  color: #FFF;
+  /*position: fixed;*/
+  width: 220px;
+  white-space: wrap;
+  overflow: invisible;
+}
+
+.main-header {
+  position: fixed;
+  width:100%;
+}
+.content {
+  padding-top: 60px;
+}

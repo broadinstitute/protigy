@@ -1,0 +1,37 @@
+
+.shiny-progress .bar {
+  opacity: 1;
+  transition-duration: 250ms;
+  height: 50px;
+}
+
+.shiny-progress .progress-text {
+  position: absolute;
+  right: 10px;
+  height: 24px;
+  width: 240px;
+  background-color: #eef8ff;
+  margin: 0px;
+  padding: 2px 3px;
+  opacity: 0.85;
+}
+
+.shiny-progress .progress-text .progress-message {
+  padding: 0px 3px;
+  font-weight: bold;
+  font-size: 90%;
+}
+
+.shiny-progress .progress-text .progress-detail {
+  padding: 0px 3px;
+  font-size: 80%;
+}
+
+.footer {
+    position:fixed;
+    bottom:0px;
+    height:30px;
+    width:100%;
+    background-color:#171717;
+    color:white;
+}

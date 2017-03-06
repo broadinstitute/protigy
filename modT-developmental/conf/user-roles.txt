@@ -1,3 +1,0 @@
-project	owner	collaborator
-testproject	karsten@broadinstitute.org	fmundt@broadinstitute.org
-CBL	schenone@broadinstitute.org	karsten@broadinstitute.org

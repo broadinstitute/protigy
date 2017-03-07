@@ -1,7 +1,7 @@
 ################################################################################################################
 ## Filename: global.r
 ## Created: October 09, 2015
-## Author(s): Karsten Krug
+## Author(s): Karsten Krug, Ozan Aygun
 ##
 ## Purpose: Shiny-app to perform differential expression analysis, primarily on proteomics data, to perform
 ##          simple data QC, to interactively browse through the results and to download high-quality result
@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.6.4"
+VER="0.6.4.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -623,6 +623,74 @@ plotPCAloadings <- function(pca, topn, pca.x, pca.y, pca.z){
 
 }
 
+#####################################################
+##
+##            scatterPlotPCAloadings
+##
+#####################################################
+
+scatterPlotPCAloadings <- function(pca, topn, pca.x, pca.y, pca.z){
+        
+        ## extract loadings
+        load.pca.x <- pca$loadings[, pca.x]
+        load.pca.y <- pca$loadings[, pca.y]
+        load.pca.z <- pca$loadings[, pca.z]
+        
+        n=length(load.pca.x)
+        
+        ## ###################
+        ## choose top N
+        x <- rev(sort(abs( load.pca.x ), decreasing=T )[1:min(topn, n)])
+        y <- rev(sort(abs( load.pca.y ), decreasing=T )[1:min(topn, n)])
+        z <- rev(sort(abs( load.pca.z ), decreasing=T )[1:min(topn, n)])
+        
+        
+        tmp.pcaloadings <- as.data.frame(pca$loadings[,c(pca.x,pca.y,pca.z)])
+        names(tmp.pcaloadings) <- make.names(names(tmp.pcaloadings))
+        
+        PC1 <- names(tmp.pcaloadings)[pca.x]
+        PC2 <- names(tmp.pcaloadings)[pca.y]
+        PC3 <- names(tmp.pcaloadings)[pca.z]
+        
+        my.scatter <- function(datafr,xa,ya,topx,topy){
+                
+                #scatterplot dimensions pairwise (pairs passed to function as x,y)
+                x.axis <- xa ; y.axis <- ya ;topxy <- c(names(topx),names(topy))
+                # This is the data.frame of the TopN loadings to be marked
+                mark.frame <- tmp.pcaloadings[which(row.names(tmp.pcaloadings) %in% topxy),]
+                
+                xmin = min(datafr[,x.axis]);xmax = max(datafr[,x.axis])
+                ymin = min(datafr[,y.axis]);ymax = max(datafr[,y.axis])
+                
+                #make the scatterplot
+                ggplot(data = datafr,aes_string(x = x.axis,y = y.axis))+
+                        geom_hline(yintercept = 0, linetype = "dashed",size =0.7)+ 
+                        geom_vline(xintercept = 0, linetype = "dashed",size = 0.7)+
+                        geom_point(color = "navy",alpha = 0.15,size=0.1, show.legend = FALSE)+
+                        geom_label_repel(data = mark.frame, size = 3, label.r = unit(0.45,"lines"),
+                                         color = "deeppink", bg = "plum1",
+                                         segment.size = 0.1, box.padding = unit(1,"lines"),
+                                         aes(label = rownames(mark.frame)))+
+                        geom_point(data = mark.frame,
+                                   color = "deeppink",
+                                   size = 2,show.legend = FALSE)+
+                        xlim(c(xmin-0.01,xmax+0.01))+ylim(c(ymin-0.01,ymax+0.01))+
+                        theme_bw()+
+                        theme(panel.grid.major = element_blank(),
+                              panel.grid.minor = element_blank()
+                        )
+                #mark the TopN ids
+                
+        }
+        
+        # call my.scatter 3 times to make 3 ggplots
+        g1 <- my.scatter(tmp.pcaloadings,PC1,PC2,x,y)
+        g2 <- my.scatter(tmp.pcaloadings,PC2,PC3,y,z)
+        g3 <- my.scatter(tmp.pcaloadings,PC1,PC3,x,z)
+        #combine them in a row by using multiplot() function
+        multiplot(g1,g2,g3,cols = 3)
+}
+
 
 #####################################################
 ## color ramp
@@ -916,4 +984,55 @@ makeProfileplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, ce
     }
 
     cat('\n-- makeProfileplot exit --\n')
+}
+
+
+##############################################
+# Multiple plot function
+##############################################
+###################################################################################
+# Multiple plot function
+# Source: R-cookbook
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+###################################################################################
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+        library(grid)
+        
+        # Make a list from the ... arguments and plotlist
+        plots <- c(list(...), plotlist)
+        
+        numPlots = length(plots)
+        
+        # If layout is NULL, then use 'cols' to determine layout
+        if (is.null(layout)) {
+                # Make the panel
+                # ncol: Number of columns of plots
+                # nrow: Number of rows needed, calculated from # of cols
+                layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                                 ncol = cols, nrow = ceiling(numPlots/cols))
+        }
+        
+        if (numPlots==1) {
+                print(plots[[1]])
+                
+        } else {
+                # Set up the page
+                grid.newpage()
+                pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+                
+                # Make each plot, in the correct location
+                for (i in 1:numPlots) {
+                        # Get the i,j matrix positions of the regions that contain this subplot
+                        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+                        
+                        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                                        layout.pos.col = matchidx$col))
+                }
+        }
 }

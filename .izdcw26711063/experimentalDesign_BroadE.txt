@@ -1,0 +1,51 @@
+Column.Name	Experiment
+LumosMS20p4..126.130C..T1.Rep1	T1
+LumosMS20p4..126.130N..4A_CRISPRCTRL_NoTreatment.1B_PPM1DMut_Notreatment	
+LumosMS20p4..126.131..4A_CRISPRCTRL_NoTreatment.4B_CRISPRCTRL_NoTreatment	
+LumosMS20p4..127N.126..2A_PPM1DMut_AraC.4A_CRISPRCTRL_NoTreatment	
+LumosMS20p4..127N.130C..T2.Rep1	T2
+LumosMS20p4..127N.130N..2A_PPM1DMut_AraC.1B_PPM1DMut_Notreatment	
+LumosMS20p4..127N.131..2A_PPM1DMut_AraC.4B_CRISPRCTRL_NoTreatment	
+LumosMS20p4..127C.126..3A_PPM1DMut_AraC.PPM1DInhibitor.4A_CRISPRCTRL_NoTreatment	
+LumosMS20p4..127C.130C..T3.Rep1	T3
+LumosMS20p4..127C.130N..3A_PPM1DMut_AraC.PPM1DInhibitor.1B_PPM1DMut_Notreatment	
+LumosMS20p4..127C.131..3A_PPM1DMut_AraC.PPM1DInhibitor.4B_CRISPRCTRL_NoTreatment	
+LumosMS20p4..128N.126..T4.Rep1	T4
+LumosMS20p4..128N.130C..5A_CRISPRCTRL_AraC.1A_PPM1DMut_Notreatment	
+LumosMS20p4..128N.130N..5A_CRISPRCTRL_AraC.1B_PPM1DMut_Notreatment	
+LumosMS20p4..128N.131..5A_CRISPRCTRL_AraC.4B_CRISPRCTRL_NoTreatment	
+LumosMS20p4..128C.126..3B_PPM1DMut_AraC.PPM1DInhibitor.4A_CRISPRCTRL_NoTreatment	
+LumosMS20p4..128C.130C..3B_PPM1DMut_AraC.PPM1DInhibitor.1A_PPM1DMut_Notreatment	
+LumosMS20p4..128C.130N..T3.Rep2	T3
+LumosMS20p4..128C.131..3B_PPM1DMut_AraC.PPM1DInhibitor.4B_CRISPRCTRL_NoTreatment	
+LumosMS20p4..129N.126..5B_CRISPRCTRL_AraC.4A_CRISPRCTRL_NoTreatment	
+LumosMS20p4..129N.130C..5B_CRISPRCTRL_AraC.1A_PPM1DMut_Notreatment	
+LumosMS20p4..129N.130N..5B_CRISPRCTRL_AraC.1B_PPM1DMut_Notreatment	
+LumosMS20p4..129N.131.T4.Rep2	T4
+LumosMS20p4..129C.126..2B_PPM1DMut_AraC.4A_CRISPRCTRL_NoTreatment	
+LumosMS20p4..129C.130C..2B_PPM1DMut_AraC.1A_PPM1DMut_Notreatment	
+LumosMS20p4..129C.130N..T2.Rep2	T2
+LumosMS20p4..129C.131..2B_PPM1DMut_AraC.4B_CRISPRCTRL_NoTreatment	
+LumosMS20p4..130N.126..1B_PPM1DMut_Notreatment.4A_CRISPRCTRL_NoTreatment	
+LumosMS20p4..130N.130C..1B_PPM1DMut_Notreatment.1A_PPM1DMut_Notreatment	
+LumosMS20p4..130N.131..1B_PPM1DMut_Notreatment.4B_CRISPRCTRL_NoTreatment	
+LumosMS20p4..130C.126..1A_PPM1DMut_Notreatment.4A_CRISPRCTRL_NoTreatment	
+LumosMS20p4..130C.130N..1A_PPM1DMut_Notreatment.1B_PPM1DMut_Notreatment	
+LumosMS20p4..130C.131..1A_PPM1DMut_Notreatment.4B_CRISPRCTRL_NoTreatment	
+LumosMS20p4..131.126..4B_CRISPRCTRL_NoTreatment.4A_CRISPRCTRL_NoTreatment	
+LumosMS20p4..131.130C..4B_CRISPRCTRL_NoTreatment.1A_PPM1DMut_Notreatment	
+LumosMS20p4..131.130N..T1.Rep2	T1
+id	
+accession_number	
+numColumnsProteinObserved	
+numSpectraProteinObserved	
+numPepsUnique	
+accession_numbers	
+species	
+protein_mw	
+subgroupNum	
+scoreUnique	
+entry_name	
+LumosMS20p4.unique_peptides	
+LumosMS20p4.numSpectra	
+LumosMS20p4.totalIntensity	

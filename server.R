@@ -130,14 +130,14 @@ shinyServer(
 
                 return( (tot-free)/tot)
             }
-            getCPUutil <- function()
-                ##return(as.numeric(system("mpstat -P ALL | awk '/all/ {print $4}'", intern=T)))
-                return(as.numeric(system( "mpstat 1 1 | grep '[A|P]M.*all' | awk '{print $4}'", intern=T )))
+           ## getCPUutil <- function()
+           ##     ##return(as.numeric(system("mpstat -P ALL | awk '/all/ {print $4}'", intern=T)))
+           ##     return(as.numeric(system( "mpstat 1 1 | grep '[A|P]M.*all' | awk '{print $4}'", intern=T )))
 
 
             ## update every 1 seconds
-            RAMused <- reactivePoll(2000, session, getFreeMem, getUsedMemPerc)
-            CPUused <- reactivePoll(2000, session, getCPUutil, getCPUutil)
+            RAMused <- reactivePoll(10000, session, getFreeMem, getUsedMemPerc)
+            ##CPUused <- reactivePoll(2000, session, getCPUutil, getCPUutil)
 
         }
 
@@ -586,7 +586,7 @@ shinyServer(
                                                                )
                                                        ),
                                                        fluidRow(
-                                                           box(title='Multiscatter', solidHeader=T, status="primary", width=100*(ncol(data.frame(global.input$table))-1), height=130*(ncol(data.frame(global.input$table))-1),
+                                                           box(title='Multiscatter', solidHeader=T, status="primary", width=100*(ncol(data.frame(global.input$table))-1), height=130*(ncol(data.frame(global.input$table)) - 1),
                                                                column(12, plotOutput("multi.scatter"))
                                                                )
                                                        )
@@ -607,7 +607,7 @@ shinyServer(
                                                                      column(5))
                                                              ),
                                                              fluidRow(
-                                                                 box(title='Correlation matrix', solidHeader=T, status="primary", width=1200, height=1000,
+                                                                 box(title='Correlation matrix', solidHeader=T, status="primary", width=dynamicWidthHM( length(global.param$grp) ), height=dynamicWidthHM( length(global.param$grp) ),
                                                                      column(12, plotOutput("correlation.matrix"))
                                                                  )
                                                              )
@@ -620,9 +620,9 @@ shinyServer(
 
                                                          fluidPage(
                                                              fluidRow(
-                                                                 column(1,  selectInput( "cm.upper", "Upper triangle", c("pearson","spearman","kendall"), selected="pearson")),
-                                                                 column(1,  selectInput( "cm.lower", "Lower triangle", c("pearson","spearman","kendall"), selected="spearman")),
-                                                                 column(1,  checkboxInput('cm.numb', 'Show numbers', value=FALSE)),
+                                                                 column(1,  selectInput( "cm.upper", "Upper triangle", c("pearson","spearman","kendall"), selected=plotparams$cm.upper)),
+                                                                 column(1,  selectInput( "cm.lower", "Lower triangle", c("pearson","spearman","kendall"), selected=plotparams$cm.lower)),
+                                                                 column(1,  checkboxInput('cm.numb', 'Show numbers', value=plotparams$cm.numb)),
                                                                  column(9)
                                                              ),
                                                              fluidRow(
@@ -753,7 +753,7 @@ shinyServer(
 
                         ## check if the folder exists (if not, 'user-roles.txt' has not been updated)
                         if(dir.exists(dir.owner)){
-                            tmp <- grep( paste(user.roles$project[ idx[i] ], '_session.RData', sep='' ),
+                            tmp <- grep( paste(user.roles$project[ idx[i] ], '_session.*RData$', sep='' ),
                                         dir( dir.owner, full.names=T, recursive=T), value=T)
                             ##search.path[i+1] <- sub('^(.*/).*' , '\\1', tmp)
                             search.path <- c( search.path, sub('^(.*/).*' , '\\1', tmp) )
@@ -807,7 +807,7 @@ shinyServer(
 
             saved.sessions <- list()
             for(i in 1:length(search.path))
-                saved.sessions[[i]] <- grep( '_session.RData', dir( search.path[i], full.names=T, recursive=T ), value=T )
+                saved.sessions[[i]] <- grep( '_session.*RData$', dir( search.path[i], full.names=T, recursive=T ), value=T )
             saved.sessions <- unlist(saved.sessions)
 
 
@@ -1027,8 +1027,13 @@ shinyServer(
             #############################################################
             if(input$export.cm){
                 withProgress(message='Exporting', detail='correlation matrix',{
-                fn.cm <- paste(global.param$session.dir, '/correlation_matrix_lo_',input$cm.lower, '_up_',input$cm.upper, '.pdf', sep='')
-                plotCorrMat(lower=input$cm.lower, upper=input$cm.upper, display_numbers=F, filename=fn.cm)
+                fn.cm <- paste(global.param$session.dir, '/correlation_matrix_lo_',plotparams$cm.lower, '_up_',plotparams$cm.upper, '.pdf', sep='')
+                ##                plotCorrMat(lower=input$cm.lower, upper=input$cm.upper, display_numbers=F, filename=fn.cm)
+                ## cat('------------ ', dynamicWidthHM(length(global.param$grp), unit='in'), '\n')
+
+                plotCorrMat(lower=input$cm.lower, upper=input$cm.upper, display_numbers=input$cm.numb, filename=fn.cm, width=dynamicWidthHM(length(global.param$grp), unit='in'), height=dynamicWidthHM(length(global.param$grp), unit='in') )
+
+
                 })
             }
             ############################################################
@@ -1048,10 +1053,15 @@ shinyServer(
                     hm.title <- paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
 
                     if(input$hm.max){
-                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, cellheight=min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
+                        ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, cellheight=min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
+                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow(global.results$filtered), unit='in'), 20 ) )
+
+
 
                     } else {
-                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm, cellheight= min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
+
+                        ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm, cellheight= min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
+                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm,  width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow( global.results$filtered ), unit='in'), 20 ))
                     }
                     })
                 } ## end if nrow(res)>3
@@ -1185,8 +1195,6 @@ shinyServer(
 
                     fn.ms <- paste(global.param$session.dir, 'multiscatter.pdf', sep='/')
                     pdf(fn.ms, height=120*ncol(global.input$table)*(11/800), width=120*ncol(global.input$table)*(11/800))
-
-                    ##my.multiscatter(tab, repro.filt=global.results$filtered.values, grp=grp,  grp.col.legend=global.param$grp.colors.legend, define.max=define.max, max.val=max.val, min.val=min.val)
                     plotMultiScatter( define.max=input$ms.max, min.val=input$ms.min.val, max.val=input$ms.max.val )
                     dev.off()
                 })
@@ -1217,9 +1225,9 @@ shinyServer(
                  ############################################
                  ## mod F
                 } else {
+
                     pval <- res.all[, paste('P.Value')]
                     hist(pval, breaks=50, main=paste('Histogram of P-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='P-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
-                    ## legend('top', legend=paste(groups), cex=2)
                 }
                 dev.off()
                 })
@@ -1231,6 +1239,7 @@ shinyServer(
             #########################################################
             if(input$export.excel){
                 withProgress(message='Exporting', detail='Excel sheet',{
+
                     res.comb <- global.results$data$output
                     tmp <- sort(global.param$grp)
 
@@ -1240,7 +1249,14 @@ shinyServer(
                     expDesign <- data.frame(Column=names(tmp), Experiment=tmp)
 
                     ## generate_filename
-                    fn.tmp <- sub(' ','_', paste(global.param$session.dir, '/', 'results_', sub(' ', '_',global.param$which.test),  ifelse(global.param$log.transform != 'none', paste('_', global.param$log.transform, sep=''), '_'), ifelse(global.param$norm.data != 'none', paste('_', global.param$norm.data, sep=''), '_'), ifelse(input$repro.filt=='yes', paste('_reprofilt', sep=''), '_'), sub(' .*', '', Sys.time()),".xlsx", sep=''))
+                    fn.tmp <- sub(' ','_',
+                                  paste(global.param$session.dir, '/', 'results_',
+                                        sub(' ', '_',global.param$which.test), '_',
+                                        ifelse(global.param$log.transform != 'none', paste( global.param$log.transform, '_', sep=''), '_'),
+                                        ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
+                                        ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
+                                        sub(' .*', '', Sys.time()),".xlsx", sep=''))
+
                     global.param$ExcelFileName <- fn.tmp
                     ## Excel
                     WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=fn.tmp, FreezeRow=1, FreezeCol=1, SheetNames=c('modT', 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
@@ -1292,7 +1308,7 @@ shinyServer(
             ## no label present
             if(is.null(global.param$label)){
 
-                fn.tmp <- paste(global.param$session.dir, paste('session', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep='/')
+                fn.tmp <- paste(global.param$session.dir, paste('session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep='/')
 
                 save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=fn.tmp)
                 fn.zip <- paste( gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
@@ -1301,10 +1317,11 @@ shinyServer(
             ## label present
             if(!is.null(global.param$label) | nchar(global.param$label) == 0){
 
-                fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
+                fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
 
                 save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=fn.tmp)
                 fn.zip <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
+
             }
 
             #########################################################
@@ -1333,9 +1350,9 @@ shinyServer(
             ## export
             writeLines(params.txt, con=paste(global.param$session.dir, 'params.txt', sep='/'))
 
-            ##############################################################
+            ## ############################################################
             ##            create an archive
-            ##############################################################
+            ## ############################################################
             fn.all <- grep('pdf$|xlsx$|txt$|gct$|RData$',  dir(global.param$session.dir) , value=T, ignore.case=T)
 	    fn.all.abs <- grep('pdf$|xlsx$|txt$|gct$|RData$', dir(global.param$session.dir, full.names=T, ignore.case=T), value=T)
 
@@ -1385,7 +1402,6 @@ shinyServer(
         observeEvent( input$id.col ,{
 
             if( is.null( global.input$table) | is.null(input$id.col.value) ) return()
-
 
             ## store name of id column
             global.param$id.col.value <- input$id.col.value
@@ -2521,10 +2537,15 @@ shinyServer(
             #######################################
             ## moderated F
             } else {
-                if(filter.type == 'adj.p')
-                    test.tab=data.frame(  sum(res[, 'adj.P.Val'] < filter.value) )
-                if(filter.type == 'nom.p')
-                    test.tab=data.frame(  sum(res[, 'P.Value'] < filter.value) )
+                if(filter.type == 'adj.p'){
+                    test.tab=data.frame(  sum(res[, 'adj.P.Val'] < filter.value, na.rm=T) )
+                    ##sum.na <- sum(is.na(res[, 'adj.P.Val']))
+                    ##if( sum.na> 0)
+                    ##    test.tab=paste(test.tab, '(', ,')')
+                }
+                if(filter.type == 'nom.p'){
+                    test.tab=data.frame(  sum(res[, 'P.Value'] < filter.value, na.rm=T) )
+                }
                 if(filter.type == 'top.n')
                     return(NULL)
                 if(filter.type == 'none')
@@ -2532,7 +2553,6 @@ shinyServer(
 
                 test.tab <- data.frame(test.tab)
 
-                ##rownames(test.tab) <- chopString( paste(unique(global.param$grp), collapse=' vs. '), 20)
                 test.tab <- data.frame(id=chopString( paste(unique(global.param$grp), collapse=' vs. '), 20), test.tab)
                 colnames(test.tab) <- c('','Number significant')
                 return(test.tab)
@@ -3117,7 +3137,8 @@ shinyServer(
             if(is.null(global.results$data)) return()
              withProgress({
                  setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                 plotCorrMat(lower=input$cm.lower, upper=input$cm.upper, display_numbers=input$cm.numb)
+                 ##plotCorrMat(lower=input$cm.lower, upper=input$cm.upper, display_numbers=input$cm.numb, width=dynamicWidthHM( length(global.param$grp), unit='in'), height=dynamicWidthHM( length(global.param$grp), unit='in' ))
+                 plotCorrMat(lower=input$cm.lower, upper=input$cm.upper, display_numbers=input$cm.numb, width=dynamicWidthHM( length(global.param$grp), unit='in'), height=dynamicWidthHM( length(global.param$grp), unit='in' ))
              })
         }, width=1200, height=1000)
 
@@ -3137,7 +3158,9 @@ shinyServer(
         ###################################################
         ## correlation matrix
         ###################################################
-        plotCorrMat <- function(filename=NA, lower=c('pearson', 'spearman', 'kendall', 'pcor'), upper=c('pearson', 'spearman', 'kendall', 'pcor'), trans=F, display_numbers=T){
+        plotCorrMat <- function(filename=NA, lower=c('pearson', 'spearman', 'kendall', 'pcor'), upper=c('pearson', 'spearman', 'kendall', 'pcor'), trans=F, display_numbers=T, width=12, height=12){
+
+
             cat('\n-- plotCorrMat --\n')
 
             ## dataset
@@ -3188,17 +3211,20 @@ shinyServer(
             setHook("grid.newpage", function() pushViewport(viewport(x=1,y=1,width=0.9, height=0.9, name="vp", just=c("right","top"))))
             if(trans)
                 pheatmap(cm, fontsize_row=10, fontsize_col=10,
-                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, width=12, height=12)
+                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, width=width, height=height)
             else
                 pheatmap(cm, fontsize_row=10, fontsize_col=10,
-                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', annotation_col=anno, annotation_colors=anno.color,  annotation_row=anno, display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, gaps_col=gaps.column, gaps_row=gaps.row, width=12, height=12)
+                     cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', annotation_col=anno, annotation_colors=anno.color,  annotation_row=anno, display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, gaps_col=gaps.column, gaps_row=gaps.row, width=width, height=height)
             setHook("grid.newpage", NULL, "replace")
 
             ## add corr coeff
             grid.text(paste(match.arg(upper)), y=.995, x=.4, gp=gpar(fontsize=25))
             grid.text(paste(match.arg(lower)), x=-0.01, rot=90, gp=gpar(fontsize=25))
         }
-         ## ################################################################################
+
+
+
+        ## ################################################################################
         ## boxplots: correlations per group
         ## ################################################################################
         output$corr.box.group <- renderPlot({
@@ -3535,7 +3561,6 @@ shinyServer(
             ##points( tab[repro.ids, 1], tab[repro.ids, 2], col='red' )
             points( tab[repro.idx2, 1], tab[repro.idx2, 2], col='blue' )
             points( tab[repro.idx3, 1], tab[repro.idx3, 2], col='green' )
-
 
 
         })

@@ -1,3 +1,4 @@
 project	owner	collaborator
 CBL	schenone@broadinstitute.org	karsten@broadinstitute.org
-PDE3A-BigSheet-experiment	hartigan@broadinstitute.org	schenone@broadinstitute.org;karsten@broadinstitute.org
+PDE3A-BigSheet-experiment	hartigan@broadinstitute.org	schenone@broadinstitute.org;karsten@broadinstitute.org;heidig@broadinstitute.org;xwu@broadinstitute.org
+lncRNA	schenone@broadinstitute.org	karsten@broadinstitute.org;mathias@broadinstitute.org

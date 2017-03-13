@@ -34,6 +34,13 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.6.5</b>
+<ul>
+<li>Fixed a bug that reaulted in not listing all saved session for a user.</li>
+<li>Worked on the filenames of exported RData and Excel files.</li>
+<li>modF: In case of too many missing values the test would not return a p-value which resulted in NA for th enumber of significant hits on the summary page.</li>
+<li></li>
+</ul>
 <b>v0.6.4</b>
 <ul>
 <li>Summary tab: number of significant hits are now reported correctly.</li>

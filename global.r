@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.6.4"
+VER="0.6.5"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -39,7 +39,7 @@ NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na",
 ## speparator tested in the uploaded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
-GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
+GRPCOLORS <<- c(RColorBrewer::brewer.pal(8, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
 ##GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"))
 ## number of characters to display in plots/tables for column names
 STRLENGTH <<- 20
@@ -111,7 +111,7 @@ plotHM <- function(res,
                    style,
                    hc.method='ward',
                    hc.dist='euclidean',
-                   filename=NA, cellwidth=NA, cellheight=NA, max.val=NA, fontsize_col, fontsize_row, ...){
+                   filename=NA, cellwidth=NA, cellheight=NA, max.val=NA, fontsize_col, fontsize_row, height=height, width=width, ...){
 
     ## convert to data matrix
     res <- data.matrix(res)
@@ -235,7 +235,7 @@ plotHM <- function(res,
     ############################################
     ## plot the heatmap
     pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
-             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, labels_row=chopString(rownames(res), STRLENGTH), na_col='black', scale='none')
+             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, labels_row=chopString(rownames(res), STRLENGTH), na_col='black', scale='none', height=height, width=width)
 }
 
 
@@ -796,15 +796,25 @@ my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
 ##################################################################
 ## function to dynamically determine the height (in px) of the heatmap
 ## depending on the number of genes
-dynamicHeightHM <- function(n){
+dynamicHeightHM <- function(n, unit=c('px', 'in')){
+
+    unit=match.arg(unit)
+
     if(is.null(n))
         return(0)
+
+    ## pixel
     if( n < 50)
         height=500
     if( n >= 50 & n <= 100)
         height=800
     if(n >=100)
         height=800+n
+
+    ## inches
+    if(unit == 'in'){
+        height=height*11/800
+    }
     return(height)
 }
 ##################################################################
@@ -832,9 +842,22 @@ cwHM <- function(n){
 ##################################################################
 ## function to dynamically determine the width of the heatmap
 ## depending on the number of data columns
-dynamicWidthHM <- function(n){
+dynamicWidthHM <- function(n, style=c('none', 'One-sample mod T', 'Two-sample mod T', 'mod F'), unit=c('px', 'in')){
+
+    style=match.arg(style)
+    unit=match.arg(unit)
+
     cw <- cwHM(n)
-    return(max(cw * n, 1000))
+
+    width=max(cw * n, 1000)
+
+    if(style == 'One-sample mod T')
+        width=width+200
+
+    if(unit == 'in')
+        width=width*11/800
+
+    return(width)
 }
 
 

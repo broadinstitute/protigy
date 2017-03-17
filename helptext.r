@@ -34,12 +34,20 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.6.6</b>
+<ul>
+<li>Fixed the \"incorrect number of dimensions\"-error in the table preview tab, if only a single annotation column is present.</li>
+<li>Prevented the automatic switch to the \"Summary\"-tab after changing the filter.</li>
+<li>Related to the previous point, the result filter is now implemented as observer rather than a reactive function.</li>
+<li>Summary-tab: fixed the workflow box showing NA when selecting filter \"none\" or \"top.n\".</li>
+<li>Dynamic UI elements will not switch back to \"One-sample modT\" after running an analysis.</li>
+<li>Table-tab: switched to DT package.</li>
+</ul>
 <b>v0.6.5</b>
 <ul>
-<li>Fixed a bug that reaulted in not listing all saved session for a user.</li>
+<li>Fixed a bug that resulted in not listing all saved session for a user.</li>
 <li>Worked on the filenames of exported RData and Excel files.</li>
-<li>modF: In case of too many missing values the test would not return a p-value which resulted in NA for th enumber of significant hits on the summary page.</li>
-<li></li>
+<li>modF: In case of too many missing values the test would not return a p-value which resulted in NA for the enumber of significant hits on the summary page.</li>
 </ul>
 <b>v0.6.4</b>
 <ul>

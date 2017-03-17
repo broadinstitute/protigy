@@ -135,6 +135,7 @@ shinyUI(
                    ## the actual content
                    uiOutput('navbar'),
 
+
                    tags$head(tags$style(HTML('
 
                       /* main sidebar */
@@ -150,6 +151,14 @@ shinyUI(
                       .skin-blue .main-header .navbar {
                               background-color: #1477C5;
                               }
+
+                    # /* scroll bar  */
+                    # .sidebar {
+                    #          height: 90vh; overflow-x: auto
+                    # }
+
+
+
                   #     /* active selected tab in the sidebarmenu */
                   #     .skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
                   #                            background-color: #ECF0F5;

@@ -81,6 +81,7 @@ library(grid)
 library(ChemometricsWithR)
 library(scatterplot3d)
 library(plotly)
+library(ggrepel)
 ## export
 library(WriteXLS)
 ## reproducibility filter

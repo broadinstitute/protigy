@@ -35,13 +35,21 @@ shinyServer(
 
         ## test results
         global.results <-  reactiveValues(
+
+            ## data tables
             data=NULL,
             table.norm=NULL,
-            export.results=F,
-            table.repro.filt=NULL,
-            pca=NULL,
             table.log=NULL,
-            repro.filt=NULL
+            table.repro.filt=NULL,
+            filtered=NULL,
+
+            export.results=F,
+            pca=NULL,
+            repro.filt=NULL,
+
+            ## ids and gene names
+            ids=NULL,
+            gene.names=NULL
         )
         ## input data
         global.input <- reactiveValues()
@@ -112,7 +120,12 @@ shinyServer(
 
         ## coordinates in volcano plot
         volc <- reactiveValues()
+        volc.brush <- reactiveValues()
 
+        ## inweb
+        inweb <- reactiveValues(
+            iw=readRDS('ppi/core.psimitab.rds')
+        )
 
         ## ###################################################
         ##
@@ -178,6 +191,7 @@ shinyServer(
             updateCheckboxInput(session, 'export.volc', 'Volcano plot', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.phist', 'P-value histogram', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.pca', 'PCA', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.pca.loadings', 'PCA loadings (xls)', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.ms', 'Multiscatter', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.excel', 'Excel sheet', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.cm', 'Correlation matrix', value=!input$export.toggle.all)
@@ -214,12 +228,24 @@ shinyServer(
 
 
         })
+
         ## #########################################################
         ## logout user
         output$logout <- renderMenu({
             if(is.null(session$user)) return()
             notificationItem('Logout', icon=shiny::icon("sign-out", "fa-1x"), status='success', href="__logout__")
         })
+
+        ## #########################################################
+        ## session name
+        output$session.name <- renderMenu({
+            if(is.null( global.param$label)) return()
+            ##session <- global.param$session
+
+            notificationItem(global.param$label, shiny::icon("star", "fa-1x", lib='glyphicon'), status='success')
+        })
+
+
 
         ################################################################################
         ##
@@ -367,52 +393,84 @@ shinyServer(
             ##      tabs for the volcano plots
             ## NOT for F test
             ############################################
-           ## if(global.param$which.test != 'mod F'){
-                volc.tabs <- list()
-                volc.tabs[[1]] <- 'Volcanos'
-                for(i in 1:length(unique(groups.comp))){
-                    volc.tabs[[i+1]]=tabPanel(paste0( groups.comp[i] ),
+
+            volc.tabs <- list()
+            volc.tabs[[1]] <- 'Volcanos'
+            for(i in 1:length(unique(groups.comp))){
+                volc.tabs[[i+1]]=tabPanel(paste0( groups.comp[i] ),
 
                                           fluidPage(
-                                            fluidRow(
-                                            box( title='', status = 'primary', solidHeader = F, width=12,
-                                            fluidRow(
+
+                                              ## ###########################################################
+                                              ## volcano plotting parameters
+                                              box( title='', status = 'primary', solidHeader = T, width=12,
+                                                 fluidRow(
 
 
-                                                  column(3, numericInput( paste("cex.volcano",groups.comp[i], sep='.'), "Point size", value=plotparams$volc.ps, min=1, step=1)),
-                                                  ##column(1, numericInput( paste("opac.volcano",groups.comp[i],sep='.'), "Opacity %", value=50, min=0, max=100, step=10)),
-                                                  column(3, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=plotparams$volc.ls, min=.1, step=.1)),
-                                                  column(3, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=plotparams$volc.grid)),
-                                                  column(3, numericInput("max.logP", "Max. Log10(P-value)", value=plotparams$volc.maxp, min=20, max=300, step=10) )
+                                                          column(3, numericInput( paste("cex.volcano",groups.comp[i], sep='.'), "Point size", value=plotparams$volc.ps, min=1, step=1, width='100px')),
+                                                          ##column(1, numericInput( paste("opac.volcano",groups.comp[i],sep='.'), "Opacity %", value=50, min=0, max=100, step=10)),
+                                                          column(3, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=plotparams$volc.ls, min=.1, step=.1, width='100px')),
+                                                          column(3, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=plotparams$volc.grid, width='100px')),
+                                                          column(3, numericInput( paste( "max.logP", groups.comp[i], sep='.'), "Max. Log10(P-value)", value=plotparams$volc.maxp, min=20, max=300, step=10, width='100px') )
 
-                                                  ##column(1, downloadButton(paste('downloadVolcano', groups.comp[i],sep='.'), 'Download (pdf)'))
-                                              ))),
-                                            fluidRow(
+                                                          ##column(1, downloadButton(paste('downloadVolcano', groups.comp[i],sep='.'), 'Download (pdf)'))
+                                                      )
+                                                  ),
 
-                                              column(width=8, box( width=NULL,  title='Volcano plot', status = 'primary', solidHeader = T,
-                                                 ##plotOutput( paste("volcano",groups.comp[i], sep='.'), width=600, height=600, click=paste('plot_click', groups.comp[i], sep='.'), hover=hoverOpts(id=paste('plot_hover', groups.comp[i], sep='.'), delay=10) )
-                                                 plotOutput( paste("volcano",groups.comp[i], sep='.'), height=600, click=paste('plot_click', groups.comp[i], sep='.'), hover=hoverOpts(id=paste('plot_hover', groups.comp[i], sep='.'), delay=10) )
+                                              ## ###########################################################
+                                              ## PPI stuff
+                                              box( title='Protein-protein interactions (InWeb)', status = 'primary', width=12, collapsible = TRUE, solidHeader=T, collapsed=T,
+                                                  fluidRow(
+                                                      ##View(global.results$table[,global.param$id.col.value])
+                                                      ##column(3, textInput(paste('ppi.bait', groups.comp[i], sep='.'), 'Bait protein', value='')),
+                                                      column(3,
+                                                             selectizeInput(paste('ppi.bait', groups.comp[i], sep='.'), 'Bait protein',
 
-                                                 )),
-                                              column(width=4, box(width=NULL,  title='Selected points', status = 'primary', solidHeader = T,
-                                                     tableOutput(paste('volc.tab.selected', groups.comp[i], sep='.'))
-                                              )))
+                                                                            ##choices=rownames(global.results$filtered),
+                                                                            choices=global.results$id.map$id.concat,
+                                                                            selected=NULL,
+                                                                            options = list(
+                                                                                maxOptions=5,
+                                                                                placeholder='Type HGNC / UniProt accession',
+                                                                                onInitialize = I('function() { this.setValue(""); }')
+                                                                            )
+                                                                            )
+                                                             ),
+                                                      column(3, checkboxInput( paste('ppi.show.labels', groups.comp[i], sep='.' ), 'Show labels', value=F) ),
+                                                      ##column(3, actionButton('ppi.go', 'Show Interactors')),
+                                                      column(6)
+                                                  )),
+                                              ## ############################################################
+                                              ## the actual plot  plus table
+                                              fluidRow(
+                                                  ## plot
+                                                  column(width=8,
+                                                         box( width=NULL,  title='Volcano plot', status = 'primary', solidHeader = T,
+                                                             plotOutput( paste("volcano",groups.comp[i], sep='.'), height=600, click=paste('plot_click', groups.comp[i], sep='.'), hover=hoverOpts(id=paste('plot_hover', groups.comp[i], sep='.'), delay=10), brush=brushOpts(id=paste('plot_brush', groups.comp[i], sep='.'), resetOnNew=T, delayType='debounce', delay='1000' ), dblclick=paste('plot_dblclick', groups.comp[i], sep='.'))
+                                                             )),
+                                                  ## table
+                                                  column(width=4,
+                                                         box(width=NULL,  title='Selected points', status = 'primary', solidHeader = T,
+                                                             actionButton(inputId=paste('volc.tab.reset', groups.comp[i], sep='.'), label='Reset'),
+                                                             tags$hr(),
+                                                             tableOutput(paste('volc.tab.selected', groups.comp[i], sep='.'))
+                                                             )))
                                           )
 
-                                        ) ## end tabPanel
-                } ## end for i
-           ## } ## end if not mod F
+                                          ) ## end tabPanel
+            } ## end for i
+
 
             ############################################
             ## HEATMAP
             ##
             ############################################
-                hm.tab <-  tabPanel('Heatmap',
+            hm.tab <-  tabPanel('Heatmap',
 
                                     box(title='Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
                                         fluidRow(
-                                        column(2, numericInput( "cexCol", "Size", value=plotparams$hm.cexCol, min=1, step=1)),
-                                        column(2, numericInput( "cexRow", "Size", value=plotparams$hm.cexRow, min=1, step=1)),
+                                        column(2, numericInput( "cexCol", "Size", value=ifelse( !is.null(plotparams$hm.cexCol), plotparams$hm.cexCol, 12  ), min=1, step=1)),
+                                        column(2, numericInput( "cexRow", "Size", value=ifelse( !is.null(plotparams$hm.cexRow), plotparams$hm.cexRow, 6), min=1, step=1)),
                                         column(2, selectInput( "hm.scale", "Scale", c("row","column","none"), selected=plotparams$hm.scale)),
                                         column(2, selectInput( "hm.clust", "Cluster", c("column","row","both","none"), selected=ifelse(global.param$which.test != "mod F", "none" ,"both"))),
                                         column(2, checkboxInput('hm.max', 'Cap values', value=plotparams$hm.max)),
@@ -485,7 +543,7 @@ shinyServer(
                                       fluidPage(
                                         fluidRow(
                                             column(width=12,
-                                            box(title='Loadings', solidHeader=T, status='primary', width=1000,## height=min( nrow(global.results$filtered), plotparams$pca.load.topn )*20+50,
+                                            box(title='Loadings by Ozan Aygun', solidHeader=T, status='primary', width=1000,## height=min( nrow(global.results$filtered), plotparams$pca.load.topn )*20+50,
                                                 sliderInput("pca.load.topn", "Choose number of loadings", 1, 100, 20),
                       ##                          plotOutput("pca.loadings")##, width=1000, height=min(nrow(global.results$filtered), plotparams$pca.load.topn )*20 )
                       ##                        ),
@@ -710,6 +768,8 @@ shinyServer(
 
             if(!is.null(input$file)) return()
             if(!is.null( global.input$file)) return()
+
+            ##View(inweb$iw[1:10, ])
 
             ## ######################################
             ## generate session ID and prepare data
@@ -1093,7 +1153,8 @@ shinyServer(
                     for(j in 1:length(grp.comp)){
                         local({
                             my_j=j
-                            plotVolcano(grp.comp[my_j], max.logP=input$max.logP)
+                            ##plotVolcano(grp.comp[my_j], max.logP=input$max.logP)
+                            plotVolcano(grp.comp[my_j])
                         })
                     }
                 dev.off()
@@ -1415,7 +1476,7 @@ shinyServer(
             ## cat('test16\n')
 
             ###############################################################
-            ## remove archived files: all files expect RData
+            ## remove archived files: all files except RData
             file.remove(gsub('"|\'', '', fn.all.abs[-grep('\\.RData$', fn.all.abs)]) )
             if(!input$export.save.session)
                 file.remove(fn.tmp)
@@ -1436,7 +1497,11 @@ shinyServer(
         ###################################################################################
 
         ###############################################
-        ## 4) initialize group assignment
+        ## 4) ID column
+        ##  - make unique ids
+        ##  - determine id type
+        ##  - map to gene names
+        ##  - initialize group assignment
         observeEvent( input$id.col ,{
 
             if( is.null( global.input$table) | is.null(input$id.col.value) ) return()
@@ -1447,26 +1512,31 @@ shinyServer(
             global.input$id.col <- input$id.col
 
 
-            #############################################
+            ## ###########################################
             ## check the id column
             tab <- global.input$table
 
+            ## ###########################################
             ## make sure the ids are unique
-            ids <- make.names( make.unique(as.character(tab[, global.param$id.col.value]), sep='_') )
+            ##ids <- make.names( make.unique(as.character(tab[, global.param$id.col.value]), sep='_') )
+            ids <- make.unique( as.character(tab[, global.param$id.col.value] ), sep='_')
+
             ## replace values in id column
             tab[, global.param$id.col.value] <- ids
-
-            ##View(tab[, global.input$id.col.value])
-            ##cat(global.input$id.col.value)
 
             ## use id as rownames
             rownames(tab) <- ids
 
-            ##View(tab)
+            ## ############################################
+            ## map to gene names
+            ## ############################################
+            map.res <- mapIDs(ids)
+            global.results$keytype <- map.res$keytype
+            global.results$id.map <- map.res$id.map
 
             ########################################
             ## store
-            global.input$table <-  tab
+            global.input$table <- tab
 
             #############################################
             ## initialize group assignemnt
@@ -1647,25 +1717,43 @@ shinyServer(
           updateSelectInput(session, inputId='cm.lower', selected=plotparams$cm.lower)
 
 
-            ##################################
-            ## set flags
-            global.param$session.imported=T
-            global.param$analysis.run=T
+          ## ################################
+          ## set flags
+          global.param$session.imported=T
+          global.param$analysis.run=T
 
-            global.param$session.import.init=T
+          global.param$session.import.init=T
 
-            global.results$export.results=F
+          global.results$export.results=F
 
-            ##################################
-            ## clean up
-            rm(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp)
+          ## ################################
+          ## clean up
+          rm(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp)
 
-            ###################################################################
-            ##            insert the panels for the volcanos
-            ###################################################################
-            if(!(global.param$which.test %in% c('mod F', 'none'))){
+          ## #################################################################
+          ##            insert the panels for the volcanos
+          ## #################################################################
+          if(!(global.param$which.test %in% c('mod F', 'none'))){
+              withProgress({
+                setProgress( message='Preparing volcanos...')
                 ins.volc()
-            }
+              })
+              }
+
+
+          ## #####################################
+          ## generate id.map for compatibility with < v0.7.0
+          if(is.null(global.results$id.map)){
+
+              ## ############################################
+              ## map to gene names
+              ## ############################################
+              map.res <- mapIDs(rownames( global.results$data$output ))
+              global.results$keytype <- map.res$keytype
+              global.results$id.map <- map.res$id.map
+              global.results$data$output <- left_join(global.results$data$output, map.res$id.map)
+
+          }
         })
 
 
@@ -1761,6 +1849,19 @@ shinyServer(
             ###################################################################
             if(!(global.param$which.test %in% c('mod F', 'none'))){
                 ins.volc()
+            }
+            ## #####################################
+            ## generate id.map for compatibility with < v0.7.0
+            if(is.null(global.results$id.map)){
+
+                ## ############################################
+                ## map to gene names
+                ## ############################################
+                map.res <- mapIDs(rownames( global.results$data$output ))
+                global.results$keytype <- map.res$keytype
+                global.results$id.map <- map.res$id.map
+                global.results$data$output <- left_join(global.results$data$output, map.res$id.map)
+
             }
         })
 
@@ -2125,7 +2226,7 @@ shinyServer(
                 res.comb <- data.frame(id=res.id, res.test, res.exprs)
                 res.comb <- res.comb[rownames(tab),]
 
-                global.results$data$output <- res.comb
+                ##global.results$data$output <- res.comb
 
 
                 })
@@ -2163,7 +2264,8 @@ shinyServer(
                         #############################################
                         ## progress bar
                         ##incProgress(1/length(unique(groups.comp)))
-                        incProgress(count/length(unique(groups.comp)), detail=g)
+                        ##incProgress( count/length(unique(groups.comp) ), detail=g)
+                        incProgress( 1/length(unique(groups.comp) ), detail=g)
                         count=count + 1
                     }
                 })
@@ -2182,7 +2284,7 @@ shinyServer(
                 res.comb <- res.comb[rownames(tab),]
                 ###########################################
                 ## store the results
-                global.results$data$output <- res.comb
+                ##global.results$data$output <- res.comb
             }
 
             ##################################
@@ -2208,7 +2310,7 @@ shinyServer(
                 res.comb <- res.comb[rownames(tab),]
                 ###########################################
                 ## store the results
-                global.results$data$output <- res.comb
+##                global.results$data$output <- res.comb
             }
 
             ###################################################################
@@ -2222,20 +2324,32 @@ shinyServer(
                 ## store data matrix as test results
                 ## - values are log
                 res.comb <- tab
-                ###########################################
-                ## store the results
-                global.results$data$output <- res.comb
 
             }
 
-            #######################################
+            ## #########################################
+            ##   add id-mapping if not present already
+            ##
+            ## #########################################
+            ##if(!is.null(global.results$id.map)){
+            if( sum(c('id.concat', 'id.mapped', 'id.query') %in% colnames(res.comb)) < 3 ){
+                res.comb <- left_join(res.comb, global.results$id.map)
+            }
+
+
+            ## #########################################
+            ## store the results
+            global.results$data$output <- res.comb
+
+            ## #####################################
             ## set some flags
             global.param$analysis.run <- T
             global.results$export.results <- F
 
-            ###################################################################
+            ## #################################################################
             ##            insert the panels for the volcanos
-            ###################################################################
+            ## #################################################################
+
             if(!(global.param$which.test %in% c('mod F', 'none'))){
                 ins.volc()
             }
@@ -2248,12 +2362,6 @@ shinyServer(
            ## run.pca()
         })
 
-        ## #################################################################################
-        ##
-        ##
-        ##
-        ## #################################################################################
-        ##observeEvent
 
         ###################################################################################
         ##
@@ -2749,7 +2857,7 @@ shinyServer(
             if(nrow(tab) > 0){
                 ## add links to uniprot
                 up.id <- rownames(tab)
-                up.link <- paste("<a href='http://www.uniprot.org/uniprot/", sub('(_|,|;).*', '', up.id),"' target='_blank'>", up.id, "</a>", sep='')
+                up.link <- paste("<a href='http://www.uniprot.org/uniprot/", sub('(_|,|;|\\.).*', '', up.id),"' target='_blank'>", up.id, "</a>", sep='')
                 tab[, 'id'] <- up.link
             }
             tab
@@ -2757,51 +2865,94 @@ shinyServer(
         }, options = list( pageLength = 20, scrollX = T), escape=F, filter='top', rownames=F)
 
 
-        ##@################################################################################
+        ## ################################################################################
         ##
         ##                             Volcano plot
         ##
-        ##@################################################################################
+        ## ################################################################################
 
-        ###################################################################
+        ## #################################################################
         ## function to generate the panels for the volcanos
         ## insert the plots into the webpage
-        ###################################################################
+        ## #################################################################
         ins.volc <- reactive({
 
             if(global.param$which.test %in% c('mod F', 'none')) return()
-            ##if(!is.null(error$msg)) return()
 
+
+##            withProgress({
+##                setProgress( message='Preparing volcanos...')
+
+            ## volcanos for each group comparison
             grp.comp <- unique( global.param$grp.comp )
 
+            ## #########################################
+            ## loop over group comparsions
             for(i in 1:length(grp.comp)){
-              local({
+                local({
+
                   my_i <- i
                   ##########################
                   ## the actual plots
                   output[[paste("volcano", grp.comp[my_i], sep='.')]] <- renderPlot({
-                      plotVolcano( grp.comp[my_i], max.logP=input$max.logP )
+                      plotVolcano( grp.comp[my_i] )
                   })
 
-                  ##################################
-                  ## observe clicks
-                  observeEvent(input[[paste('plot_click', grp.comp[my_i], sep='.')]], {
-                      res <- as.data.frame( global.results$data$output )
-                      ##group.comp <- unique(global.param$grp.comp)
+                  ## ###############################
+                  ## observe brush
+                  observeEvent(input[[paste('plot_brush', grp.comp[my_i], sep='.')]], {
 
+                      tmp <- input[[paste('plot_brush', grp.comp[my_i], sep='.')]]
+
+                      volc.brush[[paste('xmin', grp.comp[my_i], sep='.')]] <- tmp$xmin
+                      volc.brush[[paste('xmax', grp.comp[my_i], sep='.')]] <- tmp$xmax
+                      volc.brush[[paste('ymax', grp.comp[my_i], sep='.')]] <- tmp$ymax
+                      volc.brush[[paste('ymin', grp.comp[my_i], sep='.')]] <- tmp$ymin
+
+                  })
+
+                  ## ###############################
+                  ## observe double click
+                  observeEvent(input[[paste('plot_dblclick', grp.comp[my_i], sep='.')]], {
+                      volc.brush[[paste('xmin', grp.comp[my_i], sep='.')]] <- NULL
+                      volc.brush[[paste('xmax', grp.comp[my_i], sep='.')]] <- NULL
+                      volc.brush[[paste('ymax', grp.comp[my_i], sep='.')]] <- NULL
+                      volc.brush[[paste('ymin', grp.comp[my_i], sep='.')]] <- NULL
+                  })
+
+
+                  ## ################################
+                  ## observe clicks
+                  observeEvent( input[[paste('plot_click', grp.comp[my_i], sep='.')]], {
+
+                      ## the data set
+                      res <- as.data.frame( global.results$data$output )
+
+                      ## determine what to show in the plot, i.e. 'id' or mapped gene names
+                      if( !is.null(global.results$id.map ))
+                          txt.col <- 'id.concat'
+                      else
+                          txt.col <- 'id'
+
+                      ## identify the points clicked
                       text.tmp <- nearPoints(res, input[[paste('plot_click', grp.comp[my_i], sep='.')]], threshold=10, maxpoints =  1, xvar=paste('logFC', grp.comp[my_i], sep='.'), yvar=paste('Log.P.Value', grp.comp[my_i], sep='.'))
 
+                      ## if there are any
                       if(nrow(text.tmp) == 1){
+
                           ################################################
                           ## first click
                           if(is.null(volc[[ paste('x', grp.comp[my_i], sep='.')]] )){
                               volc[[paste('x', grp.comp[my_i], sep='.')]] = text.tmp[paste('logFC', grp.comp[my_i], sep='.')]
                               volc[[paste('y', grp.comp[my_i], sep='.')]] = text.tmp[paste('Log.P.Value', grp.comp[my_i], sep='.')]
-                              volc[[paste('text', grp.comp[my_i], sep='.')]] = text.tmp['id']
+                              ## volc[[paste('text', grp.comp[my_i], sep='.')]] = text.tmp['id']
+                               volc[[paste('text', grp.comp[my_i], sep='.')]] = text.tmp[ txt.col ]
                               volc[[paste('xy', grp.comp[my_i], sep='.')]] = paste(text.tmp[paste('logFC', grp.comp[my_i], sep='.')], text.tmp[paste('Log.P.Value', grp.comp[my_i], sep='.')])
                               volc[[paste('P.Value', grp.comp[my_i], sep='.')]] <- text.tmp[paste('P.Value', grp.comp[my_i], sep='.')]
                               volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- text.tmp[paste('adj.P.Val', grp.comp[my_i], sep='.')]
+
                           } else {
+
                               ######################################################
                               ## REMOVE: check if point is present already
                               if( paste(text.tmp[paste('logFC', grp.comp[my_i], sep='.')], text.tmp[paste('Log.P.Value', grp.comp[my_i], sep='.')]) %in% volc[[paste('xy', grp.comp[my_i], sep='.')]]){
@@ -2825,7 +2976,8 @@ shinyServer(
                                   volc[[paste('x', grp.comp[my_i], sep='.')]]=c( volc[[paste('x', grp.comp[my_i], sep='.')]],
                                                                       text.tmp[paste('logFC', grp.comp[my_i], sep='.')])
                                   volc[[paste('y', grp.comp[my_i], sep='.')]]=c(volc[[paste('y', grp.comp[my_i], sep='.')]], text.tmp[paste('Log.P.Value', grp.comp[my_i], sep='.')])
-                                  volc[[paste('text', grp.comp[my_i], sep='.')]]=c(volc[[paste('text', grp.comp[my_i], sep='.')]],  text.tmp[ 'id'] )
+                                  ##volc[[paste('text', grp.comp[my_i], sep='.')]]=c(volc[[paste('text', grp.comp[my_i], sep='.')]],  text.tmp[ 'id'] )
+                                  volc[[paste('text', grp.comp[my_i], sep='.')]]=c(volc[[paste('text', grp.comp[my_i], sep='.')]],  text.tmp[ txt.col ] )
                                   volc[[paste('xy', grp.comp[my_i], sep='.')]] = c(volc[[paste('xy', grp.comp[my_i], sep='.')]], paste(text.tmp[paste('logFC', grp.comp[my_i], sep='.')], text.tmp[paste('Log.P.Value', grp.comp[my_i], sep='.')]) )
 
                                   volc[[paste('P.Value', grp.comp[my_i], sep='.')]]=c(volc[[paste('P.Value', grp.comp[my_i], sep='.')]],  text.tmp[paste('P.Value', grp.comp[my_i], sep='.')] )
@@ -2835,7 +2987,15 @@ shinyServer(
                       }
                   }) ## end observe clicks
 
-                  ######################################################
+                  observeEvent(input[[paste('volc.tab.reset', grp.comp[my_i], sep='.')]],{
+                      volc[[paste('x', grp.comp[my_i], sep='.')]] <- NULL
+                      volc[[paste('y', grp.comp[my_i], sep='.')]] <- NULL
+                      volc[[paste('xy', grp.comp[my_i], sep='.')]] <- NULL
+                      volc[[paste('P.Value', grp.comp[my_i], sep='.')]] <- NULL
+                      volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- NULL
+                  })
+
+                  ## ####################################################
                   ## table of selected features
                   output[[paste('volc.tab.selected', grp.comp[my_i], sep='.')]] <- renderTable({
 
@@ -2845,10 +3005,10 @@ shinyServer(
                       tags$h4('Selection:')
 
                       id.tmp <- volc[[paste('text', grp.comp[my_i], sep='.')]]
-                      ## dat.select = data.frame(id=unlist(volc[[paste('text', grp.comp[my_i], sep='.')]]), logFC=unlist(volc[[paste('x', grp.comp[my_i], sep='.')]]), xy=unlist(volc[[paste('xy', grp.comp[my_i], sep='.')]]))
-                       dat.select = data.frame(id=unlist(volc[[paste('text', grp.comp[my_i], sep='.')]]), logFC=unlist(volc[[paste('x', grp.comp[my_i], sep='.')]]), P.Value=unlist(volc[[paste('P.Value', grp.comp[my_i], sep='.')]]), adj.P.Value=unlist(volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]]) )
+
+                      dat.select = data.frame(id=unlist(volc[[paste('text', grp.comp[my_i], sep='.')]]), logFC=unlist(volc[[paste('x', grp.comp[my_i], sep='.')]]), P.Value=unlist(volc[[paste('P.Value', grp.comp[my_i], sep='.')]]), adj.P.Value=unlist(volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]]) )
                       up.id <- dat.select[, 'id']
-                      up.link <- paste("<a href='http://www.uniprot.org/uniprot/", sub('(_|,|;).*', '', up.id),"' target='_blank'>", up.id, "</a>", sep='')
+                      up.link <- paste("<a href='http://www.uniprot.org/uniprot/", sub('(_|,|;|\\.).*', '', up.id),"' target='_blank'>", up.id, "</a>", sep='')
                       dat.select[, 'id'] <- up.link
 
                       dat.select
@@ -2856,7 +3016,11 @@ shinyServer(
 
               }) ## end local
 
+                ##incProgress( 1/length(grp.comp))
+
             } ## end for loop
+
+        ##}) ## end withProgress
 
         }) ## end 'ins.volc'
 
@@ -2866,46 +3030,59 @@ shinyServer(
         ## volcano - actual plot
         ##
         ################################################################
-        plotVolcano <- function(group, max.logP = 100){
+        plotVolcano <- function(group, interactors=NULL){
 
             cat('\n-- plotVolcano --\n')
             if(!is.null(error$msg)) return()
 
-            ## apply filter
-            ##filter.res()
-            ##tab.select <- input$mainPage
-            ###filter.res()#-
-            ##updateNavbarPage(session, 'mainPage', selected=tab.select)
+            max.logP <- input[[paste('max.logP', group, sep='.')]]
 
             ## pch for significant points
             sig.pch=23
 
             ## unfiltered
             res = as.data.frame( global.results$data$output )
-            ##rownames(res) <- res[, input$id.col.value]
- ## filtered
-            res.filt = as.data.frame(global.results$filtered.groups[[group]])
-            ##rownames(res.filt) <- res.filt$id
 
+            ## #############################
+            ## p-values
             if(global.param$which.test != 'mod F'){
-                ## extract fc and p
                 logPVal <- res[, paste('Log.P.Value.', group, sep='')]
             } else {
-                ## extract fc and p
                 logPVal <- res[, paste('Log.P.Value',  sep='')]
             }
 
+            ## ##############################
+            ## log fold change
             logFC <- res[, paste('logFC.', group, sep='')]
+
+            ## ##############################
+            ## ids
+            ##if(is.null(global.results$id.map)) { ## before version v0.7.0
+            ##    IDs <- res[, global.param$id.col.value]
+            ##} else {
+                IDs <- global.results$id.map$id.concat
+            ##}
+            ##View(IDs)
+
+            ## ###################################################
+            ##             use IDs as vector names
+            names(logPVal) <- names(logFC) <- IDs
 
             ## index of missing values
             rm.idx <- union( which(is.na(logFC)), which(is.na(logPVal)) )
+
             if(length(rm.idx) > 0){
                 res <- res[-rm.idx, ]
                 logFC <- logFC[-rm.idx]
                 logPVal <- logPVal[-rm.idx]
+                IDs <- IDs[-rm.idx]
             }
+            ## store a copy of IDs before zoom
 
-            ## which filter?
+            IDs.all <- IDs
+            ##else
+
+            ## which filter has been used?
             filter.str <- paste('filter:', global.param$filter.type, '\ncutoff:', global.param$filter.value)
 
             ######################################################################
@@ -2916,6 +3093,7 @@ shinyServer(
                 if(global.param$filter.type == 'top.n'){
                     PVal <- res[, paste('P.Value.', group, sep='')]
                     sig.idx = order(PVal, decreasing=F)[1:global.param$filter.value]
+
                 }
                 if(global.param$filter.type == 'nom.p'){
                     PVal <- res[, paste('P.Value.', group, sep='')]
@@ -2944,38 +3122,84 @@ shinyServer(
             if(global.param$filter.type == 'none')
                 sig.idx = 1:length(logFC)
 
-            ##pch.vec=rep(19, nrow(res))
+            ##View(sig.idx)
+            ##save(sig.idx, IDs, file='tmp.RData')
+
+            ## use IDs as names
+            names(sig.idx) <- IDs[sig.idx]
+
+
+            ## #################################################
+            ##
+            ##              pch and cex
+            ##
+            ## ##################################################
             pch.vec=rep(21, nrow(res))
             cex.vec=rep( input[[paste('cex.volcano', group, sep='.')]], nrow(res))
 
             if(length(sig.idx) > 0){
-                pch.vec[sig.idx] <- sig.pch
-                cex.vec[sig.idx] <- cex.vec[1]+1
-
+                pch.vec[ sig.idx ] <- sig.pch
+                cex.vec[ sig.idx ] <- cex.vec[1]+.5
+            }
 
             ###################################
             ## set maximal log p value
             if(!is.null( max.logP))
                 logPVal[which(logPVal > max.logP)] <- max.logP
-            }
-            ##cat('max.logP=',max.logP)
+
             #############################
             ## color gradient
-            ##cat('# NA:',sum(is.na(logPVal)),'\n', sum(is.na(na.omit( logPVal))), '\n')
- ##           col=myColorRamp(c('black', 'grey20', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP))
-            col=myColorRamp(c('black', 'grey20', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=1)
-            col.opac=myColorRamp(c('black', 'grey20', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=0.2)
-            ##col='blue'
+            ##col=myColorRamp(c('black', 'grey20', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=1)
+            ##col.opac=myColorRamp(c('black', 'grey20', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=0.2)
+            col=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=1)
+            col.opac=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=0.2)
 
-            ## limits
+            ## ###################################################################
+            ##
+            ##                         limits
+            ##
+            ## ###################################################################
             xlim = max(abs(logFC), na.rm=T)
-            ##xlim <- max( abs(res), na.rm=T)
             xlim = xlim + xlim*.1
-            xlim = c(-xlim, xlim)
 
-            ## y-limits
-            ylim = ifelse(is.null(max.logP), max(logPVal, na.rm=T), max.logP)
-            ylim = c(0, ylim+.2*ylim)
+            if( is.null( volc.brush[[ paste('xmin', group, sep='.') ]] ) ){
+                xlim = c(-xlim, xlim)
+                ## y-limits
+                ylim = ifelse(is.null(max.logP), max(logPVal, na.rm=T), max.logP)
+                ylim = c(0, ylim+.2*ylim)
+
+            } else {
+
+                ## ##################################
+                ##        zoomed
+                ## x-axis
+                xlim = c(volc.brush[[ paste('xmin', group, sep='.') ]], volc.brush[[ paste('xmax', group, sep='.') ]])
+                logFC[ logFC < xlim[1] | logFC > xlim[2] ] <-  NA
+
+                ## y-axis
+                ylim = c( max(0, volc.brush[[ paste('ymin', group, sep='.') ]]), volc.brush[[ paste('ymax', group, sep='.') ]])
+                logPVal[ logPVal < ylim[1] | logPVal > ylim[2] ] <-  NA
+
+                ## remove missng  values
+                rm.idx <- union( which(is.na(logFC)), which(is.na(logPVal)) )
+
+                if(length(rm.idx) > 0){
+                    res <- res[-rm.idx, ]
+                    logFC <- logFC[-rm.idx]
+                    logPVal <- logPVal[-rm.idx]
+                    IDs <- IDs[-rm.idx]
+
+                    ## colors, pch, cex
+                    col <- col[-rm.idx]
+                    col.opac <- col.opac[-rm.idx]
+                    pch.vec <- pch.vec[-rm.idx]
+                    cex.vec <- cex.vec[-rm.idx]
+
+                    ## update index of significant stuff
+                    sig.idx <- sig.idx[ !(sig.idx %in% rm.idx) ]
+                }
+            }
+
 
             ####################################################
             ## plot
@@ -2985,12 +3209,10 @@ shinyServer(
             ## title
             mtext(group, side=3, cex=2, line=2)
             ## label axes
-            ##mtext(expression(log(FC)), side=1, cex=1.8, line=3)
             if(global.param$which.test == 'Two-sample mod T')
                 mtext( paste("log(", sub('.*\\.vs\\.', '', group), "/", sub('\\.vs.*', '', group),")"), side=1, cex=1.8, line=3)
             else
                 mtext(expression(log(FC)), side=1, cex=1.8, line=3)
-
             mtext(expression(-10*log[10](P-value)), side=2, cex=1.8, line=3)
             ## draw axes
             axis(1, cex.axis=1.8)
@@ -2998,32 +3220,90 @@ shinyServer(
             ## grid
             if( input[[paste('grid.volcano', group, sep='.')]] )
                 grid()
+
             ## actual plot
             points(logFC, logPVal, col=col, bg=col.opac, pch=pch.vec, cex=cex.vec, lwd=2)
-            ##points(logFC, logPVal, col=col.noalpha, pch=pch.vec)
 
-            ##points(logFC, logPVal, col=col)
+            ## ###################################
             ## add filter
-            abline(h=min(logPVal[sig.idx], na.rm=T), col='grey30', lwd=2, lty='dashed')
-            text( xlim[2]-(xlim[2]*.05), min(logPVal[sig.idx], na.rm=T), paste(global.param$filter.type, global.param$filter.value, sep='='), pos=3, col='grey30')
+            ## minimal log P-value for given filter
+            if(length(sig.idx) > 0){
+                filt.minlogPVal <- min(logPVal[names(sig.idx)], na.rm=T)
+                abline(h=filt.minlogPVal, col='grey30', lwd=2, lty='dashed')
+                text( xlim[2]-(xlim[2]*.05), filt.minlogPVal, paste(global.param$filter.type, global.param$filter.value, sep='='), pos=3, col='grey30')
+            }
             ## number of significant
             legend('top', bty='n', legend=paste(filter.str, '\nsig / tot: ', length(sig.idx),' / ', sum(!is.na(logFC) & !is.na(logPVal)), sep=''), cex=1.5)
 
-            ##############################
+            ## ############################
             ## indicate directionality for two-sample tests
             if(global.param$which.test == 'Two-sample mod T'){
                 legend('topleft', legend=sub('\\.vs.*', '', group), cex=2, text.col='darkblue', bty='n')
                 legend('topright', legend=sub('.*\\.vs\\.', '', group), cex=2, text.col='darkblue', bty='n')
             }
 
-            ## legend('topleft', legend=paste('\n', sum()))
-            ## add selected points
+
+            ## ###########################################################
+            ##
+            ##               selected points
+            ##
+            volc.add.X <- volc.add.Y <- volc.add.text <- volc.add.col <- c()
             if(!is.null( volc[[paste('x', group, sep='.')]] ) & length(volc[[paste('x', group, sep='.')]]) ){
-                for(i2 in 1:length(unlist(volc[[paste('x', group, sep='.')]])))
-                   text(unlist(volc[[paste('x', group, sep='.')]][i2]), unlist(volc[[paste('y', group, sep='.')]][i2]), unlist(volc[[paste('text', group, sep='.')]][i2]),pos=ifelse(volc[[paste('x', group, sep='.')]][i2] < 0, 2, 4), cex=input[[paste('cex.volcano.lab', group, sep='.')]])
+
+                for(i2 in 1:length( unlist( volc[[paste('x', group, sep='.')]]))){
+
+                    volc.add.X[i2] <- as.numeric( unlist( volc[[paste('x', group, sep='.')]][i2] ) )
+                    volc.add.Y[i2] <- as.numeric( unlist( volc[[paste('y', group, sep='.')]][i2] ) )
+                    volc.add.text[i2] <- as.character( unlist( volc[[paste('text', group, sep='.')]][i2]) )
+                    volc.add.col[i2] <- 'black'
+                }
+                ##View(volc.add.X)
+                ##View(volc.add.Y)
+                ##View(volc.add.text)
+                    ##text(unlist(volc[[paste('x', group, sep='.')]][i2]), unlist(volc[[paste('y', group, sep='.')]][i2]), unlist(volc[[paste('text', group, sep='.')]][i2]),pos=ifelse(volc[[paste('x', group, sep='.')]][i2] < 0, 2, 4), cex=input[[paste('cex.volcano.lab', group, sep='.')]])
+
             }
-            ##if( input[[paste('grid.volcano', group, sep='.')]] )
-            ##    grid()
+
+            ## ########################################################
+            ## add PPI stuff
+            ppi.bait <- input[[paste('ppi.bait', group, sep='.')]]
+
+            if(toupper(ppi.bait) %in% toupper(IDs.all)){
+
+                ## bait protein
+                ppi.bait.idx <- which( toupper(IDs) == toupper(ppi.bait) ) ## bait in data set
+                if(length(ppi.bait.idx) > 0)
+                    points(logFC[ppi.bait.idx], logPVal[ppi.bait.idx], col='green', bg='green', pch=pch.vec[ppi.bait.idx], cex=cex.vec[ppi.bait.idx])
+
+                ## interactors
+                iw <- inweb$iw
+                ##View(iw[1:20, ])
+                ppi.int <- iw$V2[ which(toupper(iw$V1) == toupper(paste('uniprotkb', sub('_.*','',ppi.bait), sep=':'))) ]
+
+                ## if there are interactors
+                if(length(ppi.int) > 0){
+                    ppi.int.idx <- which(sub('_.*','',IDs) %in% sub('.*\\:(.*)$','\\1', ppi.int))
+
+                    points(logFC[ppi.int.idx], logPVal[ppi.int.idx], col='blue', bg='blue', pch=pch.vec[ppi.int.idx], cex=cex.vec[ppi.int.idx])
+
+                    if(input[[paste('ppi.show.labels', group, sep='.')]]){
+
+                        volc.add.X <- c(volc.add.X, logFC[ppi.int.idx])
+                        volc.add.Y <- c(volc.add.Y, logPVal[ppi.int.idx])
+                        volc.add.text <- c( volc.add.text, as.character(IDs[ppi.int.idx]))
+                        volc.add.col <- c(volc.add.col, rep('blue', length(ppi.int.idx)))
+                        ##pointLabel(logFC[ppi.int.idx], logPVal[ppi.int.idx], labels=IDs[ppi.int.idx], col='blue', offset=10, method='SANN')
+                    }
+                }
+
+            }
+
+            ## ########################################
+            ##  draw ids of selected points
+            if(length(volc.add.X) > 0)
+
+                pointLabel(as.numeric(unlist(volc.add.X)), as.numeric(unlist(volc.add.Y)), labels=as.character(unlist(volc.add.text)), col=volc.add.col, offset=20, method='SANN', cex=input[[paste('cex.volcano.lab', group, sep='.')]])
+
         }
 
         #######################################################################################

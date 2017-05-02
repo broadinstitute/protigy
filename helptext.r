@@ -34,7 +34,22 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
-<b>v0.6.6</b>
+<b>v0.7.0</b>
+<ul>
+<li>Mapping to gene names.</li>
+<li>InWeb integration</li>
+<li>Scale of volcanos fixed.</li>
+<li>Zoomable volcanos</li>
+<li>Reset button for volcano annotations</li>
+</ul>
+<b>v0.6.6.1 Mar 17, 2017</b>
+<ul>
+<li>Export-tab: PCA loadings can be exported as Excel sheet (by Ozan Aygun).</li>
+<li>PCA-tab: New PCA loadings plot (by Ozan Aygun).</li>
+<li>Export-tab: included button for PCA loadings in \"toggle all\".</li>
+<li>Heatmap-tab: Default vaules for row/column fon size read from \"plotparams\", if defined.</li>
+</ul>
+<b>v0.6.6 Mar 17, 2017</b>
 <ul>
 <li>Fixed the \"incorrect number of dimensions\"-error in the table preview tab, if only a single annotation column is present.</li>
 <li>Prevented the automatic switch to the \"Summary\"-tab after changing the filter.</li>
@@ -43,26 +58,26 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
 <li>Dynamic UI elements will not switch back to \"One-sample modT\" after running an analysis.</li>
 <li>Table-tab: switched to DT package.</li>
 </ul>
-<b>v0.6.5</b>
+<b>v0.6.5 Mar 7, 2017</b>
 <ul>
 <li>Fixed a bug that resulted in not listing all saved session for a user.</li>
 <li>Worked on the filenames of exported RData and Excel files.</li>
 <li>modF: In case of too many missing values the test would not return a p-value which resulted in NA for the enumber of significant hits on the summary page.</li>
 </ul>
-<b>v0.6.4</b>
+<b>v0.6.4 Mar 6, 2017</b>
 <ul>
 <li>Summary tab: number of significant hits are now reported correctly.</li>
 <li>Summary tab: Missing value distribution after log-transformation shown correctly.</li>
 <li>Changed cluster method from \'complete\' to \'ward\'.</li>
 <li>Fixed a bug that happend if a project is defined and shared in \'user-roles.txt\' but has been deleted from the server.</li>
 </ul>
-<b>v0.6.3</b>
+<b>v0.6.3 Feb 2, 2017</b>
 <ul>
 <li>Commited to GitHub for debugging purposes. Do not use this verion!</li>
 <li>Re-organization of UI elements when setting up the analysis.</li>
 <li>Implementation of SD filter across all samples.</li>
 </ul>
-<b>v0.6.2</b>
+<b>v0.6.2 Jan 31, 2017</b>
 <ul>
 <li>UI elements for setting up an anlysis workflow are now dynamically generated, e.g. if reproducibility filter is chosen, onnly "One-sample modT" or "none" can be chosen.</li>
 <li>Reproducibility filter: users can choose bewteen (predefined) alpha-values.</li>
@@ -72,33 +87,33 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
 <li>Some more error handling when exporting analysis results.</li>
 <li>Previously saved sessions are not deleted anymore, if checkbox "save session" is not enabled.</li>
 </ul>
-<b>v0.6.1</b>
+<b>v0.6.1 Jan 12, 2017</b>
 <ul>
 <li>Session managment: Added possibility to delete saved sessions and to choose whether to save a session on the server in the first place.</li>
 <li>User role managment (alpha status): A project saved on the server has an owner and (optional) collaborators. Collaborators can \"see\" projects they are assigned to in the dropdown menu \"Saved sessions\".</li>
 </ul>
-<b>v0.6.0</b>
+<b>v0.6.0 Jan 4, 2017</b>
 <ul>
 <li>Switched to <a href="https://rstudio.github.io/shinydashboard/">Shiny Dashboards</a>.</li>
 <li>Extented PCA analysis using the <i>ChemometricsWithR</i> R package.</li>
 </ul>
-<b>v0.5.4</b>
+<b>v0.5.4  Dec 27, 2016</b>
 <ul>
 <li>Filter values and plotting parameters are now restored after session import (except for volcano plot...).</li>
 <li>Changed visual style of volcano plots.</li>
 </ul>
-<b>v0.5.3</b>
+<b>v0.5.3 Dec 21, 2016</b>
 <ul>
 <li>Minor fixes due to shiny update.</li>
 <li>User can now specify label names used to create file and session names when  exporting results. Initial values are taken from filenames of the input and experimental design file.</li>
 <li>Experimental design file is now part of the results.</li>
 </ul>
-<b>v0.5.2</b>
+<b>v0.5.2 Dec 1, 2016</b>
 <ul>
 <li>Rudimentary support of \'gct\' files, i.e. files can be imported by ignoring the first two lines (gct header). </li>
 <li>Figured out the issue with  the 2-sample T-test volcanos. The functions in \'limma\' always report fold changes group factor variable \'0\'. The original \'moderated.t\' alphabetically orders the class names and then converts class names to factors. First class name will become zero. I make sure that class names are alphabeticaly sorted before calling \'moderated.t\'.</li>
 </ul>
-<b>v0.5.1</b>
+<b>v0.5.1 Nov 26, 2016</b>
 <ul>
 <li><mark>BUG: </mark>Reverted the indication of direction in volcano plots for <b>2-sample tests</b>. The direction was inferred from the sign of \'logFC\' returned by function \'topTable\' (limma) which cannot be used to do that.</li>
 <li>Updated shiny R package from 0.12/0.13.2 to 0.14.2 resulting in some minor changes in the <i>look and feel</i> of the app. Code needed some adaptions (navbarPage, navbarMenu) to run poperly with 0.14.2 version.</li>
@@ -106,18 +121,18 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
 <li>Changed how heatmap dimensions are determined to better show very large and very small heatmaps.</li>
 <li>Scaling of heatmap done after clustering.</li>
 </ul>
-<b>v0.5.0</b>
+<b>v0.5.0 Nov 7, 2016</b>
 <ul>
 <li>Exported sessions are saved on the server and can be re-imported. Each user has its own folder on ther server in which an R-sessions file is stored.</li>
 <li>Non-unique entries in the id column are made unique, e.g. \'Abl\', \'Abl\' -> \'Abl\', \'Abl_1\'. Empty entries will be replaced by \'X\', e.g. \'Abl\', \'\', \'\' -> \'Abl\', \'X\', \'X_1\'.</li>
 </ul>
-<b>v0.4.5</b>
+<b>v0.4.5 Sep 1, 2016</b>
 <ul>
 <li>Multiscatter: log-transformed values wil be used if log-transformation has been applied.</li>
 <li>For each user a new folder on the server is created. Every session that gets exported will be saved there.</li>
 <li>A copy of the original data file will be part of the results (zip-file).</li>
 </ul>
-<b>v0.4.4</b>
+<b>v0.4.4 Aug 19, 2016</b>
 <ul>
 <li>New \'Export\'-tab to download a zip-file containing:
  <ul>
@@ -130,29 +145,29 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
 <li>Error handling for two-component normalization.</li>
 <li>Profile plots under \'QC\'-tab</li>
 </ul>
-<b>v0.4.3</b>
+<b>v0.4.3 Aug 16, 2016</b>
 <ul>
 <li>Session export/import.</li>
 <li>"#VALUE!"-entries from Excel can be handeled now.</li>
 <li>Fixed bug causing PDF export of heatmap with user defined max. values to crash.</li>
 </ul>
-<b>v0.4.2</b>
+<b>v0.4.2 Jul 21, 2016</b>
 <ul>
 <li><mark>BUG:</mark> Bugfix in 2-sample test that occured whenever the names of different groups defined the experimental design file started with the same series of characters, e.g. \'ABC\' and \'ABCD\'.</li>
 </ul>
-<b>v0.4.1</b>
+<b>v0.4.1 Jul 1, 2016</b>
 <ul>
 <li>Novel tab summarizing the analysis.</i>
 <li>Data can now be log-transformed, e.g. for MaxQuant results.</li>
 <li>Added option to skip testing, e.g. for PCA analysis.</li>
 <li>User can specify principle components in the PCA scatterplot.</li>
 </ul>
-<b>v0.4</b>
+<b>v0.4 Jun 29, 2016</b>
 <ul>
 <li>Integration of moderated F statistics</li>
 <li>Disabled column-based clustering one-sample and two-sample tests if multiple groups are being compared.</li>
 </ul>
-<b>v0.3</b>
+<b>v0.3 Mar 11, 2016</b>
 <ul>
 <li>Data normalization.</li>
 <li>Reproducibility filter.</li>
@@ -160,7 +175,11 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
 <li>Download of native Excel files.</li>
 <li>Integration of the Javascript D3-based plotly library.</li>
 </ul>
-<b>v0.1</b>
+<b>v0.2 Feb 23, 2016</b>
+<ul>
+<li>Working version on server.</li>
+</ul>
+<b>v0.1 Dec 20, 2015</b>
 <ul>
 <li>First prototype.</li>
 </ul>

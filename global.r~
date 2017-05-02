@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.6.6"
+VER="0.7.0"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -81,6 +81,7 @@ library(grid)
 library(ChemometricsWithR)
 library(scatterplot3d)
 library(plotly)
+library(ggrepel)
 ## export
 library(WriteXLS)
 ## reproducibility filter
@@ -93,8 +94,14 @@ library(preprocessCore)
 library (mice)
 library (mixtools)
 library (mclust)
-
+## table preview
 library(DT)
+## label placments without overlap
+library(maptools)
+
+## id mapping
+library(org.Hs.eg.db)
+library(dplyr)
 
 #################################################################################
 ##     Heatmap of expression values combining all of the results from all tests

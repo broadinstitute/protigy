@@ -18,12 +18,16 @@ library(shiny)
 options(shiny.maxRequestSize = MAXSIZEMB*1024^2)
 
 
+
 ###########################################################################################################
 ##                         Define server logic
 ############################################################################################
 shinyServer(
 
     function(input, output, session) {
+
+        hide(id = "loading-content", anim = TRUE, animType = "fade")
+        show("app-content")
 
         #####################################
         ## reactive variables to store
@@ -80,7 +84,13 @@ shinyServer(
             analysis.run=F,              ## flag whether the analysis has been run
 
             filter.type='adj.p',         ## default filter
-            filter.value=0.05            ## default filter value
+            filter.value=0.05,           ## default filter value
+
+            run.test=0,                   ## number of times the 'Run analysis' button has been pressed during a user session
+
+            update.ppi.select= FALSE,     ## trigger selectize
+
+            expand.ppi=FALSE              ## should PPI query panel be expanded?
 
         )
 
@@ -122,10 +132,10 @@ shinyServer(
         volc <- reactiveValues()
         volc.brush <- reactiveValues()
 
-        ## inweb
-        inweb <- reactiveValues(
-            iw=readRDS('ppi/core.psimitab.rds')
-        )
+        ## PPI databases
+       ## ppi <- reactiveValues(
+       ##     iw=readRDS('ppi/core.psimitab.rds')
+       ## )
 
         ## ###################################################
         ##
@@ -237,19 +247,19 @@ shinyServer(
         })
 
         ## #########################################################
-        ## session name
-        output$session.name <- renderMenu({
-            if(is.null( global.param$label)) return()
-            ##session <- global.param$session
-
-            notificationItem(global.param$label, shiny::icon("star", "fa-1x", lib='glyphicon'), status='success')
-        })
+       ## session name
+       ## output$session.name <- renderMenu({
+       ##     if(is.null( global.param$label)) return()
+       ##     ##session <- global.param$session
+       ##
+       ##     notificationItem(global.param$label, shiny::icon("star", "fa-1x", lib='glyphicon'), status='success')
+       ## })
 
 
 
         ################################################################################
         ##
-        ##                                navigation bar
+        ##                      navbar -   render UI
         ##
         ################################################################################
         output$navbar <- renderUI({
@@ -367,6 +377,7 @@ shinyServer(
             ## ##########################################
             summary.tab <-  tabPanel('Summary',
 
+
                                      fluidRow(
                                         box(title="Dataset:", solidHeader = T, status = "primary", width = 4,
                                          tableOutput('summary.data')),
@@ -393,9 +404,9 @@ shinyServer(
             ##      tabs for the volcano plots
             ## NOT for F test
             ############################################
-
             volc.tabs <- list()
             volc.tabs[[1]] <- 'Volcanos'
+
             for(i in 1:length(unique(groups.comp))){
                 volc.tabs[[i+1]]=tabPanel(paste0( groups.comp[i] ),
 
@@ -419,26 +430,25 @@ shinyServer(
 
                                               ## ###########################################################
                                               ## PPI stuff
-                                              box( title='Protein-protein interactions (InWeb)', status = 'primary', width=12, collapsible = TRUE, solidHeader=T, collapsed=T,
+                                              box( title='Protein-protein interactions', status = 'primary', width=12, collapsible = TRUE, solidHeader=T, collapsed=global.param$expand.ppi,
                                                   fluidRow(
-                                                      ##View(global.results$table[,global.param$id.col.value])
-                                                      ##column(3, textInput(paste('ppi.bait', groups.comp[i], sep='.'), 'Bait protein', value='')),
                                                       column(3,
-                                                             selectizeInput(paste('ppi.bait', groups.comp[i], sep='.'), 'Bait protein',
-
-                                                                            ##choices=rownames(global.results$filtered),
-                                                                            choices=global.results$id.map$id.concat,
+                                                              selectizeInput( inputId=gsub('\\.','', gsub('\\.', '', paste0('ppi.bait.', groups.comp[i])) ), label=NULL,
+                                                                           ## choices=global.results$id.map$id.concat,
+                                                                            choices=NULL,
                                                                             selected=NULL,
                                                                             options = list(
                                                                                 maxOptions=5,
-                                                                                placeholder='Type HGNC / UniProt accession',
+                                                                                placeholder='Bait protein',
                                                                                 onInitialize = I('function() { this.setValue(""); }')
                                                                             )
+
                                                                             )
                                                              ),
+                                                      column(3,checkboxGroupInput(paste('ppi.db', groups.comp[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw'), selected=c('bg', 'iw') )),
                                                       column(3, checkboxInput( paste('ppi.show.labels', groups.comp[i], sep='.' ), 'Show labels', value=F) ),
                                                       ##column(3, actionButton('ppi.go', 'Show Interactors')),
-                                                      column(6)
+                                                      column(3)
                                                   )),
                                               ## ############################################################
                                               ## the actual plot  plus table
@@ -469,8 +479,8 @@ shinyServer(
 
                                     box(title='Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
                                         fluidRow(
-                                        column(2, numericInput( "cexCol", "Size", value=ifelse( !is.null(plotparams$hm.cexCol), plotparams$hm.cexCol, 12  ), min=1, step=1)),
-                                        column(2, numericInput( "cexRow", "Size", value=ifelse( !is.null(plotparams$hm.cexRow), plotparams$hm.cexRow, 6), min=1, step=1)),
+                                        column(2, numericInput( "cexCol", "Font size column", value=ifelse( !is.null(plotparams$hm.cexCol), plotparams$hm.cexCol, 12  ), min=1, step=1)),
+                                        column(2, numericInput( "cexRow", "Font size row", value=ifelse( !is.null(plotparams$hm.cexRow), plotparams$hm.cexRow, 6), min=1, step=1)),
                                         column(2, selectInput( "hm.scale", "Scale", c("row","column","none"), selected=plotparams$hm.scale)),
                                         column(2, selectInput( "hm.clust", "Cluster", c("column","row","both","none"), selected=ifelse(global.param$which.test != "mod F", "none" ,"both"))),
                                         column(2, checkboxInput('hm.max', 'Cap values', value=plotparams$hm.max)),
@@ -749,7 +759,19 @@ shinyServer(
                        ## export
                        export.tab
                        ) ## end navbarpage
-        })
+
+            ## global.param$ins.volc.n <- global.param$ins.volc.n + 1
+        }) ## end renderUI
+
+        ##ch=list(AA='TEST1', BB='TEST2')
+
+##        observe({
+##            if( is.null(is.null(input$stest)) ) return()
+##            ch=global.results$id.map$id.concat
+##            cat('cat:',ch[1:3],'\n')
+##           updateSelectizeInput(session, inputId='stest', label=NULL, choices=ch, server=T)
+##
+        ##})
 
         #########################################################################################
         ##
@@ -769,7 +791,7 @@ shinyServer(
             if(!is.null(input$file)) return()
             if(!is.null( global.input$file)) return()
 
-            ##View(inweb$iw[1:10, ])
+            ##View(ppi$iw[1:10, ])
 
             ## ######################################
             ## generate session ID and prepare data
@@ -1559,7 +1581,7 @@ shinyServer(
         ##
         ## 2) - upload file
         ##    - import file
-        ##    - folders are create here
+        ##    - user folders are create here
         ##    - extract label from filename
         #################################################################################
         observeEvent( input$file, {
@@ -1955,6 +1977,9 @@ shinyServer(
             ## - extract all non-empty cells in the 'Experiment' column
             grp.exprs <- grp.file[exprs.idx, ]
 
+            ## order alphabetically to make coloring consistent
+            grp.exprs <- grp.exprs[order(grp.exprs$Experiment),]
+
             ## class vector
             grp=grp.exprs$Experiment
             names(grp)=grp.exprs$Column.Name
@@ -2333,7 +2358,7 @@ shinyServer(
             ## #########################################
             ##if(!is.null(global.results$id.map)){
             if( sum(c('id.concat', 'id.mapped', 'id.query') %in% colnames(res.comb)) < 3 ){
-                res.comb <- left_join(res.comb, global.results$id.map)
+                res.comb <- left_join(res.comb, global.results$id.map, 'id')
             }
 
 
@@ -2354,12 +2379,9 @@ shinyServer(
                 ins.volc()
             }
 
-
             ## #################################################################
-            ## run the filter: not possible because input$filter.type
-            ## #################################################################
-            ##filter.res()
-           ## run.pca()
+            ## increment counter: will invoke the filter
+            global.param$run.test <- global.param$run.test + 1
         })
 
 
@@ -2371,24 +2393,25 @@ shinyServer(
         ##
         ###################################################################################
         ##filter.res  <-  reactive({
-        observeEvent(c(input$filter.type, input$filter.value.top.n, input$filter.value.nom.p, input$filter.value.adj.p),{
+        observeEvent(c(input$filter.type, input$filter.value.top.n, input$filter.value.nom.p, input$filter.value.adj.p, global.param$run.test),{
+
+            ## only run after one analysis has been completed
+            if(global.param$run.test == 0 | is.null(input$filter.type)) return()
+
+            cat('\n-- filter.res --\n')
+            cat('filter.type: ', global.param$filter.type, '\nfilter.value:', global.param$filter.value, '\n')
 
             ## ######################################
             ## get the current tab
             tab.select <- input$mainPage
-
-            cat('\n-- filter.res --\n')
-            cat('filter.type: ', global.param$filter.type, '\nfilter.value:', global.param$filter.value, '\n')
 
             groups.comp=unique(global.param$grp.comp)
 
             ## test results
             res <- data.frame(global.results$data$output)
 
-            ##View(res)
-            ##if(is.null(input$filter.type))
+            ## get the filter type
             global.param$filter.type=input$filter.type
-            ##global.param$filter.value=input$filter.
 
             #################################
             ## top N
@@ -2537,6 +2560,10 @@ shinyServer(
             ## #####################################################
             ## suppress switching to the first tab
             updateNavbarPage(session, 'mainPage', selected=tab.select)
+
+            ## trigger selectize update
+            global.param$update.ppi.select <- TRUE
+
 
         })
 
@@ -2871,17 +2898,53 @@ shinyServer(
         ##
         ## ################################################################################
 
+        ## for(i in 1:length( unique( global.param$grp.comp ) ))
+        ##updateSelectizeInput( session=session, inputId = 'ppibaitLenalidomide12hvsPomalidomide12h', label='Bait protein', choices=cbind(a=c('test', 'adasdad', 'test2'), name=c('AA', 'BB', 'CC')), selected=NULL, server=T )
+
+
         ## #################################################################
         ## function to generate the panels for the volcanos
         ## insert the plots into the webpage
         ## #################################################################
+        ##observe({
+            ##if()
+        ##    grp.comp <- unique( global.param$grp.comp )
+        ##    for(i in 1:length(grp.comp)){
+        ##        if(!is.null(input[[gsub('\\.','', paste0('ppi.bait.',  grp.comp[i])) ]] )){
+        ##            choices=unlist(global.results$id.map$id.concat)
+        ##            updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices,selected=choices[1], server=T)
+        ##        }
+        ##    }
+        ##})
+
+
+
+        ## ##########################################################
+        ## obserever to trigger  'updateSelectizeInput' for volcano plots
+        observe({
+            if( !global.param$update.ppi.select ) return()
+
+            cat('now:', global.param$update.ppi.select, '\n')
+
+            grp.comp <- unique( global.param$grp.comp )
+            for(i in 1:length(grp.comp)){
+                if(!is.null(input[[gsub('\\.','', paste0('ppi.bait.',  grp.comp[i])) ]] )){
+                    choices=unlist(global.results$id.map$id.concat)
+                    updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T)
+                }
+            }
+            global.param$update.ppi.select <- FALSE
+        })
+
+
+        ## #############################################################
+        ## insert volcano panles
         ins.volc <- reactive({
 
             if(global.param$which.test %in% c('mod F', 'none')) return()
 
-
-##            withProgress({
-##                setProgress( message='Preparing volcanos...')
+           withProgress({
+                setProgress( message='Preparing volcanos...')
 
             ## volcanos for each group comparison
             grp.comp <- unique( global.param$grp.comp )
@@ -2889,14 +2952,21 @@ shinyServer(
             ## #########################################
             ## loop over group comparsions
             for(i in 1:length(grp.comp)){
+
+
                 local({
 
-                  my_i <- i
-                  ##########################
-                  ## the actual plots
-                  output[[paste("volcano", grp.comp[my_i], sep='.')]] <- renderPlot({
-                      plotVolcano( grp.comp[my_i] )
-                  })
+                    my_i <- i
+                    ## ########################
+                    ## the actual plots
+                    output[[paste("volcano", grp.comp[my_i], sep='.')]] <- renderPlot({
+                        plotVolcano( grp.comp[my_i] )
+                    })
+
+
+
+
+                  ##View(global.results$id.map)
 
                   ## ###############################
                   ## observe brush
@@ -2987,6 +3057,8 @@ shinyServer(
                       }
                   }) ## end observe clicks
 
+                  ## ###################################################
+                  ## reset volcano annotations
                   observeEvent(input[[paste('volc.tab.reset', grp.comp[my_i], sep='.')]],{
                       volc[[paste('x', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('y', grp.comp[my_i], sep='.')]] <- NULL
@@ -3020,7 +3092,10 @@ shinyServer(
 
             } ## end for loop
 
-        ##}) ## end withProgress
+        }) ## end withProgress
+
+            ## trigger selectize update
+            global.param$update.ppi.select <- TRUE
 
         }) ## end 'ins.volc'
 
@@ -3035,12 +3110,13 @@ shinyServer(
             cat('\n-- plotVolcano --\n')
             if(!is.null(error$msg)) return()
 
+            ## maximal log10 p-value
             max.logP <- input[[paste('max.logP', group, sep='.')]]
 
             ## pch for significant points
             sig.pch=23
 
-            ## unfiltered
+            ## unfiltered data set
             res = as.data.frame( global.results$data$output )
 
             ## #############################
@@ -3060,7 +3136,7 @@ shinyServer(
             ##if(is.null(global.results$id.map)) { ## before version v0.7.0
             ##    IDs <- res[, global.param$id.col.value]
             ##} else {
-                IDs <- global.results$id.map$id.concat
+            IDs <- global.results$id.map$id.concat
             ##}
             ##View(IDs)
 
@@ -3078,7 +3154,6 @@ shinyServer(
                 IDs <- IDs[-rm.idx]
             }
             ## store a copy of IDs before zoom
-
             IDs.all <- IDs
             ##else
 
@@ -3246,7 +3321,7 @@ shinyServer(
             ## ###########################################################
             ##
             ##               selected points
-            ##
+            ## ###########################################################
             volc.add.X <- volc.add.Y <- volc.add.text <- volc.add.col <- c()
             if(!is.null( volc[[paste('x', group, sep='.')]] ) & length(volc[[paste('x', group, sep='.')]]) ){
 
@@ -3266,37 +3341,97 @@ shinyServer(
 
             ## ########################################################
             ## add PPI stuff
-            ppi.bait <- input[[paste('ppi.bait', group, sep='.')]]
+            ## observeEvent( input$ppi.go,  {
+
+            ppi.bait <- input[[ gsub('\\.', '', paste0('ppi.bait.', group)) ]]
 
             if(toupper(ppi.bait) %in% toupper(IDs.all)){
+                bg.int <- iw.int <- c()
 
-                ## bait protein
-                ppi.bait.idx <- which( toupper(IDs) == toupper(ppi.bait) ) ## bait in data set
-                if(length(ppi.bait.idx) > 0)
-                    points(logFC[ppi.bait.idx], logPVal[ppi.bait.idx], col='green', bg='green', pch=pch.vec[ppi.bait.idx], cex=cex.vec[ppi.bait.idx])
+                ## #########################################
+                ##             InWeb
+                ## #########################################
+                if( 'iw' %in% input[[ paste0('ppi.db.', group) ]] ){
+                    iw <- ppi$iw
 
-                ## interactors
-                iw <- inweb$iw
-                ##View(iw[1:20, ])
-                ppi.int <- iw$V2[ which(toupper(iw$V1) == toupper(paste('uniprotkb', sub('_.*','',ppi.bait), sep=':'))) ]
+                    ## ###################################
+                    ## try uniprot
+                    ##ppi.bait.up <- sub('_.*', '', ppi.bait)
+                    ##i1.up <- iw$V1
+                    ##i2.up <- iw$V2
+
+                   ## ppi.int <- i2.up[which(i1.up == ppi.bait.up)]
+                   ## ppi.int <- c(ppi.int, i1.up[which(i2.up == ppi.bait.up)])
+
+
+                    ## ##################################
+                    ## try gene names
+                    ##if(length(ppi.int) == 0){
+                    ppi.bait.gn <- toupper(sub('.*_', '', ppi.bait))
+                    i1.gn <- iw$V5
+                    i2.gn <- iw$V6
+                    iw.int <- i2.gn[which(i1.gn == ppi.bait.gn)]
+                    iw.int <- c(iw.int, i1.gn[which(i2.gn == ppi.bait.gn)])
+                    ##}
+                }
+                ## #################################################
+                ##                BioGRID
+                ## #################################################
+                if( 'bg' %in% input[[ paste0('ppi.db.', group) ]] ){
+                    bg <- ppi$bg
+
+                    ppi.bait.gn <- toupper(sub('.*_', '', ppi.bait))
+
+                    i1.gn <- bg$Alt.IDs.Interactor.A
+                    i2.gn <- bg$Alt.IDs.Interactor.B
+
+                    bg.int <- i2.gn[which(i1.gn == ppi.bait.gn)]
+                    bg.int <- c(bg.int, i1.gn[which(i2.gn == ppi.bait.gn)])
+
+
+                }
+                ## ##################################################
+                ##            combine
+                ## ##################################################
+                ppi.int <- c(iw.int, bg.int)
+                ##ppi.int.col <- c(rep('blue', length(iw.int)), rep('orange', length(bg.int)))
 
                 ## if there are interactors
                 if(length(ppi.int) > 0){
-                    ppi.int.idx <- which(sub('_.*','',IDs) %in% sub('.*\\:(.*)$','\\1', ppi.int))
 
-                    points(logFC[ppi.int.idx], logPVal[ppi.int.idx], col='blue', bg='blue', pch=pch.vec[ppi.int.idx], cex=cex.vec[ppi.int.idx])
+                    ## map to data
+                    ppi.int.idx <- which( toupper(sub('.*_', '', IDs)) %in% ppi.int)
+                    cat('ids:', IDs[1:3], '\n')
 
+                    ## check ppi source: different colors
+                    ppi.col <- sapply( toupper(sub('.*_','',IDs))[ ppi.int.idx], function(x){
+                        if(x %in% iw.int & x %in% bg.int) return('cyan')
+                        if(x %in% iw.int) return('blue')
+                        if(x %in% bg.int) return('orange')
+                    })
+                    ## plot
+                    points(logFC[ppi.int.idx], logPVal[ppi.int.idx], col=ppi.col, bg=ppi.col, pch=pch.vec[ppi.int.idx], cex=cex.vec[ppi.int.idx])
+                    ## labels
                     if(input[[paste('ppi.show.labels', group, sep='.')]]){
 
                         volc.add.X <- c(volc.add.X, logFC[ppi.int.idx])
                         volc.add.Y <- c(volc.add.Y, logPVal[ppi.int.idx])
                         volc.add.text <- c( volc.add.text, as.character(IDs[ppi.int.idx]))
                         volc.add.col <- c(volc.add.col, rep('blue', length(ppi.int.idx)))
-                        ##pointLabel(logFC[ppi.int.idx], logPVal[ppi.int.idx], labels=IDs[ppi.int.idx], col='blue', offset=10, method='SANN')
                     }
                 }
 
+
+
+                ## #########################################
+                ## bait protein
+                ppi.bait.idx <- which( toupper(IDs) == toupper(ppi.bait) ) ## bait in data set
+                if(length(ppi.bait.idx) > 0)
+                    points(logFC[ppi.bait.idx], logPVal[ppi.bait.idx], col='green', bg='green', pch=pch.vec[ppi.bait.idx], cex=cex.vec[ppi.bait.idx])
+
+
             }
+           ## }) ## end observer
 
             ## ########################################
             ##  draw ids of selected points
@@ -3544,8 +3679,8 @@ shinyServer(
             cm[ upper.tri(cm, diag=F) ] <- cm.upper[upper.tri(cm.upper, diag=F)]
 
             ## colors
-            color.breaks = seq(-1, 1, length.out=10)
-            color.hm=colorRampPalette(c('blue', 'grey80' , 'red'))(length(color.breaks))
+            color.breaks = seq(-1, 1, length.out=20)
+            color.hm=colorRampPalette(c('blueviolet','blue','cyan', 'aliceblue', 'white' , 'blanchedalmond', 'orange', 'red', 'darkred'))(length(color.breaks))
 
             ## gaps between groups
             gaps.column=cumsum(table(grp))
@@ -3888,6 +4023,9 @@ shinyServer(
 
             return(pca)
         }
+
+
+
 
 })
 

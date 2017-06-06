@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.0"
+VER="0.7.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -65,6 +65,7 @@ CONFAPP <<- 'http://shiny-proteomics.broadinstitute.org:3838/modTconf/'
 #################################################################
 library(shiny)
 library(shinydashboard)
+library(shinyjs)
 ## heatmap
 ##library(pheatmap)
 library(scales)
@@ -103,6 +104,46 @@ library(maptools)
 library(org.Hs.eg.db)
 library(dplyr)
 
+## #####################################
+## CSS for loading animantion
+appCSS <- "
+#loading-content {
+  position: absolute;
+  background: #000000;
+  opacity: 0.9;
+  z-index: 100;
+  left: 0;
+  right: 0;
+  height: 100%;
+  text-align: center;
+  color: #FFFFFF;
+}
+"
+
+
+## ##########################################
+## import PPi databases
+ppi <- list()
+
+## ###################################
+##             InWeb
+ppi$iw <- readRDS('ppi/core.psimitab.rds')
+## uniprot
+ppi$iw$V1 <- toupper(sub('uniprotkb\\:', '', ppi$iw$V1))
+ppi$iw$V2 <- toupper(sub('uniprotkb\\:', '', ppi$iw$V2))
+## gene names
+ppi$iw$V5 <- toupper(sub('^uniprotkb\\:(.*?)\\(gene name\\).*', '\\1', ppi$iw$V5))
+ppi$iw$V6 <- toupper(sub('^uniprotkb\\:(.*?)\\(gene name\\).*', '\\1', ppi$iw$V6))
+
+## ###################################
+##            biogrid
+ppi$bg <- readRDS('ppi/BIOGRID-HUMAN-3.4.147.mitab.rds')
+ppi$bg$Alt.IDs.Interactor.A <- sapply(strsplit(ppi$bg$Alt.IDs.Interactor.A, '\\|'), function(x) sub('.*\\:','',x[2]) )
+ppi$bg$Alt.IDs.Interactor.B <- sapply(strsplit(ppi$bg$Alt.IDs.Interactor.B, '\\|'), function(x) sub('.*\\:','',x[2]) )
+
+
+
+
 ## ###############################################
 ##
 ##        map uniprot/refseq to gene names
@@ -129,22 +170,24 @@ mapIDs <- function(ids){
             ## ##################################
             ## map
             if(keytype != 'UNKNOWN')
-                id.map.tmp <- mapIds(org.Hs.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first')
+                id.map.tmp <- try(mapIds(org.Hs.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
             else
                 id.map.tmp <- c()
 
-            if(length(id.map.tmp) > 0){
 
-                id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(names(id.query), id.map.tmp, sep='_'), stringsAsFactors=T)
+            ##if(length(id.map.tmp) > 0){
+            if(class(id.map.tmp) != 'try-error'){
+                id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(names(id.query), id.map.tmp, sep='_'), stringsAsFactors=F)
             ##global.results$id.map=id.map
             } else {
-                id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query),stringsAsFactors=T)
+                id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query), stringsAsFactors=F)
+                keytype <- 'UNKNOWN'
             }
-
-    res <- list()
-    res[[1]] <- keytype
-    res[[2]] <- id.map
-    names(res) <- c('keytype', 'id.map')
+           ## View(id.map)
+            res <- list()
+            res[[1]] <- keytype
+            res[[2]] <- id.map
+            names(res) <- c('keytype', 'id.map')
     })
 
     return(res)

@@ -32,7 +32,8 @@ shinyUI(
                   dashboardHeader( title=paste("modT (v",VER,")", sep=""),
 
                         ## logged user
-                        dropdownMenuOutput('memfree'),
+                        ##dropdownMenuOutput('memfree'),
+                        dropdownMenuOutput('session.name'),
                         dropdownMenuOutput('logged.user'),
                         dropdownMenuOutput('logout'),
 

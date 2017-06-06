@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.0"
+VER="0.7.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -102,6 +102,53 @@ library(maptools)
 ## id mapping
 library(org.Hs.eg.db)
 library(dplyr)
+
+## ###############################################
+##
+##        map uniprot/refseq to gene names
+##
+## ###############################################
+mapIDs <- function(ids){
+    withProgress(message='Mapping gene names...', {
+            ## ###################################
+            ##           id type
+            ## ###################################
+            keytype <- 'UNKNOWN'
+            ## Uniprot or RefSeq?
+            if(length(grep('^(Q|P|O|A|E|H|F)', ids)) > 0)
+                keytype='UNIPROT'
+            if(length(grep('^(NP_|XP_)', ids)) > 0)
+                keytype='REFSEQ'
+
+            ## ###################################
+            ##            try to map gene names
+            ## ###################################
+            id.query <- sub('(-|;|\\.|_).*', '', ids) ## first id
+            names(id.query) <- ids
+
+            ## ##################################
+            ## map
+            if(keytype != 'UNKNOWN')
+                id.map.tmp <- mapIds(org.Hs.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first')
+            else
+                id.map.tmp <- c()
+
+            if(length(id.map.tmp) > 0){
+
+                id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(names(id.query), id.map.tmp, sep='_'), stringsAsFactors=T)
+            ##global.results$id.map=id.map
+            } else {
+                id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query),stringsAsFactors=T)
+            }
+
+    res <- list()
+    res[[1]] <- keytype
+    res[[2]] <- id.map
+    names(res) <- c('keytype', 'id.map')
+    })
+
+    return(res)
+}
 
 #################################################################################
 ##     Heatmap of expression values combining all of the results from all tests

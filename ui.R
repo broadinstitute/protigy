@@ -21,6 +21,16 @@ shinyUI(
     ##fluidPage(theme="custom.css",
     dashboardPage( skin='blue',
 
+                  ##useShinyjs(),
+                  ##inlineCSS(appCSS),
+                  ##div(
+                  ##    id = "loading-content",
+                  ##    h2("Loading...")
+                  ##),
+
+                  ##hidden(
+                  ##     div( id= "app-content",
+
                  ## tags$head(
                  ##     tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
                  ## ),
@@ -124,8 +134,21 @@ shinyUI(
 
                 tags$head(includeCSS('www/custom.css')),
 
-                   htmlOutput('error'),
+                useShinyjs(),
+                inlineCSS(appCSS),
+                div(
+                    id = "loading-content",
+                    h2("Loading...")
+                ),
 
+                hidden(
+                     div( id= "app-content",
+
+
+
+
+                   htmlOutput('error'),
+                 ##selectizeInput('stest', 'TEST', choices=NULL),
                    printHTMLUI('getting.started'),
                    printHTMLUI('change.log'),
                    printHTMLUI('id.column'),
@@ -170,11 +193,16 @@ shinyUI(
                   #   }
                    ')))
 
+
+            ) ## end div
+            ) ## end hidden
                    )## dashboard body
 
         ##) ## end end fluidRow
 
-        ##)
-        ) ## end fluidPage
+            ##)
+
+
+        ) ## end dashboardPage
 
 ) ## end shinyUI

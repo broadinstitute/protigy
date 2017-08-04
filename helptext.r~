@@ -34,14 +34,22 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.7.2 June 6, 2017</b>
+<ul>
+<li>Volcano plots: added hyperbolic curves based on a minimal fold change cut-off and adjusted p-values.</li>
+</ul>
 <b>v0.7.1 June 1, 2017</b>
 <ul>
-<li>General: fixed a bug preventing the filter to be triggered after the user re-runs an analysis.</li>
-
+<li>Misc: fixed a bug preventing the filter to be triggered after the user re-runs an analysis.</li>
+<li>Volcano plots: integration of BioGRID (human) protein-protein interactions.</li>
+<li>Volcano plots: <i>selectizeInput</i> now rendered on the server. Significantly speeded up page respond times.</li>
+<li>Correlation matrix: updated color scheme to better visualize subtle differences.</li>
+<li>Gene name mapping: fixed some bugs causing the app to crash if no gene names could be mapped or if other accessions than UniProt or RefSeq were used..</li>
+<li>Misc: loading animation.</li>
 </ul>
 <b>v0.7.0 May 5, 2017</b>
 <ul>
-<li>General: automatic mapping to gene names if RefSeq or UniProt accession numbers were found in "id" column.</li>
+<li>Misc: automatic mapping to gene names if RefSeq or UniProt accession numbers were found in "id" column.</li>
 <li>Volcano plots: integration of InWeb database.</li>
 <li>Volcano plots: paramater "max. Log10(p-value)" works in all volcano plots. Before, changing the parameter only worked in the parameter panel of the first volcano.</li>
 <li>Volcano plots: completely zoomable</li>

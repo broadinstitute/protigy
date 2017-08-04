@@ -44,13 +44,13 @@ modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NU
     mod.t.result <- moderated.t (data, design.mat)
 
     ## 20151211 kk
-    mod.t.result <- data.frame( mod.t.result, Log.P.Value=-10*log(mod.t.result$P.Value,10))
+    mod.t.result <- data.frame( mod.t.result, Log.P.Value=-10*log(mod.t.result$P.Value,10), stringsAsFactors=F)
 
     ## add label
     if(!is.null(label))
         colnames(mod.t.result) <- paste(colnames(mod.t.result), label, sep='.')
 
-    mod.t <- data.frame ( cbind (data.frame (id=id), data, mod.t.result) )
+    mod.t <- data.frame ( cbind (data.frame (id=id), data, mod.t.result), stringsAsFactors=F )
     ##mod.t <- data.frame ( cbind (data.frame (id),  mod.t.result, data) )
     rownames(mod.t) <- id ##make.unique(as.character(mod.t[, 1]), sep='_')
     ##colnames(mod.t)[1] <- 'id'
@@ -129,14 +129,14 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
                      return (ret.value)
                    })
     ## 20151210 kk
-    mod.t.result <- data.frame( mod.t.result, change=change, significant=mod.sig, Log.P.Value=-10*log(mod.t.result$P.Value,10))
+    mod.t.result <- data.frame( mod.t.result, change=change, significant=mod.sig, Log.P.Value=-10*log(mod.t.result$P.Value,10), stringsAsFactors=F)
 
     ## add label
     if(!is.null(label))
         colnames(mod.t.result) <- paste(colnames(mod.t.result), label, sep='.')
 
     ##mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result, change=change, significant=mod.sig) )
-    mod.t <- data.frame ( cbind (data.frame (id=id), data, mod.t.result) )
+    mod.t <- data.frame ( cbind (data.frame (id=id), data, mod.t.result), stringsAsFactors=F )
     ##colnames (mod.t)[1] <- id.col   # retain id.col (if provided)
     ##rownames(mod.t) <- make.unique( as.character(mod.t[,1]), sep='_' )
     rownames(mod.t) <- id
@@ -198,7 +198,7 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
   non.na.n <- apply (data, 1, function (x) { sum (is.finite (x)) })
 
 
-    mod.f <- data.frame ( cbind (id=id, sig, significant=mod.sig, total.n=non.na.n, Log.P.Value=-10*log(sig[,'P.Value'] ,10)) )
+    mod.f <- data.frame ( cbind (id=id, sig, significant=mod.sig, total.n=non.na.n, Log.P.Value=-10*log(sig[,'P.Value'] ,10)), stringsAsFactors=F )
 
     ##if(!is.null(label))
     ##    colnames(mod.f) <- paste(colnames(mod.f), label, sep='.')
@@ -226,7 +226,7 @@ moderated.t <- function (data, design=NULL) {
 
      cat('\n-- moderated.t --\n')
 
-    data.matrix <- data.frame (data)
+    data.matrix <- data.frame (data, stringsAsFactors=F)
     ## the design matrix is expected to be:
     ##    ref    comparison
     ##     1         0
@@ -284,7 +284,7 @@ reproducibility.filter <- function (data, id.col='id', alpha=0.05) {
     cat('\n-- reproducibility.filter --\n')
 
   d <- data [, setdiff (colnames (data), id.col)]     # data part of input
-  data.long <- melt (data.frame (data), id=id.col)    # convert to long format
+  data.long <- melt (data.frame (data, stringsAsFactors=F), id=id.col)    # convert to long format
   colnames (data.long) <- c ('id', 'rep', 'y')
   # keep column order in data so that (i,j) below correctly corresponds to columns
   data.long [,'rep'] <- factor (data.long[,'rep'], levels=colnames (d))

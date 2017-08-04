@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.1"
+VER="0.7.3"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -70,7 +70,7 @@ library(shinyjs)
 ##library(pheatmap)
 library(scales)
 library(gtable)
-## moderated t-test
+## moderated tests
 library(limma)
 ## colors
 library (RColorBrewer)
@@ -97,9 +97,8 @@ library (mixtools)
 library (mclust)
 ## table preview
 library(DT)
-## label placments without overlap
+## label placements without overlap
 library(maptools)
-
 ## id mapping
 library(org.Hs.eg.db)
 library(dplyr)
@@ -119,10 +118,27 @@ appCSS <- "
   color: #FFFFFF;
 }
 "
+## #################################################################
+##
+##              color scheme for PPI databases
+##
+## #################################################################
+ppi.db.col <- c('InWeb'='deepskyblue',
+                'BioGRID'='yellow',
+                'Reactome'='magenta',
 
+                'InWeb-BioGRID'='darkolivegreen4',
+                'InWeb-Reactome'='darkviolet',
+                'BioGRID-Reactome'='orange',
 
-## ##########################################
-## import PPi databases
+                'InWeb-BioGRID-Reactome'='cyan'
+                )
+
+## ##################################################################
+##
+##                    import PPi databases
+##
+## ##################################################################
 ppi <- list()
 
 ## ###################################
@@ -141,6 +157,11 @@ ppi$bg <- readRDS('ppi/BIOGRID-HUMAN-3.4.147.mitab.rds')
 ppi$bg$Alt.IDs.Interactor.A <- sapply(strsplit(ppi$bg$Alt.IDs.Interactor.A, '\\|'), function(x) sub('.*\\:','',x[2]) )
 ppi$bg$Alt.IDs.Interactor.B <- sapply(strsplit(ppi$bg$Alt.IDs.Interactor.B, '\\|'), function(x) sub('.*\\:','',x[2]) )
 
+## ###################################
+##           Reactome
+ppi$react <- readRDS('ppi/homo_sapiens.mitab.interactions.rds')
+ppi$react$alternative.id.A <- sub('^.*_(.*?)\\(.*$','\\1', ppi$react$alternative.id.A)
+ppi$react$alternative.id.B <- sub('^.*_(.*?)\\(.*$','\\1', ppi$react$alternative.id.B)
 
 
 
@@ -151,6 +172,7 @@ ppi$bg$Alt.IDs.Interactor.B <- sapply(strsplit(ppi$bg$Alt.IDs.Interactor.B, '\\|
 ## ###############################################
 mapIDs <- function(ids){
     withProgress(message='Mapping gene names...', {
+
             ## ###################################
             ##           id type
             ## ###################################
@@ -164,7 +186,7 @@ mapIDs <- function(ids){
             ## ###################################
             ##            try to map gene names
             ## ###################################
-            id.query <- sub('(-|;|\\.|_).*', '', ids) ## first id
+            id.query <- sub('(-|;|\\.|_|\\|).*', '', ids) ## first id
             names(id.query) <- ids
 
             ## ##################################
@@ -174,16 +196,18 @@ mapIDs <- function(ids){
             else
                 id.map.tmp <- c()
 
-
             ##if(length(id.map.tmp) > 0){
             if(class(id.map.tmp) != 'try-error'){
-                id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(names(id.query), id.map.tmp, sep='_'), stringsAsFactors=F)
-            ##global.results$id.map=id.map
+                ##id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(names(id.query), id.map.tmp, sep='_'), stringsAsFactors=F)
+                id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(id.query, id.map.tmp, sep='_'), stringsAsFactors=F)
+
+                ##global.results$id.map=id.map
             } else {
                 id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query), stringsAsFactors=F)
                 keytype <- 'UNKNOWN'
             }
-           ## View(id.map)
+
+            ## results
             res <- list()
             res[[1]] <- keytype
             res[[2]] <- id.map

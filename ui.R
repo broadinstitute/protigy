@@ -21,24 +21,9 @@ shinyUI(
     ##fluidPage(theme="custom.css",
     dashboardPage( skin='blue',
 
-                  ##useShinyjs(),
-                  ##inlineCSS(appCSS),
-                  ##div(
-                  ##    id = "loading-content",
-                  ##    h2("Loading...")
-                  ##),
 
-                  ##hidden(
-                  ##     div( id= "app-content",
-
-                 ## tags$head(
-                 ##     tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
-                 ## ),
-
-
-
-        ############################################
-        ## header
+                  ## ##########################################
+                  ## header
                   dashboardHeader( title=paste("modT (v",VER,")", sep=""),
 
                         ## logged user
@@ -132,76 +117,72 @@ shinyUI(
             dashboardBody(
             ##column(9,
 
-                tags$head(includeCSS('www/custom.css')),
+                ##tags$head(includeCSS('www/custom.css')),
 
                 useShinyjs(),
                 inlineCSS(appCSS),
+
+                ## #######################
+                ## loading animantion
                 div(
                     id = "loading-content",
                     h2("Loading...")
                 ),
+                ## #######################
+                ## app content
+               ## hidden(
+                    div( id= "app-content",
 
-                hidden(
-                     div( id= "app-content",
+                         htmlOutput('error'),
 
+                         printHTMLUI('getting.started'),
+                         printHTMLUI('change.log'),
+                         printHTMLUI('id.column'),
+                         printHTMLUI('exp.design'),
+                         printHTMLUI('analysis'),
+                         printHTMLUI('results'),
 
-
-
-                   htmlOutput('error'),
-                 ##selectizeInput('stest', 'TEST', choices=NULL),
-                   printHTMLUI('getting.started'),
-                   printHTMLUI('change.log'),
-                   printHTMLUI('id.column'),
-                   printHTMLUI('exp.design'),
-                   printHTMLUI('analysis'),
-                   printHTMLUI('results'),
-
-                   ## the actual content
-                   uiOutput('navbar'),
+                         ## the actual content
+                         uiOutput('navbar'),
 
 
-                   tags$head(tags$style(HTML('
+                         tags$head(tags$style(HTML('
 
-                      /* main sidebar */
-                      .skin-blue .main-sidebar {
-                              background-color: #000000;
-                      }
-                      /* logo */
-                      .skin-blue .main-header .logo {
-                             background-color: #1477C5; ## Broad blue
+                              /* main sidebar */
+                              .skin-blue .main-sidebar {
+                                      background-color: #000000;
+                              }
+                              /* logo */
+                              .skin-blue .main-header .logo {
+                                      background-color: #1477C5; ## Broad blue
 
-                      }
-                      /* rest of the header*/
-                      .skin-blue .main-header .navbar {
-                              background-color: #1477C5;
+                              }
+                              /* rest of the header*/
+                              .skin-blue .main-header .navbar {
+                                      background-color: #1477C5;
                               }
 
-                    # /* scroll bar  */
-                    # .sidebar {
-                    #          height: 90vh; overflow-x: auto
-                    # }
+                              # /* scroll bar  */
+                              # .sidebar {
+                              #          height: 90vh; overflow-x: auto
+                              # }
 
 
 
-                  #     /* active selected tab in the sidebarmenu */
-                  #     .skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
-                  #                            background-color: #ECF0F5;
-                  #                            }
-                  #    /*  */
-                  #    .skin-blue .content-wrapper .right-side {
-                  #                             background-color: #FFFFFF;
-                  #   }
+                              # /* active selected tab in the sidebarmenu */
+                              # .skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
+                              #          background-color: #ECF0F5;
+                              # }
+                              # /*  */
+                              # .skin-blue .content-wrapper .right-side {
+                              #          background-color: #FFFFFF;
+                              # }
                    ')))
+                   ) ## end div
 
+               ## ) ## end hidden
 
-            ) ## end div
-            ) ## end hidden
-                   )## dashboard body
-
-        ##) ## end end fluidRow
-
-            ##)
-
+            )## dashboard body
 
         ) ## end dashboardPage
 

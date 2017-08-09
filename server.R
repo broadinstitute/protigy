@@ -3332,8 +3332,9 @@ shinyServer(
             }
 
 
-            ####################################################
-            ## plot
+            ## ##################################################
+            ##               set up the plot
+            ## ##################################################
             par(mar=c(4,5,5,2))
             plot.new()
             plot.window( xlim=xlim, ylim=ylim, cex.axis=1.8, cex.lab=1.8)
@@ -3398,14 +3399,14 @@ shinyServer(
                     volc.add.text[i2] <- as.character( unlist( volc[[paste('text', group, sep='.')]][i2]) )
                     volc.add.col[i2] <- 'black'
                 }
-         }
+            }
 
             ## ########################################################
             ## add PPI stuff
             ## observeEvent( input$ppi.go,  {
             ppi.bait <- input[[ gsub('\\.', '', paste0('ppi.bait.', group)) ]]
 
-            if(toupper(ppi.bait) %in% toupper(IDs.all)){
+            if(toupper(ppi.bait) %in% toupper(IDs.all)) {
                 bg.int <- iw.int <- react.int <- c()
 
                 ## #########################################
@@ -3497,7 +3498,9 @@ shinyServer(
                         volc.add.text <- c( volc.add.text, as.character(IDs[ppi.int.idx]))
                         volc.add.col <- c(volc.add.col, rep('blue', length(ppi.int.idx)))
                     }
-                }
+                }## else { ## end if there are interactors
+                    ##ppi.col <-
+                ##}
 
                 ## #########################################
                 ## bait protein
@@ -3536,19 +3539,21 @@ shinyServer(
                 leg <- paste(names(ppi.col.leg), ' (',ppi.col.leg.sig,'/' ,ppi.col.leg,')', sep='')
                 legend('topleft', legend=leg, col=ppi.db.col.tmp, pch=16, bty='n', cex=1.5, title=paste('Known interactors (sig/tot)'))
                 }
-            }
+            } ## end if ppi.bait in IDs.all
 
 
             ## ########################################
             ##  draw ids of selected points
             if(length(volc.add.X) > 0)
                 ##ppi.col[ppi.bait.idx] <- 'green'
-                pointLabel(as.numeric(unlist(volc.add.X)), as.numeric(unlist(volc.add.Y)), labels=as.character(unlist(volc.add.text)), col=ppi.col, offset=20, method='SANN', cex=input[[paste('cex.volcano.lab', group, sep='.')]])
+                pointLabel(as.numeric(unlist(volc.add.X)), as.numeric(unlist(volc.add.Y)), labels=as.character(unlist(volc.add.text)), col=volc.add.col, offset=20, method='SANN', cex=input[[paste('cex.volcano.lab', group, sep='.')]])
+
+        } ## end plotVolcano
 
 
 
 
-        }
+
 
         #######################################################################################
         ##

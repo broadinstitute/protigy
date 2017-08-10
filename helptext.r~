@@ -34,6 +34,11 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.7.3 June 20, 2017</b>
+<ul>
+<li>Misc: unified the naming of the id-column on the code.</li>
+<li>Volcano plots: Integration of Reactome (human) protein-protein interactions.</li>
+</ul>
 <b>v0.7.2 June 6, 2017</b>
 <ul>
 <li>Volcano plots: added hyperbolic curves based on a minimal fold change cut-off and adjusted p-values.</li>
@@ -53,7 +58,7 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
 <li>Volcano plots: integration of InWeb database.</li>
 <li>Volcano plots: paramater "max. Log10(p-value)" works in all volcano plots. Before, changing the parameter only worked in the parameter panel of the first volcano.</li>
 <li>Volcano plots: completely zoomable</li>
-<li>Volcano plots: reset button for volcano annotations</li>
+<li>Volcano plots: button to reset volcano annotations</li>
 </ul>
 <b>v0.6.6.1 Mar 17, 2017</b>
 <ul>

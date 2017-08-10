@@ -34,7 +34,7 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
-<b>v0.7.4 August 09, 2017</b>
+<b>v0.7.4 August 10, 2017</b>
 <ul>
 <li>Scatterplots: new tab that provides interactive scatterplots between replicate measurements. For One-sample moderated T-test and F-test the significant proteins are marked in red.</li>
 <li>Volcano: PPI - search mask keeps working after multiple rounds of analysis.</li>

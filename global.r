@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.3"
+VER="0.7.4"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data

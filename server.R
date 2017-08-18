@@ -424,20 +424,21 @@ shinyServer(
 
                 scat.tabs[[i+1]]=tabPanel(paste0( grp.unique[ i ] ),
                                           fluidPage(
+
                                               ## ###############################
                                               ## select data columns to plot
-                                              box( title='', status = 'primary', solidHeader = T, width=12,
+                                              box( title='Choose expression columns', status = 'primary', solidHeader = T, width=12,
 
                                                   fluidRow(
-                                                      column(2),
-                                                      column(4, selectInput( paste0('scat.x.', grp.unique[i]), 'x-axis', scat.x, selected=scat.x[1], multiple=FALSE, selectize=TRUE)),
-                                                      column(4, selectInput( paste0('scat.y.', grp.unique[i]), 'y-axis', scat.y, selected=scat.y[2], multiple=FALSE, selectize=TRUE)),
-                                                      column(2)
+                                                      column(1),
+                                                      column(5, selectInput( paste0('scat.x.', grp.unique[i]), 'x-axis', scat.x, selected=scat.x[1], multiple=FALSE, selectize=TRUE)),
+                                                      column(5, selectInput( paste0('scat.y.', grp.unique[i]), 'y-axis', scat.y, selected=scat.y[2], multiple=FALSE, selectize=TRUE)),
+                                                      column(1)
                                                   )
 
                                                   ), # end box
 
-                                                ## ###########################################################
+                                              ## ###########################################################
                                               ## PPI stuff
                                               box( title='Protein-protein interactions', status = 'primary', width=12, collapsible = TRUE, solidHeader=T, collapsed=global.param$collapse.ppi,
                                                   fluidRow(
@@ -492,7 +493,7 @@ shinyServer(
 
                                               ## ###########################################################
                                               ## volcano plotting parameters
-                                              box( title='', status = 'primary', solidHeader = T, width=12,
+                                              box( title='Plotting parameters', status = 'primary', solidHeader = T, width=12,
                                                  fluidRow(
 
 
@@ -1865,6 +1866,8 @@ shinyServer(
               global.results$keytype <- map.res$keytype
               global.results$id.map <- map.res$id.map
               global.results$data$output <- left_join(global.results$data$output, map.res$id.map, 'id')
+              ##View(global.results$data$output)
+              ##rownames(global.results$data$output) <- global.results$id.map$id.concat
 
           }
         })
@@ -1963,6 +1966,11 @@ shinyServer(
             if(!(global.param$which.test %in% c('mod F', 'none'))){
                 ins.volc()
             }
+            ###################################################################
+            ##            insert the panels for the scatterplots
+            ###################################################################
+            ins.scat()
+
             ## #####################################
             ## generate id.map for compatibility with < v0.7.0
             if(is.null(global.results$id.map)){
@@ -1979,7 +1987,7 @@ shinyServer(
                 global.results$keytype <- map.res$keytype
                 global.results$id.map <- data.frame(id=ids,  map.res$id.map )
                 global.results$data$output <- left_join(global.results$data$output, global.results$id.map, 'id')
-
+                ##rownames(global.results$data$output) <- global.results$id.map$id.concat
             }
         })
 
@@ -2448,6 +2456,8 @@ shinyServer(
                 ###########################################
                 ## store data matrix as test results
                 ## - values are log
+
+                tab <- data.frame(id=tab[ , id.col], tab)
                 res.comb <- tab
 
             }
@@ -2465,16 +2475,21 @@ shinyServer(
                 ##res.comb <- data.frame(res.comb, stringsAsFactors=F)
                 ##cat(res.comb$id[1:3], '\n')
                 res.comb <- left_join(res.comb, global.results$id.map, 'id')
+                ##View(res.comb)
+                ##rownames(res.comb) <- res.comb[, 'id']
                 ##cat(res.comb$id[1:3], '\n')
                 ##cat('test2\n')
             }
 
+            ##save(res.comb, file='tmp.RData')
+            ##rownames(res.comb) <- make.names(res.comb$id.concat)
+            rownames(res.comb) <- make.names(res.comb$id)
 
             ## #########################################
             ## store the results
             global.results$data$output <- res.comb
 
-            cat(dim(global.results$data$output))
+            ##cat(dim(global.results$data$output))
 
             ## #####################################
             ## set some flags
@@ -2523,7 +2538,7 @@ shinyServer(
             groups.comp=unique(global.param$grp.comp)
 
             ## test results
-            res <- data.frame(global.results$data$output)
+            res <- data.frame(global.results$data$output, stringsAsFactors=F )
             ##View(data.frame(global.results$data$output))
 
             ## get the filter type
@@ -2669,6 +2684,8 @@ shinyServer(
 
             ###################################################
             ## global filter accross all experiments
+            ##rownames(res) <- res[, 'id.concat']
+
             global.results$filtered <- res
             ##View(res)
             global.results$filtered.groups <- res.groups
@@ -2999,8 +3016,8 @@ shinyServer(
             if(!is.null(table.anno)){
                 if(is.null(dim(table.anno)))
                     table.anno <- data.frame(table.anno)
-                View(tab)
-                View(table.anno)
+               ## View(tab)
+               ## View(table.anno)
                 ##tab <- cbind(tab, table.anno[ rownames(tab), ])
                 tab <- left_join(tab, table.anno, 'id')
             }
@@ -3079,7 +3096,7 @@ shinyServer(
 
             ##cat('now:', global.param$update.ppi.select.scat, '\n')
 
-            grp.comp <- unique( global.param$grp.comp )
+            grp.comp <- unique( global.param$grp )
 
             for(i in 1:length(grp.comp)){
 
@@ -3106,7 +3123,10 @@ shinyServer(
                 setProgress( message='Preparing scatterplots...')
 
                 ## volcanos for each group comparison
-                grp.comp <- unique( global.param$grp )
+                ##if(global.param$which.test == 'Two-sample mod T')
+                ##    grp.comp <- unique( global.param$grp.comp )
+                ##else
+                    grp.comp <- unique( global.param$grp )
 
                 ## #########################################
                 ## loop over group comparsions
@@ -3294,7 +3314,7 @@ shinyServer(
         ## #############################################################
         ##
         ##                   SCATTERPLOTS
-        ##  - actual plot is generetad here
+        ##  - actual plot is generated here
         ##
         ## #############################################################
         plotScatter <- function(group){
@@ -3329,11 +3349,15 @@ shinyServer(
                     pval <- rep(1, nrow(res))
             }
             ## ###############################
-            ## p-values mod F
+            ## p-values two-sample
             if(global.param$which.test == 'Two-sample mod T') {
                 pval <- rep(1, nrow(res))
             }
-
+            ## ###############################
+            ## p-values no test
+            if(global.param$which.test == 'none') {
+                pval <- rep(1, nrow(res))
+            }
 
             ## ##############################
             ## extract data columns
@@ -3360,6 +3384,7 @@ shinyServer(
             ## ###############################
             ## color significant values
             col <- rep('black', nrow(res))
+            sig.idx <- c()
             if(global.param$filter.type == 'adj.p' | global.param$filter.type == 'nom.p'){
                 sig.idx <- which(pval < as.numeric(global.param$filter.value ))
                 col[ sig.idx ] <- 'red'
@@ -3369,12 +3394,78 @@ shinyServer(
             ## data frame
             dat.plot <- data.frame(x.ax, y.ax, pval, IDs, stringsAsFactors=F)
 
+            ## check whether to draw PPI stuff
+            ppi.bait <- input[[ gsub('\\.', '', paste0('ppi.bait.scat', group)) ]]
+            PPI <- FALSE
 
+            if( nchar(ppi.bait) > 0 & toupper(ppi.bait) %in% toupper(IDs))
+                PPI <- TRUE
 
             ## ##############################
-            ##            plot
+            ##        set up the  plot
             ## ##############################
-            p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs )
+            if(PPI)
+                p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs, alpha=.1, showlegend=F )
+                ##p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col, showlegend=FALSE), text=IDs, alpha=.1 )
+            else
+                p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs, showlegend=F )
+            ## ########################################################
+            ##                  add PPI stuff
+            ## ##########################################################
+            ppi.idx <- c()
+            ##if(toupper(ppi.bait) %in% toupper(IDs)) {
+            if(PPI){
+                ## ##############################################
+                ##
+                ##            extract interactors
+                ##
+                ## ###############################################
+                ppi.map <- get.interactors( ppi.bait=ppi.bait,
+                                           IDs=IDs,
+                                           sig.idx=sig.idx,
+                                           db=input[[ paste0('ppi.db.scat.', group) ]],
+                                           ppi.db=ppi,
+                                           ppi.db.col=ppi.db.col
+                                           )
+
+                ## ################################
+                ## extract results
+                ppi.int.idx <- ppi.map$ppi.int.idx
+                ppi.bait.idx <- ppi.map$ppi.bait.idx
+                leg <- ppi.map$leg
+                leg.col <- ppi.map$leg.col
+                ppi.col <- ppi.map$ppi.col
+
+                ## ###############################
+                ## add interactors
+                if(length(ppi.int.idx) > 0){
+                    col[ppi.int.idx] <- ppi.col[ nchar(ppi.col) > 0 ]
+                    ppi.idx <- ppi.int.idx
+
+                    p <- p %>% add_trace(x=dat.plot$x.ax[ppi.int.idx], y=dat.plot$y.ax[ppi.int.idx], type='scatter', mode = 'markers', marker=list( size=10, color=col[ppi.int.idx]), text=IDs[ppi.int.idx], name='Interactors' )
+                }
+                ## ################################
+                ## add bait
+                if(length(ppi.bait.idx) > 0){
+                    col[ppi.bait.idx] <- 'green'
+                    ppi.idx <- c(ppi.idx, ppi.int.idx)
+
+                    p <- p %>% add_trace(x=dat.plot$x.ax[ppi.bait.idx], y=dat.plot$y.ax[ppi.bait.idx], type='scatter', mode = 'markers', marker=list( size=15, color=col[ppi.bait.idx]), text=IDs[ppi.bait.idx], name=paste('Bait protein:', ppi.bait) )
+                }
+            }
+
+
+
+            ## interactors
+           ## if(length(ppi.int.idx) > 0){
+
+            ##}
+            ## bait
+            ##if(length(ppi.bait.idx) > 0){
+
+            ##}
+
+            ## some astethics
             p <- layout(p,
                         title='',
                         xaxis=list(
@@ -3408,6 +3499,9 @@ shinyServer(
 
             ## pch for significant points
             sig.pch=23
+
+            ## vectors for selected points/PP interactors
+            volc.add.X <- volc.add.Y <- volc.add.text <- volc.add.col <- c()
 
             ## unfiltered data set
             res = as.data.frame( global.results$data$output )
@@ -3527,11 +3621,14 @@ shinyServer(
             }
 
             if(global.param$filter.type == 'none')
-                sig.idx = 1:length(logFC)
+                sig.idx <- c()
+                ##sig.idx = 1:length(logFC)
 
             ## use IDs as names
-            names(sig.idx) <- IDs[sig.idx]
+            if(length(sig.idx) >0 )
+                names(sig.idx) <- IDs[sig.idx]
 
+            sig.idx.all <- sig.idx
 
             ## #################################################
             ##
@@ -3555,8 +3652,88 @@ shinyServer(
             col.opac=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=0.2)
 
 
+
+            ## ########################################################
+            ##
+            ##                Query PPI databases
+            ##
+            ## ##########################################################
+            ppi.bait <- input[[ gsub('\\.', '', paste0('ppi.bait.', group)) ]]
+
+            ## ##############################################
+            ##
+            ## if the bait is was detected
+            ##
+            ## ###############################################
+            PPI <- FALSE
+            if(toupper(ppi.bait) %in% toupper(IDs.all)) {
+
+                PPI <- TRUE
+
+                ppi.map <- get.interactors( ppi.bait=ppi.bait,
+                                           IDs=IDs.all,
+                                           sig.idx=sig.idx.all,
+                                           db=input[[ paste0('ppi.db.', group) ]],
+                                           ppi.db=ppi,
+                                           ppi.db.col=ppi.db.col
+                                           )
+
+                ## ################################
+                ## extract results
+                ppi.int.idx <- ppi.map$ppi.int.idx
+
+                ##ppi.bait.idx <- ppi.map$ppi.bait.idx
+                leg <- ppi.map$leg
+                leg.col <- ppi.map$leg.col
+                ppi.col <- ppi.map$ppi.col
+
+                ppi.bait.idx <- which(toupper(IDs) == toupper(ppi.bait))
+                ppi.col[ ppi.bait.idx ] <- 'green'
+
+                ppi.int.vec <- rep(FALSE, length(IDs))
+                ppi.int.vec[ppi.int.idx] <- TRUE
+
+                ##cat(ppi.col[])
+
+                ## udpate color vector
+                col[ nchar(ppi.col) > 0] <- ppi.col[ nchar(ppi.col) > 0]
+                col.opac[ nchar(ppi.col) > 0] <- ppi.col[ nchar(ppi.col) > 0 ]
+
+
+                ## ###############################
+                ## plot if there are interactors
+                if(length(ppi.int.idx) > 0) {
+
+                    ##points(logFC[ppi.int.idx], logPVal[ppi.int.idx], col=ppi.col[ppi.int.idx], bg=ppi.col[ppi.int.idx], pch=pch.vec[ppi.int.idx], cex=cex.vec[ppi.int.idx])
+
+                    ## labels
+                    if(input[[paste('ppi.show.labels', group, sep='.')]]){
+
+                        volc.add.X <- c(volc.add.X, logFC[ppi.int.idx])
+                        volc.add.Y <- c(volc.add.Y, logPVal[ppi.int.idx])
+                        volc.add.text <- c( volc.add.text, as.character(IDs[ppi.int.idx]))
+                        ##volc.add.col <- c(volc.add.col, rep('black', length(ppi.int.idx)))
+                        volc.add.col <- c(volc.add.col, col[ppi.int.idx])
+                    }
+                }
+                ## add bait
+               ## if(length(ppi.bait.idx) > 0)
+               ##     points(logFC[ppi.bait.idx], logPVal[ppi.bait.idx], col='green', bg='green', pch=pch.vec[ppi.bait.idx], cex=cex.vec[ppi.bait.idx])
+
+                ## legend('topleft', legend=leg, col=leg.col, pch=16, bty='n', cex=1.5, title=paste('Known interactors\n(sig/det/tot)'))
+
+            }
+
+
+
+
+
+
+
             ## ##################################################################
-            ##               zoomed vs not zoomed
+            ##
+            ##                   zoomed vs not zoomed
+            ##
             ## ##################################################################
             if( is.null( volc.brush[[ paste('xmin', group, sep='.') ]] ) ){
                 xlim = c(-xlim, xlim)
@@ -3575,7 +3752,7 @@ shinyServer(
                 ylim = c( max(0, volc.brush[[ paste('ymin', group, sep='.') ]]), volc.brush[[ paste('ymax', group, sep='.') ]])
                 logPVal[ logPVal < ylim[1] | logPVal > ylim[2] ] <-  NA
 
-                ## remove missng  values
+                ## remove missing  values
                 rm.idx <- union( which(is.na(logFC)), which(is.na(logPVal)) )
 
                 if(length(rm.idx) > 0){
@@ -3590,8 +3767,16 @@ shinyServer(
                     pch.vec <- pch.vec[-rm.idx]
                     cex.vec <- cex.vec[-rm.idx]
 
+                    ## update PPI stuff
+                    if(PPI){
+                        ppi.int.vec <- ppi.int.vec[-rm.idx]
+                        ppi.int.idx <- which(ppi.int.vec)
+                        ppi.bait.idx <- which(toupper(IDs) == toupper(ppi.bait))
+                    }
+
                     ## update index of significant stuff
                     sig.idx <- sig.idx[ !(sig.idx %in% rm.idx) ]
+                    ##sig.idx <- sig.idx[ -rm.idx ]
                 }
             }
 
@@ -3639,7 +3824,7 @@ shinyServer(
             }
 
             ## number of significant
-            legend('top', bty='n', legend=paste(filter.str, '\nsig / tot: ', length(sig.idx),' / ', sum(!is.na(logFC) & !is.na(logPVal)), sep=''), cex=1.5)
+            legend(ifelse(PPI, 'topright', 'top'), bty='n', legend=paste(filter.str, '\nsig / tot: ', length(sig.idx),' / ', sum(!is.na(logFC) & !is.na(logPVal)), sep=''), cex=1.5)
 
             ## ############################
             ## indicate directionality for two-sample tests
@@ -3653,7 +3838,6 @@ shinyServer(
             ##
             ##               selected points
             ## ###########################################################
-            volc.add.X <- volc.add.Y <- volc.add.text <- volc.add.col <- c()
             if(!is.null( volc[[paste('x', group, sep='.')]] ) & length(volc[[paste('x', group, sep='.')]]) ){
 
                 for(i2 in 1:length( unlist( volc[[paste('x', group, sep='.')]]))){
@@ -3665,154 +3849,25 @@ shinyServer(
                 }
             }
 
-            ## ########################################################
+            ## ###########################################################
             ##
+            ##                 plot PPI stuff
             ##
-            ##                  add PPI stuff
-            ##
-            ## ##########################################################
-            ppi.bait <- input[[ gsub('\\.', '', paste0('ppi.bait.', group)) ]]
+            ## ###########################################################
+            if(PPI){
+                if(length(ppi.int.idx) > 0)
+                    points(logFC[ppi.int.idx], logPVal[ppi.int.idx], col=col[ppi.int.idx], bg=col[ppi.int.idx], pch=pch.vec[ppi.int.idx], cex=cex.vec[ppi.int.idx])
 
-            if(toupper(ppi.bait) %in% toupper(IDs.all)) {
-                bg.int <- iw.int <- react.int <- c()
-
-                ## #########################################
-                ##             InWeb
-                ## #########################################
-                if( 'iw' %in% input[[ paste0('ppi.db.', group) ]] ){
-                    iw <- ppi$iw
-
-                    ## ##################################
-                    ## try gene names
-                    ppi.bait.gn <- toupper(sub('.*_', '', ppi.bait))
-
-                    i1.gn <- iw$V5
-                    i2.gn <- iw$V6
-
-                    iw.int <- i2.gn[which(i1.gn == ppi.bait.gn)]
-                    iw.int <- c(iw.int, i1.gn[which(i2.gn == ppi.bait.gn)])
-
-                }
-                ## #################################################
-                ##                BioGRID
-                ## #################################################
-                if( 'bg' %in% input[[ paste0('ppi.db.', group) ]] ){
-                    bg <- ppi$bg
-
-                    ppi.bait.gn <- toupper(sub('.*_', '', ppi.bait))
-
-                    i1.gn <- bg$Alt.IDs.Interactor.A
-                    i2.gn <- bg$Alt.IDs.Interactor.B
-
-                    bg.int <- i2.gn[which(i1.gn == ppi.bait.gn)]
-                    bg.int <- c(bg.int, i1.gn[which(i2.gn == ppi.bait.gn)])
-
-                }
-                ## #################################################
-                ##              Reactome
-                ## #################################################
-                if( 'react' %in% input[[ paste0('ppi.db.', group) ]] ){
-                    react <- ppi$react
-
-                    ppi.bait.gn <- toupper(sub('.*_', '', ppi.bait))
-
-                    i1.gn <- react$alternative.id.A
-                    i2.gn <- react$alternative.id.B
-
-                    react.int <- i2.gn[which(i1.gn == ppi.bait.gn)]
-                    react.int <- c(bg.int, i1.gn[which(i2.gn == ppi.bait.gn)])
-                }
-
-                ## ##################################################
-                ##            combine
-                ## ##################################################
-                ppi.int <- c(iw.int, bg.int, react.int)
-                ##ppi.int.col <- c(rep('blue', length(iw.int)), rep('orange', length(bg.int)))
-
-                ## if there are interactors
-                if(length(ppi.int) > 0){
-
-                    ## map to data
-                    ppi.int.idx <- which( toupper(sub('.*_', '', IDs)) %in% ppi.int)
-                    ##cat('ids:', IDs[1:3], '\n')
-
-                    ## check ppi source: different colors
-                    ppi.col <- sapply( toupper(sub('.*_','',IDs))[ ppi.int.idx ], function(x){
-
-                        ## all three
-                        if(x %in% iw.int & x %in% bg.int & x %in% react.int) return(ppi.db.col['InWeb-BioGRID-Reactome'])
-
-                        ## blue and yellow
-                        if(x %in% iw.int & x %in% bg.int) return(ppi.db.col['InWeb-BioGRID'])
-                        ## blue and red
-                        if(x %in% iw.int & x %in% react.int) return(ppi.db.col['InWeb-Reactome'])
-                        ## red and yellow
-                        if(x %in% bg.int & x %in% react.int) return(ppi.db.col['BioGRID-Reactome'])
-
-
-                        if(x %in% iw.int) return(ppi.db.col['InWeb'])
-                        if(x %in% bg.int) return(ppi.db.col['BioGRID'])
-                        if(x %in% react.int) return(ppi.db.col['Reactome'])
-
-                    })
-                    ## plot
-                    points(logFC[ppi.int.idx], logPVal[ppi.int.idx], col=ppi.col, bg=ppi.col, pch=pch.vec[ppi.int.idx], cex=cex.vec[ppi.int.idx])
-                    ## labels
-                    if(input[[paste('ppi.show.labels', group, sep='.')]]){
-
-                        volc.add.X <- c(volc.add.X, logFC[ppi.int.idx])
-                        volc.add.Y <- c(volc.add.Y, logPVal[ppi.int.idx])
-                        volc.add.text <- c( volc.add.text, as.character(IDs[ppi.int.idx]))
-                        volc.add.col <- c(volc.add.col, rep('blue', length(ppi.int.idx)))
-                    }
-                } else { ## end if there are interactors
-                    ppi.col <- NULL
-                }
-
-                ## #########################################
-                ## bait protein
-                ppi.bait.idx <- which( toupper(IDs) == toupper(ppi.bait) ) ## bait in data set
                 if(length(ppi.bait.idx) > 0)
                     points(logFC[ppi.bait.idx], logPVal[ppi.bait.idx], col='green', bg='green', pch=pch.vec[ppi.bait.idx], cex=cex.vec[ppi.bait.idx])
 
+                legend('topleft', legend=leg, col=leg.col, pch=16, bty='n', cex=1.5, title=paste('Known interactors sig/det/tot'))
 
-                ## ###################################################
-                ##              add a ppi legend
-                ## ###################################################
-                ## PPI checkbox
-                ppi.db.leg <- input[[ paste0('ppi.db.', group) ]]
-                ppi.db.leg <- sub('^iw$','InWeb', sub('^bg$', 'BioGRID', sub('^react$', 'Reactome', ppi.db.leg)))
-                ## only selected dbs
-                ppi.db.col.tmp <- ppi.db.col[ which(sapply(strsplit( names(ppi.db.col), '-' ) , function(x) length( grep(paste(ppi.db.leg, collapse='|'), x)) == length(x) )) ]
-
-                if(length(ppi.col) > 0 ){
-                ## all hits
-                ppi.col.leg.tmp <-  table( sapply(ppi.col, function(x) names(ppi.db.col.tmp)[ which(ppi.db.col.tmp == x)] ))
-                ppi.col.leg <- rep(0, length(ppi.db.col.tmp))
-                names( ppi.col.leg) <- names(ppi.db.col.tmp)
-                ppi.col.leg [ names(ppi.col.leg.tmp) ] <- ppi.col.leg.tmp
-
-                ## significant hits
-                    ppi.col.leg.sig <- rep(0, length(ppi.db.col.tmp))
-                names( ppi.col.leg.sig) <- names(ppi.db.col.tmp)
-
-                ppi.sig.idx <- which(ppi.int.idx %in% sig.idx)
-
-                if(length(ppi.sig.idx) > 0){
-                ppi.col.leg.sig.tmp <-  table( sapply(ppi.col[ ppi.sig.idx ], function(x) names(c(ppi.db.col.tmp))[which(ppi.db.col.tmp == x)] ))
-                ppi.col.leg.sig [ names(ppi.col.leg.sig.tmp) ] <- ppi.col.leg.sig.tmp
-                }
-                ## draw the legend
-                leg <- paste(names(ppi.col.leg), ' (',ppi.col.leg.sig,'/' ,ppi.col.leg,')', sep='')
-                legend('topleft', legend=leg, col=ppi.db.col.tmp, pch=16, bty='n', cex=1.5, title=paste('Known interactors (sig/tot)'))
-                }
-            } ## end if ppi.bait in IDs.all
-
+            }
 
             ## ########################################
             ##  draw ids of selected points
             if(length(volc.add.X) > 0)
-                ##ppi.col[ppi.bait.idx] <- 'green'
                 pointLabel(as.numeric(unlist(volc.add.X)), as.numeric(unlist(volc.add.Y)), labels=as.character(unlist(volc.add.text)), col=volc.add.col, offset=20, method='SANN', cex=input[[paste('cex.volcano.lab', group, sep='.')]])
 
         } ## end plotVolcano
@@ -4139,6 +4194,7 @@ shinyServer(
             ##updateNavbarPage(session, 'mainPage', selected=tab.select)
 
             res = global.results$filtered
+
 
 
             ######################################

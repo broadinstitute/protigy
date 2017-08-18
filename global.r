@@ -31,7 +31,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.4"
+VER="0.7.5"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -127,11 +127,13 @@ ppi.db.col <- c('InWeb'='deepskyblue',
                 'BioGRID'='yellow',
                 'Reactome'='magenta',
 
-                'InWeb-BioGRID'='darkolivegreen4',
-                'InWeb-Reactome'='darkviolet',
-                'BioGRID-Reactome'='orange',
+                'Shared'='orange'##,
+                ##'InWeb-BioGRID'='darkolivegreen4',
+                ##'InWeb-Reactome'='darkviolet',
+                ##'BioGRID-Reactome'='orange',
 
-                'InWeb-BioGRID-Reactome'='cyan'
+                ##'InWeb-BioGRID-Reactome'='cyan'
+                ##'Three'='cyan'
                 )
 
 ## ##################################################################
@@ -206,6 +208,9 @@ mapIDs <- function(ids){
                 id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query), stringsAsFactors=F)
                 keytype <- 'UNKNOWN'
             }
+
+
+           ## View(id.map)
 
             ## results
             res <- list()
@@ -354,10 +359,14 @@ plotHM <- function(res,
     ## indicate scaling in the title
     hm.title <- paste(hm.title, '\nscaling: ',hm.scale, sep='')
 
+    hm.rownames <- chopString(rownames(res), STRLENGTH)
+   ## hm.rownames <- chopString(rownames(res$id.concat), STRLENGTH)
+
+
     ############################################
     ## plot the heatmap
     pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
-             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, labels_row=chopString(rownames(res), STRLENGTH), na_col='black', scale='none', height=height, width=width)
+             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, labels_row=hm.rownames, na_col='black', scale='none', height=height, width=width)
 }
 
 
@@ -670,13 +679,16 @@ my.prcomp <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, sc
 #####################################################
 my.prcomp2 <- function(res, grp){
 
-  ## remove missing values
-  rm.idx <- apply(res, 1, function(x) sum(is.na(x)) + sum(is.infinite(x)))
-  rm.idx <- which(rm.idx > 0)
-  if(length(rm.idx)>0) res <- res[-rm.idx, ]
+    ## remove missing values
+    ##res <- data.matrix(res)
+    rm.idx <- apply(res, 1, function(x) sum(is.na(x)) + sum(is.infinite(x)))
+    rm.idx <- which(rm.idx > 0)
+    if(length(rm.idx)>0) res <- res[-rm.idx, ]
 
   ## extract expression data
   res = res[, names(grp)]
+
+   ## View(res)
 
   ## perform pca
   ##pca <- prcomp(x, scale=scale)
@@ -1180,4 +1192,241 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
                                                         layout.pos.col = matchidx$col))
                 }
         }
+
+
+}
+
+
+## #################################################################################
+## ppi.bait - character
+## db   - character, ppi databases
+## IDs  - vector of ids in dataset
+## sig.idx - index if significnat features in the dataset
+##
+## ppi.db      - list of ppi databases, defined in 'global.r'
+## ppi.db.col  - colors for different ppi databases, defined in 'global.r'
+get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), ppi.db, ppi.db.col){
+
+    IDs <- toupper(sub('.*_', '', IDs) )
+    ppi.bait <-  toupper(sub('.*_', '', ppi.bait))
+
+    ## #########################################################
+    ##
+    ##bg.int <- iw.int <- react.int <- c()
+
+    ## #########################################################
+    ## list to store ALL interactors of 'ppi.bait' found in the
+    ## selected PPi databases
+    ppi.int.all.l <- vector('list', length(db))
+    names(ppi.int.all.l) <- db
+
+    ## #########################################################
+    ## list to store DETECTED interactors
+    ppi.int.detect.l <- ppi.int.all.l
+
+    ## #########################################################
+    ## list to store DETECTED and SIGNIFICANT interactors
+    ppi.int.signif.l <- ppi.int.all.l
+
+    ## #########################################
+    ##             InWeb
+    ## #########################################
+    if( 'iw' %in% db ){
+
+        iw <- ppi$iw
+
+        ## ##################################
+        ## try gene names
+        ##ppi.bait.gn <- toupper(sub('.*_', '', ppi.bait))
+        ppi.bait.gn <- ppi.bait
+
+        i1.gn <- iw$V5
+        i2.gn <- iw$V6
+
+        iw.int <- i2.gn[which(i1.gn == ppi.bait.gn)]
+        iw.int <- c(iw.int, i1.gn[which(i2.gn == ppi.bait.gn)])
+
+        iw.int <- setdiff( unique(iw.int), ppi.bait )
+
+        ## store all interactors
+        ppi.int.all.l[['iw']] <- iw.int
+        names(ppi.int.all.l)[which(names(ppi.int.all.l) == 'iw')] <- 'InWeb'
+
+        ## interactors found in dataset
+        ppi.int.detect.l[['iw']] <- intersect( IDs, iw.int)
+        names(ppi.int.detect.l)[which(names(ppi.int.detect.l) == 'iw')] <- 'InWeb'
+
+        ## significant interactors
+        ppi.int.signif.l[['iw']] <- intersect( IDs[ sig.idx ], iw.int)
+
+    }
+    ## #################################################
+    ##                BioGRID
+    ## #################################################
+    if( 'bg' %in% db ){
+
+        bg <- ppi$bg
+
+        ##ppi.bait.gn <- toupper(sub('.*_', '', ppi.bait))
+        ppi.bait.gn <- ppi.bait
+
+        i1.gn <- bg$Alt.IDs.Interactor.A
+        i2.gn <- bg$Alt.IDs.Interactor.B
+
+        bg.int <- i2.gn[which(i1.gn == ppi.bait.gn)]
+        bg.int <- c(bg.int, i1.gn[which(i2.gn == ppi.bait.gn)])
+
+        bg.int <- setdiff( unique(bg.int), ppi.bait)
+
+        ## all interactors
+        ppi.int.all.l[['bg']] <- bg.int
+        names(ppi.int.all.l)[ which(names(ppi.int.all.l) == 'bg')] <- 'BioGRID'
+
+        ## interactors found in dataset
+        ppi.int.detect.l[['bg']] <- intersect( IDs, bg.int)
+        names(ppi.int.detect.l)[which(names(ppi.int.detect.l) == 'bg')] <- 'BioGRID'
+
+        ## significant interactors
+        ppi.int.signif.l[['bg']] <- intersect( IDs[ sig.idx ], bg.int)
+
+    }
+    ## #################################################
+    ##              Reactome
+    ## #################################################
+    if( 'react' %in% db ){
+        react <- ppi$react
+
+
+        ppi.bait.gn <- ppi.bait
+
+        i1.gn <- react$alternative.id.A
+        i2.gn <- react$alternative.id.B
+
+        react.int <- i2.gn[which(i1.gn == ppi.bait.gn)]
+        react.int <- c(react.int, i1.gn[which(i2.gn == ppi.bait.gn)])
+
+        ## make unique
+        react.int <-setdiff(  unique(react.int), ppi.bait )
+
+        ## all interactors
+        ppi.int.all.l[['react']] <- react.int
+        names(ppi.int.all.l)[which(names(ppi.int.all.l) == 'react')] <- 'Reactome'
+
+        ## interactors found in dataset
+        ppi.int.detect.l[['react']] <- intersect( IDs, react.int)
+        names(ppi.int.detect.l)[which(names(ppi.int.detect.l) == 'react')] <- 'Reactome'
+
+        ## significant interactors
+        ppi.int.signif.l[['react']] <- intersect( IDs[ sig.idx ], react.int)
+
+    }
+
+    ## #################################################
+    ##
+    ## - determine in which database an interactors
+    ##   has been found
+    ## #################################################
+    if(length(db) > 1){
+        ## all interactors
+        ppi.int.all.l.ol <- table(unlist(ppi.int.all.l))
+        ppi.int.all.l.ol <- names(ppi.int.all.l.ol[ ppi.int.all.l.ol > 1 ])
+
+        ppi.int.all.l <- append(ppi.int.all.l, list(ppi.int.all.l.ol))
+        names(ppi.int.all.l)[length(ppi.int.all.l)] <- 'Shared'
+
+        ## detected interactors
+        ppi.int.detect.l.ol <- table(unlist(ppi.int.detect.l))
+        ppi.int.detect.l.ol <- names(ppi.int.detect.l.ol[ppi.int.detect.l.ol > 1])
+
+        ppi.int.detect.l <- append(ppi.int.detect.l, list(ppi.int.detect.l.ol))
+        names(ppi.int.detect.l)[length(ppi.int.detect.l)] <- 'Shared'
+
+        ## significant interactors
+        ppi.int.signif.l.ol <- table(unlist(ppi.int.signif.l))
+        ppi.int.signif.l.ol <- names(ppi.int.signif.l.ol[ppi.int.signif.l.ol > 1])
+        ppi.int.signif.l <- append(ppi.int.signif.l, list(ppi.int.signif.l.ol))
+        names(ppi.int.signif.l)[length(ppi.int.signif.l)] <- 'Shared'
+    }
+    ##save(ppi.int.all.l, ppi.int.detect.l, file='tmp.RData')
+
+    ## ##################################################
+    ##            combine
+    ## ##################################################
+    ## all interactions
+
+    ppi.int <- unlist(ppi.int.all.l)
+
+
+    ppi.int.idx <- NULL
+    leg <- NULL
+    leg.col <- NULL
+
+    ## ##################################################
+    ## if there are interactors
+    if(length(ppi.int) > 0){
+
+        ## ###############################
+        ## index of interactors in dataset
+        ##ppi.int.idx <- which( IDs %in% ppi.int )
+        ppi.int.idx <- which( IDs %in% unlist(ppi.int.detect.l) )
+
+        ## ######################################################################
+        ## check ppi source: different colors
+        ## - consider overlap as separate class
+        ## - counts based on this vector are mutually axclusive, i.e. to count
+        ##   number of interactions in InWeb one has to sum #InWeb + #Overlap
+        ##
+        ppi.col <- rep('', length(IDs))
+        names(ppi.col) <- IDs
+
+        ##View(ppi.col)
+        for( d in 1:length(ppi.int.detect.l))
+            ppi.col[ ppi.int.detect.l[[d]] ] <- ppi.db.col[ names(ppi.int.detect.l)[d]  ]
+
+
+        ## #########################################
+        ## colors, defined at the beginning of
+        ## this file
+        ## #########################################
+        ppi.db.col.tmp <- ppi.db.col[ names(ppi.int.all.l) ]
+
+
+        ## #########################################
+        ## numbers for the legend
+        leg.all <- sapply(ppi.int.all.l, length)
+        leg.detect <- sapply(ppi.int.detect.l, length)
+        leg.signif <- sapply(ppi.int.signif.l, length)
+
+        leg <- paste(names(ppi.int.all.l), ' ',leg.signif, '/' ,leg.detect, '/' ,leg.all, sep='')
+
+        ##leg <- paste(names(ppi.col.leg), ' (',ppi.col.leg.sig,'/' ,ppi.col.leg,')', sep='')
+        ##legend('topleft', legend=leg, col=ppi.db.col.tmp, pch=16, bty='n', cex=1.5, title=paste('Known interactors (sig/tot)'))
+
+
+    } else {  ## end if there are interactors
+        ppi.col <- NULL
+        leg=''
+        ppi.col.leg.sig.tmp='white'
+        ppi.db.col.tmp='white'
+    }
+
+     ## ###################################################
+     ## index of bait protein
+     ##
+     ppi.bait.idx <- which( toupper(IDs) == toupper(ppi.bait) ) ## bait in data set
+
+
+
+    ## ##########################
+    ## assemble output
+    out <- list(
+        ppi.int.idx=ppi.int.idx,
+        ppi.bait.idx=ppi.bait.idx,
+        leg=leg,
+        leg.col=ppi.db.col.tmp,
+        ppi.col=ppi.col
+    )
+
+    return(out)
+
 }

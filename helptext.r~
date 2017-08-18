@@ -34,6 +34,16 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.7.4 August 10, 2017</b>
+<ul>
+<li>Scatterplots: new tab that provides interactive scatterplots between replicate measurements. For One-sample moderated T-test and F-test the significant proteins are marked in red.</li>
+<li>Volcano: PPI - search mask keeps working after multiple rounds of analysis.</li>
+<li>Misc: parameter file: fixed NA for data filter.</li>
+</ul>
+<b>v0.7.3.1 August 4, 2017</b>
+<ul>
+<li>Misc: unified the naming of the id-column on the code.</li>
+</ul>
 <b>v0.7.3 June 20, 2017</b>
 <ul>
 <li>Misc: unified the naming of the id-column on the code.</li>

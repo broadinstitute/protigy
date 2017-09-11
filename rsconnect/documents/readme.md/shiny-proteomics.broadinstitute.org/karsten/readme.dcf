@@ -1,0 +1,12 @@
+name: readme
+title: readme
+username: karsten
+account: karsten
+server: shiny-proteomics.broadinstitute.org
+hostUrl: http://shiny-proteomics.broadinstitute.org:3939/__api__
+appId: 2
+bundleId: 4
+url: http://shiny-proteomics.broadinstitute.org:3939/content/2/
+when: 1505164377.97471
+asMultiple: FALSE
+asStatic: TRUE

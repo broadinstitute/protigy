@@ -22,16 +22,19 @@
 ##                     - outsourced Mani's code to a separate file 'modT.r'
 ################################################################################################################
 
+##R package managing tool
+## - the only package that is required to install manually
+library(pacman)
+
 source('modT.r')
 source('pheatmap.r')
 source('helptext.r')
-
 
 #################################################################
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.5"
+VER="0.7.6"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -48,60 +51,64 @@ OS <<- Sys.info()['sysname']
 ## temp directory to write the Excel file
 TMPDIR <<- ifelse(OS=='Windows', "./", "/tmp/")
 ## app name
-APPNAME <<- sub('.*/','',getwd())
-## aoo directory
+##APPNAME <<- sub('.*/','',getwd())
+APPNAME <<- 'modT'
+## app folder
 APPDIR <<- getwd()
 ## directory to store data files
-DATADIR <<- ifelse(OS=='Windows', ".", "/local/shiny-data/")
+##DATADIR <<- ifelse(OS=='Windows', ".", "/local/shiny-data/")
+DATADIR <<- ifelse(OS=='Linux', "/local/shiny-data/", '.')
 
 ## email for trouble shooting
 MAIL <<- 'karsten@broadinstitute.org'
-## URL to configuration app
+## URL to configuration app (SSP only)
 CONFAPP <<- 'http://shiny-proteomics.broadinstitute.org:3838/modTconf/'
 
 
 #################################################################
 ## load required packages
 #################################################################
-library(shiny)
-library(shinydashboard)
-library(shinyjs)
+p_load(shiny)
+p_load(shinydashboard)
+p_load(shinyjs)
 ## heatmap
-##library(pheatmap)
-library(scales)
-library(gtable)
+##p_load(pheatmap)
+p_load(scales)
+p_load(gtable)
 ## moderated tests
-library(limma)
+p_load(limma)
 ## colors
-library (RColorBrewer)
+p_load (RColorBrewer)
 ## multiscatter
-library(hexbin)
-library(Hmisc)
-library(grid)
+p_load(hexbin)
+p_load(Hmisc)
+p_load(grid)
 ## pca
-library(ChemometricsWithR)
-library(scatterplot3d)
-library(plotly)
-library(ggrepel)
+p_load(ChemometricsWithR)
+p_load(scatterplot3d)
+p_load(plotly)
 ## export
-library(WriteXLS)
+p_load(WriteXLS)
 ## reproducibility filter
-library(reshape)
-library(nlme)
-library(BlandAltmanLeh)
+p_load(reshape)
+p_load(nlme)
+p_load(BlandAltmanLeh)
 ## normalization Quantile
-library(preprocessCore)
+p_load(preprocessCore)
 ## normalization 2-component
-library (mice)
-library (mixtools)
-library (mclust)
+p_load (mice)
+p_load (mixtools)
+p_load (mclust)
 ## table preview
-library(DT)
+p_load(DT)
 ## label placements without overlap
-library(maptools)
+p_load(maptools)
+p_load(ggrepel)
 ## id mapping
-library(org.Hs.eg.db)
-library(dplyr)
+p_load(RSQLite)
+p_load(org.Hs.eg.db)
+p_load(dplyr)
+
 
 ## #####################################
 ## CSS for loading animantion
@@ -545,14 +552,14 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
 
     ## quantile
     if(method == 'Quantile'){
-        require("preprocessCore")
+        p_load("preprocessCore")
         data.norm <- normalize.quantiles(data)
         rownames(data.norm) <- rownames(data)
         colnames(data.norm) <- paste( colnames(data))
 
 
         ## shift median to zero
-        data.norm <- apply(data.norm, 2, function(x) x - median(x, na.rm=T))
+        ## data.norm <- apply(data.norm, 2, function(x) x - median(x, na.rm=T))
     }
     ## median only
     if(method == 'Median'){
@@ -634,7 +641,7 @@ my.prcomp <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, sc
     # rgl plot
     ##############
     if(rgl & N > 2){
-        require(rgl)
+        p_load(rgl)
         plot3d(pc1, pc2, pc3, xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), zlab=paste("PC 3 (", round(100*comp.var[3]/sum(comp.var),1),"%)", sep=""), type="s", col=col, expand=1.2, size=rgl.point.size)
     }
 
@@ -643,7 +650,7 @@ my.prcomp <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, sc
     ########################################
     if( plot){
 
-         require(scatterplot3d)
+         p_load(scatterplot3d)
 
         if(N > 2)
             par(mfrow=c(1,3), mar=c(7,7,3,1))
@@ -1159,7 +1166,7 @@ makeProfileplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, ce
 # 3 will go all the way across the bottom.
 ###################################################################################
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-        library(grid)
+        p_load(grid)
 
         # Make a list from the ... arguments and plotlist
         plots <- c(list(...), plotlist)

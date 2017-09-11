@@ -18,23 +18,22 @@ library(shiny)
 
 shinyUI(
 
-    ##fluidPage(theme="custom.css",
     dashboardPage( skin='blue',
-
 
                   ## ##########################################
                   ## header
-                  dashboardHeader( title=paste("modT (v",VER,")", sep=""),
+                  dashboardHeader( title=paste(APPNAME, " (v",VER,")", sep=""),
+                      ##title=paste(img(height = "50px", alt="TIDYPro Logo", src="logo.png")," (v",VER,")", sep=""),
 
                         ## logged user
-                        ##dropdownMenuOutput('memfree'),
+                        ##dropdownMenuOutput('memfree'), ## causes high latency times
                         dropdownMenuOutput('session.name'),
                         dropdownMenuOutput('logged.user'),
                         dropdownMenuOutput('logout'),
 
                         ## E-mail
                         tags$li(class = "dropdown",
-                                a(href=paste('https://mail.google.com/mail/?view=cm&fs=1&to=', MAIL,'&su=Shiny%20modTv',VER,'%20help&body=%0D%0A%0D%0A%0D%0A',paste(rep('-', 30), collapse=''),'%0D%0AMachine:', Sys.info()['nodename'],'%0D%0AApp:', APPNAME, '%0D%0AVersion:', VER, '%0D%0A', sep=''), target="_blank",
+                                a(href=paste('https://mail.google.com/mail/?view=cm&fs=1&to=', MAIL,'&su=Shiny%20',APPNAME,'v',VER,'%20help&body=%0D%0A%0D%0A%0D%0A',paste(rep('-', 30), collapse=''),'%0D%0AMachine:', Sys.info()['nodename'],'%0D%0AApp:', APPNAME, '%0D%0AVersion:', VER, '%0D%0A', sep=''), target="_blank",
                                   "Help me!",
                                   img(src="help.jpg", height="20px", alt="Help"),  style = "padding-top:15px; padding-bottom:0px"
                                   )

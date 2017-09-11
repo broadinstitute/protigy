@@ -1,14 +1,13 @@
 <!--![](www/logo_v2.png)-->
 
-# modT - interactive expression analysis using moderated statistics
+# modT - interactive analysis of gene expression data using moderated statistics
 
-This Shiny app facilitates exploratory and interactive analysis of data sets derived from quantitative  *proteomics* experiments, as well as from *RNA-seq* and gene expression *microarrays*.
+This Shiny app facilitates exploratory and interactive analysis of data sets derived from quantitative  *proteomics* experiments, *RNA-seq* and gene expression *microarrays*.
 
 The app can run locally on your Desktop computer (Windows/Linux/MAC) or can deployed to Shiny Server environments. To access all implemented features the app has to run on a [Shiny Server Pro (SSP)](https://www.rstudio.com/products/shiny-server-pro/) instance, see below for a summary of features only available in SSP. 
 
 #### Supported input formats:
-* Any type of text file containing both, expression and annotation columns, can directly be imported into the app. 
-* Assignment of expression columns is done in a separate file, which will be automatically generated and can be downloaded.
+* Any type of text file containing both, expression and annotation columns, can directly be imported into the app.
 * Supported file formats:
     + text files (tsv, csv, txt)
     + gct 1.2
@@ -16,14 +15,14 @@ The app can run locally on your Desktop computer (Windows/Linux/MAC) or can depl
 #### Data manipulation:
 * Transformation
     + log$_2$ and log$_{10}$ transformation
-* Normalization (per sample)
-    + Median
-    + Median-MAD
+* Sample-wise Normalization
+    + Centering (median)
+    + Centering and scaling (median-MAD)
     + Quantile
     + 2-component
 * Filtering
     + Reproducibility filter across replicate measurements
-    + Standard deviation filter across samples
+    + Standard deviation across samples
     
 #### Marker selection (based on _limma_ package)
 * One-sample moderated T-test
@@ -48,7 +47,7 @@ The app can run locally on your Desktop computer (Windows/Linux/MAC) or can depl
     + Reactome 
 
 #### Export of analysis results
-* Results comprise high-quality figures (pdf), Excel-sheets, parameter files and the R-workspace itself.
+* Results comprise high-quality figures (pdf), Excel-sheets and the R-workspace itself.
 * All results can be downloaded as single zip-file. 
 
 

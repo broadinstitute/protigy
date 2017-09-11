@@ -120,15 +120,14 @@ $(document).ready(function () {
 
 
 <!--![](www/logo_v2.png)-->
-<div id="modt---interactive-expression-analysis-using-moderated-statistics" class="section level1">
-<h1>modT - interactive expression analysis using moderated statistics</h1>
-<p>This Shiny app facilitates exploratory and interactive analysis of data sets derived from quantitative <em>proteomics</em> experiments, as well as from <em>RNA-seq</em> and gene expression <em>microarrays</em>.</p>
+<div id="modt---interactive-analysis-of-gene-expression-data-using-moderated-statistics" class="section level1">
+<h1>modT - interactive analysis of gene expression data using moderated statistics</h1>
+<p>This Shiny app facilitates exploratory and interactive analysis of data sets derived from quantitative <em>proteomics</em> experiments, <em>RNA-seq</em> and gene expression <em>microarrays</em>.</p>
 <p>The app can run locally on your Desktop computer (Windows/Linux/MAC) or can deployed to Shiny Server environments. To access all implemented features the app has to run on a <a href="https://www.rstudio.com/products/shiny-server-pro/">Shiny Server Pro (SSP)</a> instance, see below for a summary of features only available in SSP.</p>
 <div id="supported-input-formats" class="section level4">
 <h4>Supported input formats:</h4>
 <ul>
 <li>Any type of text file containing both, expression and annotation columns, can directly be imported into the app.</li>
-<li>Assignment of expression columns is done in a separate file, which will be automatically generated and can be downloaded.</li>
 <li>Supported file formats:
 <ul>
 <li>text files (tsv, csv, txt)</li>
@@ -143,17 +142,17 @@ $(document).ready(function () {
 <ul>
 <li>log<span class="math inline">\(_2\)</span> and log<span class="math inline">\(_{10}\)</span> transformation</li>
 </ul></li>
-<li>Normalization (per sample)
+<li>Sample-wise Normalization
 <ul>
-<li>Median</li>
-<li>Median-MAD</li>
+<li>Centering (median)</li>
+<li>Centering and scaling (median-MAD)</li>
 <li>Quantile</li>
 <li>2-component</li>
 </ul></li>
 <li>Filtering
 <ul>
 <li>Reproducibility filter across replicate measurements</li>
-<li>Standard deviation filter across samples</li>
+<li>Standard deviation across samples</li>
 </ul></li>
 </ul>
 </div>
@@ -195,7 +194,7 @@ $(document).ready(function () {
 <div id="export-of-analysis-results" class="section level4">
 <h4>Export of analysis results</h4>
 <ul>
-<li>Results comprise high-quality figures (pdf), Excel-sheets, parameter files and the R-workspace itself.</li>
+<li>Results comprise high-quality figures (pdf), Excel-sheets and the R-workspace itself.</li>
 <li>All results can be downloaded as single zip-file.</li>
 </ul>
 </div>

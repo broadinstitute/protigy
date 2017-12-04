@@ -1,6 +1,5 @@
-<!--![](www/logo_v2.png)-->
+<img src="www/logo_v3.png" alt="Drawing" style="width: 300px;"/>
 
-# modT - interactive analysis of gene expression data using moderated statistics
 
 This Shiny app facilitates exploratory and interactive analysis of data sets derived from quantitative  *proteomics* experiments, *RNA-seq* and gene expression *microarrays*.
 
@@ -14,7 +13,7 @@ The app can run locally on your Desktop computer (Windows/Linux/MAC) or can depl
 
 #### Data manipulation:
 * Transformation
-    + log$_2$ and log$_{10}$ transformation
+    + log transformation
 * Sample-wise Normalization
     + Centering (median)
     + Centering and scaling (median-MAD)
@@ -57,3 +56,5 @@ The app can run locally on your Desktop computer (Windows/Linux/MAC) or can depl
 
 
 This app is being developed and maintained at the [Proteomics Platform](https://www.broadinstitute.org/proteomics) of the [Broad Institute of MIT and Harvard](https://www.broadinstitute.org/).
+
+***

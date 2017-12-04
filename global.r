@@ -34,7 +34,7 @@ source('helptext.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.6"
+VER="0.7.8"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -43,16 +43,15 @@ NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na",
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
 GRPCOLORS <<- c(RColorBrewer::brewer.pal(8, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
-##GRPCOLORS <<- c(RColorBrewer::brewer.pal(9, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"))
 ## number of characters to display in plots/tables for column names
-STRLENGTH <<- 20
+STRLENGTH <<- 40
 ## operating system
 OS <<- Sys.info()['sysname']
 ## temp directory to write the Excel file
 TMPDIR <<- ifelse(OS=='Windows', "./", "/tmp/")
 ## app name
 ##APPNAME <<- sub('.*/','',getwd())
-APPNAME <<- 'modT'
+APPNAME <<- 'PROTigy'
 ## app folder
 APPDIR <<- getwd()
 ## directory to store data files
@@ -77,6 +76,7 @@ p_load(scales)
 p_load(gtable)
 ## moderated tests
 p_load(limma)
+p_load(statmod)
 ## colors
 p_load (RColorBrewer)
 ## multiscatter
@@ -108,7 +108,11 @@ p_load(ggrepel)
 p_load(RSQLite)
 p_load(org.Hs.eg.db)
 p_load(dplyr)
-
+## morpheus
+#p_load_gh('morpheus')
+if(!require(morpheus))
+  devtools::install_github('cmap/morpheus.R')
+p_load(morpheus)
 
 ## #####################################
 ## CSS for loading animantion
@@ -189,7 +193,7 @@ mapIDs <- function(ids){
             ## Uniprot or RefSeq?
             if(length(grep('^(Q|P|O|A|E|H|F)', ids)) > 0)
                 keytype='UNIPROT'
-            if(length(grep('^(NP_|XP_)', ids)) > 0)
+            if(length(grep('^(NP_|XP_|YP_)', ids)) > 0)
                 keytype='REFSEQ'
 
             ## ###################################
@@ -205,19 +209,19 @@ mapIDs <- function(ids){
             else
                 id.map.tmp <- c()
 
-            ##if(length(id.map.tmp) > 0){
-            if(class(id.map.tmp) != 'try-error'){
-                ##id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(names(id.query), id.map.tmp, sep='_'), stringsAsFactors=F)
-                id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(id.query, id.map.tmp, sep='_'), stringsAsFactors=F)
+            #cat(class(id.map.tmp), '\n')
+            #cat(is.null( class(id.map.tmp) ))
 
-                ##global.results$id.map=id.map
+            if(class(id.map.tmp) == 'try-error' | is.null( class(id.map.tmp) ) | class(id.map.tmp) == 'NULL' ){
+              #cat('test1')
+              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query), stringsAsFactors=F)
+              keytype <- 'UNKNOWN'
+              
             } else {
-                id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query), stringsAsFactors=F)
-                keytype <- 'UNKNOWN'
-            }
-
-
-           ## View(id.map)
+              #cat('test2')
+              ##id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(names(id.query), id.map.tmp, sep='_'), stringsAsFactors=F)
+              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(id.query, id.map.tmp, sep='_'), stringsAsFactors=F)
+              }
 
             ## results
             res <- list()

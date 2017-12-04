@@ -23,8 +23,9 @@ shinyUI(
                   ## ##########################################
                   ## header
                   dashboardHeader( title=paste(APPNAME, " (v",VER,")", sep=""),
-                      ##title=paste(img(height = "50px", alt="TIDYPro Logo", src="logo.png")," (v",VER,")", sep=""),
-
+                        #title=paste(img(height = "50px", alt="Logo", src="logo_v3.png")," (v",VER,")", sep=""),
+                        #title=tags$img(height = "50px", alt="Logo", src="logo_v3.png"),
+                    
                         ## logged user
                         ##dropdownMenuOutput('memfree'), ## causes high latency times
                         dropdownMenuOutput('session.name'),

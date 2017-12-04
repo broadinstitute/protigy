@@ -9,3 +9,5 @@ KRAS-JulyOctASreps-1T	schenone@broadinstitute.org	aberger@broadinstitute.org;kar
 Cohesin-Set1-2-3-2016search	schenone@broadinstitute.org	tothova@broadinstitute.org;karsten@broadinstitute.org
 CohesinRound-Round1and3-5reps-2peps-acrossAll	schenone@broadinstitute.org	tothova@broadinstitute.org;karsten@broadinstitute.org
 PURA-experiment	hartigan@broadinstitute.org	mathias@broadinstitute.org;schenone@broadinstitute.org;karsten@broadinstitute.org
+RTFDC-Final-experiment	hartigan@broadinstitute.org	bchia@broadinstitute.org;karsten@broadinstitute.org
+SHOC2-MultiMedian-noKRTN	schenone@broadinstitute.org	aapffel@broadinstitute.org;walsh@broadinstitute.org;karsten@broadinstitute.org

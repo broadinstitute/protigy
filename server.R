@@ -89,14 +89,14 @@ shinyServer(
 
             run.test=0,                   ## number of times the 'Run analysis' button has been pressed during a user session
 
-            update.ppi.select= FALSE,     ## trigger selectize
-            update.ppi.select.scat=FALSE,
-            collapse.ppi=TRUE            ## should PPI query panel be collapsed?
+            update.ppi.select= FALSE,     ## trigger selectize, volcano
+            update.ppi.select.scat=FALSE, ## trigger selectize, scatterplot
+            collapse.ppi=TRUE             ## should PPI query panel be collapsed?
 
         )
 
         #####################################################
-        ## plotting params
+        ## plotting parameter
         plotparams <- reactiveValues(
 
             ## multiscatter
@@ -163,18 +163,17 @@ shinyServer(
 
         ## }
 
-        ##@##############################################################################
+        ################################################################################
         ##
         ##                                instructions / help pages
         ##
-        ##@##############################################################################
+        ################################################################################
         callModule(printHTML, id='getting.started', what='gs', global.input = global.input)
         callModule(printHTML, id='change.log', what='cl', global.input = global.input)
         callModule(printHTML, id='id.column', what='id', global.param=global.param, global.input=global.input)
         callModule(printHTML, id='exp.design', what='ed', global.param=global.param, global.input=global.input)
         callModule(printHTML, id='analysis', what='ana', global.param=global.param, global.input=global.input)
-      ##  callModule(printHTML, id='results', what='res', global.param=global.param, global.input=global.input)
-
+        
         #################################
         ## F5 hint
         output$F5hint <- renderText({
@@ -191,7 +190,7 @@ shinyServer(
         })
 
         ## #########################################################
-        ## toggle all option for export
+        ## toggle all options for export
         ## #########################################################
         observeEvent(input$export.toggle.all, {
 
@@ -276,8 +275,6 @@ shinyServer(
             ## class vector
             grp <- global.param$grp
             grp.unique <- unique(grp)
-
-            ##View(global.param$grp.comp)
 
             ################################################################################################################
             ##
@@ -409,16 +406,14 @@ shinyServer(
             ## ##########################################
             ## SCATTERPLOTS plotly
             ## - for each group comparison
+            ##
             ## ##########################################
             scat.tabs <- list()
             scat.tabs[[1]] <- 'Scatterplots'
 
-            ##for(i in 1:length(unique(groups.comp))){
             for(i in 1:length( grp.unique )){
 
                 ## extract data columns of current experiment
-                ##scat.x <- names(groups)[which(groups == groups.comp[i])]
-                ##scat.y <- names(groups)[which(groups == groups.comp[i])]
                 scat.x <- names(grp)[which(grp == grp.unique[i])]
                 scat.y <- names(grp)[which(grp == grp.unique[i])]
 
@@ -455,7 +450,7 @@ shinyServer(
 
                                                                             )
                                                              ),
-                                                      column(3,checkboxGroupInput(paste('ppi.db.scat', grp.unique[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw', 'Reactome (human)' = 'react'), selected=c('bg', 'iw', 'react') )),
+                                                      column(3, checkboxGroupInput(paste('ppi.db.scat', grp.unique[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw', 'Reactome (human)' = 'react'), selected=c('bg', 'iw', 'react') )),
                                                       column(3, checkboxInput( paste('ppi.show.labels.scat', grp.unique[i], sep='.' ), 'Show labels', value=F) )
 
                                                       ##column(1)
@@ -483,85 +478,86 @@ shinyServer(
             ##      tabs for the volcano plots
             ## NOT for F test
             ############################################
-            volc.tabs <- list()
-            volc.tabs[[1]] <- 'Volcanos'
-
-            for(i in 1:length(unique(groups.comp))){
-                volc.tabs[[i+1]]=tabPanel(paste0( groups.comp[i] ),
-
-                                          fluidPage(
-
-                                              ## ###########################################################
-                                              ## volcano plotting parameters
-                                              box( title='Plotting parameters', status = 'primary', solidHeader = T, width=12,
-                                                 fluidRow(
-
-
-                                                          column(3, numericInput( paste("cex.volcano",groups.comp[i], sep='.'), "Point size", value=plotparams$volc.ps, min=1, step=1, width='100px')),
-                                                          ##column(1, numericInput( paste("opac.volcano",groups.comp[i],sep='.'), "Opacity %", value=50, min=0, max=100, step=10)),
-                                                          column(3, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=plotparams$volc.ls, min=.1, step=.1, width='100px')),
-                                                          column(3, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=plotparams$volc.grid, width='100px')),
-                                                          column(3, numericInput( paste( "max.logP", groups.comp[i], sep='.'), "Max. Log10(P-value)", value=plotparams$volc.maxp, min=20, max=300, step=10, width='100px') )
-
-                                                          ##column(1, downloadButton(paste('downloadVolcano', groups.comp[i],sep='.'), 'Download (pdf)'))
-                                                      )
-                                                  ),
-
-                                              ## ###########################################################
-                                              ## PPI stuff
-                                              box( title='Protein-protein interactions', status = 'primary', width=12, collapsible = TRUE, solidHeader=T, collapsed=global.param$collapse.ppi,
+            if( !(global.param$which.test %in% c('mod F', 'none'))) {
+              
+                volc.tabs <- list()
+                volc.tabs[[1]] <- 'Volcanos'
+    
+                for(i in 1:length(unique(groups.comp))){
+                    volc.tabs[[i+1]]=tabPanel(paste0( groups.comp[i] ),
+    
+                                              fluidPage(
+    
+                                                  ## ###########################################################
+                                                  ## volcano plotting parameters
+                                                  box( title='Plotting parameters', status = 'primary', solidHeader = T, width=12,
+                                                     fluidRow(
+    
+    
+                                                              column(3, numericInput( paste("cex.volcano",groups.comp[i], sep='.'), "Point size", value=plotparams$volc.ps, min=1, step=1, width='100px')),
+                                                              ##column(1, numericInput( paste("opac.volcano",groups.comp[i],sep='.'), "Opacity %", value=50, min=0, max=100, step=10)),
+                                                              column(3, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=plotparams$volc.ls, min=.1, step=.1, width='100px')),
+                                                              column(3, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=plotparams$volc.grid, width='100px')),
+                                                              column(3, numericInput( paste( "max.logP", groups.comp[i], sep='.'), "Max. Log10(P-value)", value=plotparams$volc.maxp, min=20, max=300, step=10, width='100px') )
+    
+                                                              ##column(1, downloadButton(paste('downloadVolcano', groups.comp[i],sep='.'), 'Download (pdf)'))
+                                                          )
+                                                      ),
+    
+                                                  ## ###########################################################
+                                                  ## PPI stuff
+                                                  box( title='Protein-protein interactions', status = 'primary', width=12, collapsible = TRUE, solidHeader=T, collapsed=global.param$collapse.ppi,
+                                                      fluidRow(
+                                                          column(3,
+                                                                  selectizeInput( inputId=gsub('\\.','', gsub('\\.', '', paste0('ppi.bait.', groups.comp[i])) ), label=NULL,
+                                                                               ## choices=global.results$id.map$id.concat,
+                                                                                choices=NULL,
+                                                                                selected=NULL,
+                                                                                options = list(
+                                                                                    maxOptions=5,
+                                                                                    placeholder='Bait protein',
+                                                                                    onInitialize = I('function() { this.setValue(""); }')
+                                                                                )
+    
+                                                                                )
+                                                                 ),
+                                                          column(3, checkboxGroupInput(paste('ppi.db', groups.comp[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw', 'Reactome (human)' = 'react'), selected=c('bg', 'iw', 'react') )),
+                                                          column(3, checkboxInput( paste('ppi.show.labels', groups.comp[i], sep='.' ), 'Show labels', value=F) ),
+    
+                                                          column(1, checkboxInput( paste('ppi.hyper.filt', groups.comp[i], sep='.' ), 'Hyperbolic curve', value=F)),
+                                                          column(1, numericInput(paste( "ppi.min.fc", groups.comp[i], sep='.'), 'Min. FC', value=plotparams$volc.hyper.fc, min=0, max=100, step=0.1)),
+                                                          column(1, numericInput(paste( "ppi.curve", groups.comp[i], sep='.'), 'Curvation', value=plotparams$volc.hyper.fc, min=0.1, max=100, step=0.1) )
+                                                          ##column(1)
+                                                      )),
+    
+    
+                                                  ## ############################################################
+                                                  ## the actual plot  plus table
                                                   fluidRow(
-                                                      column(3,
-                                                              selectizeInput( inputId=gsub('\\.','', gsub('\\.', '', paste0('ppi.bait.', groups.comp[i])) ), label=NULL,
-                                                                           ## choices=global.results$id.map$id.concat,
-                                                                            choices=NULL,
-                                                                            selected=NULL,
-                                                                            options = list(
-                                                                                maxOptions=5,
-                                                                                placeholder='Bait protein',
-                                                                                onInitialize = I('function() { this.setValue(""); }')
-                                                                            )
-
-                                                                            )
-                                                             ),
-                                                      column(3,checkboxGroupInput(paste('ppi.db', groups.comp[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw', 'Reactome (human)' = 'react'), selected=c('bg', 'iw', 'react') )),
-                                                      column(3, checkboxInput( paste('ppi.show.labels', groups.comp[i], sep='.' ), 'Show labels', value=F) ),
-
-                                                      column(1, checkboxInput( paste('ppi.hyper.filt', groups.comp[i], sep='.' ), 'Hyperbolic curve', value=F)),
-                                                      column(1, numericInput(paste( "ppi.min.fc", groups.comp[i], sep='.'), 'Min. FC', value=plotparams$volc.hyper.fc, min=0, max=100, step=0.1)),
-                                                      column(1, numericInput(paste( "ppi.curve", groups.comp[i], sep='.'), 'Curvation', value=plotparams$volc.hyper.fc, min=0.1, max=100, step=0.1) )
-                                                      ##column(1)
-                                                  )),
-
-
-                                              ## ############################################################
-                                              ## the actual plot  plus table
-                                              fluidRow(
-                                                  ## plot
-                                                  column(width=8,
-                                                         box( width=NULL,  title='Volcano plot', status = 'primary', solidHeader = T,
-                                                             plotOutput( paste("volcano", groups.comp[i], sep='.'), height=600, click=paste('plot_click', groups.comp[i], sep='.'), hover=hoverOpts(id=paste('plot_hover', groups.comp[i], sep='.'), delay=10), brush=brushOpts(id=paste('plot_brush', groups.comp[i], sep='.'), resetOnNew=T, delayType='debounce', delay='1000' ), dblclick=paste('plot_dblclick', groups.comp[i], sep='.'))
-                                                             )),
-                                                  ## table
-                                                  column(width=4,
-                                                         box(width=NULL,  title='Selected points', status = 'primary', solidHeader = T,
-                                                             actionButton(inputId=paste('volc.tab.reset', groups.comp[i], sep='.'), label='Reset'),
-                                                             tags$hr(),
-                                                             tableOutput(paste('volc.tab.selected', groups.comp[i], sep='.'))
-                                                             )))
-                                          ) ## end fluidPage
-
-                                          ) ## end tabPanel
-            } ## end for i
-
+                                                      ## plot
+                                                      column(width=8,
+                                                             box( width=NULL,  title='Volcano plot', status = 'primary', solidHeader = T,
+                                                                 plotOutput( paste("volcano", groups.comp[i], sep='.'), height=600, click=paste('plot_click', groups.comp[i], sep='.'), hover=hoverOpts(id=paste('plot_hover', groups.comp[i], sep='.'), delay=10), brush=brushOpts(id=paste('plot_brush', groups.comp[i], sep='.'), resetOnNew=T, delayType='debounce', delay='1000' ), dblclick=paste('plot_dblclick', groups.comp[i], sep='.'))
+                                                                 )),
+                                                      ## table
+                                                      column(width=4,
+                                                             box(width=NULL,  title='Selected points', status = 'primary', solidHeader = T,
+                                                                 actionButton(inputId=paste('volc.tab.reset', groups.comp[i], sep='.'), label='Reset'),
+                                                                 tags$hr(),
+                                                                 tableOutput(paste('volc.tab.selected', groups.comp[i], sep='.'))
+                                                                 )))
+                                              ) ## end fluidPage
+    
+                                              ) ## end tabPanel
+                } ## end for i
+            } # end if 
 
             ############################################
             ## HEATMAP
             ##
             ############################################
             hm.tab <-  tabPanel('Heatmap',
-
-                                    box(title='Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
+                                      box(title='Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
                                         fluidRow(
                                         column(2, numericInput( "cexCol", "Font size column", value=ifelse( !is.null(plotparams$hm.cexCol), plotparams$hm.cexCol, 12  ), min=1, step=1)),
                                         column(2, numericInput( "cexRow", "Font size row", value=ifelse( !is.null(plotparams$hm.cexRow), plotparams$hm.cexRow, 6), min=1, step=1)),
@@ -574,8 +570,21 @@ shinyServer(
                                             column(12, align='center', plotOutput("HM", height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ), width=dynamicWidthHM(length(global.param$grp))) )
                                             ##column(12, align='center', plotOutput("HM"))
                                         )
+                                      )
+                                    
+            )
+            
+            ## ##############################################
+            ##  MORPHEUS widget
+            ##
+            ## ##############################################
+            morph.tab <- tabPanel('Morpheus',
+                                    fluidRow(
+                                      column(12, morpheusOutput("HM.morpheus",height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ), width=dynamicWidthHM(length(global.param$grp))))
                                     )
             )
+            
+            
 
             #############################################
             ##
@@ -801,7 +810,9 @@ shinyServer(
             ##                         insert the tabs
             ##
             ## #################################################################################
-             navbarPage(title='', id='mainPage',
+            if( !(global.param$which.test %in% c('mod F', 'none'))){
+            
+              navbarPage(title='', id='mainPage',
 
 
                         #######################################
@@ -812,14 +823,18 @@ shinyServer(
                         ##              insert heatmap
                         #######################################
                         hm.tab,
+                        ##do.call(navbarMenu, hm.tab),
+                        #morph.tab,
+                        
                         #######################################
                         ##              insert volcanos
                         #######################################
-                        if( !(global.param$which.test %in% c('mod F', 'none'))){
-                           do.call(navbarMenu, volc.tabs)
-                       } else {
-                           ''
-                       },
+                        #if( !(global.param$which.test %in% c('mod F', 'none'))){
+                           do.call(navbarMenu, volc.tabs),
+                      #  } else {
+                      #       list()
+                      #     },
+                       
                        ## ####################################
                        ##          insert scatterplots
                        ## ####################################
@@ -847,19 +862,53 @@ shinyServer(
                        ## export
                        export.tab
                        ) ## end navbarpage
+            } else {
+              
+              navbarPage(title='', id='mainPage',
+                      #######################################
+                      ##            insert summary tab
+                      #######################################
+                      summary.tab,
+                      #######################################
+                      ##              insert heatmap
+                      #######################################
+                      hm.tab,
+                      ##do.call(navbarMenu, hm.tab),
+                      #morph.tab,
+                      
+                      ## ####################################
+                      ##          insert scatterplots
+                      ## ####################################
+                      do.call(navbarMenu, scat.tabs),
+                      
+                      #######################################
+                      ##              insert PCA
+                      #######################################
+                      navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
+                      
+                      #######################################
+                      ##           insert table preview
+                      #######################################
+                      table.tab,
+                      
+                      #######################################
+                      ## QC
+                      if(global.param$which.test != 'none') {
+                        navbarMenu('QC', qc.tabs[[1]], qc.tabs[[2]], qc.tabs[[3]], qc.tabs[[4]], qc.tabs[[5]])
+                      } else {
+                        navbarMenu('QC', qc.tabs[[1]], qc.tabs[[2]], qc.tabs[[4]], qc.tabs[[5]])
+                      },
+                      
+                      ## #######################################
+                      ## export
+                      export.tab
+                ) ## end navbarpage
+            }
+            
 
             ## global.param$ins.volc.n <- global.param$ins.volc.n + 1
         }) ## end renderUI
 
-        ##ch=list(AA='TEST1', BB='TEST2')
-
-##        observe({
-##            if( is.null(is.null(input$stest)) ) return()
-##            ch=global.results$id.map$id.concat
-##            cat('cat:',ch[1:3],'\n')
-##           updateSelectizeInput(session, inputId='stest', label=NULL, choices=ch, server=T)
-##
-        ##})
 
         #########################################################################################
         ##
@@ -2011,8 +2060,8 @@ shinyServer(
             ##grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
             grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
             Column.Name <- grp.file$Column.Name
-            Experiment <- grp.file$Experiment
-
+            Experiment <- as.character(grp.file$Experiment)
+            
             ## #############################################################
             ## index on non-empty 'Experiment' rows
             exprs.idx <- which(nchar(Experiment) > 0 )
@@ -2031,7 +2080,7 @@ shinyServer(
                 global.param$label <- paste(global.param$label, label, sep='-')
             }
 
-
+  cat('\n',nchar(Experiment),'\n')
             ###############################################################
             ##
             ## - do some sanity checks
@@ -2051,7 +2100,7 @@ shinyServer(
                 return()
             }
             ## 'empty' file
-            if( sum( nchar(Experiment) > 0 ) == 0 | sum(!is.na( Experiment) == 0) ){
+            if( sum( nchar(Experiment) > 0, na.rm=T ) == 0 | sum(!is.na( Experiment) == 0) ){
                 error$msg <- 'No experiments defined!'
                 return()
             }
@@ -3174,11 +3223,6 @@ shinyServer(
                         plotVolcano( grp.comp[my_i] )
                     })
 
-
-
-
-                  ##View(global.results$id.map)
-
                   ## ###############################
                   ## observe brush
                   observeEvent(input[[paste('plot_brush', grp.comp[my_i], sep='.')]], {
@@ -3454,17 +3498,6 @@ shinyServer(
                 }
             }
 
-
-
-            ## interactors
-           ## if(length(ppi.int.idx) > 0){
-
-            ##}
-            ## bait
-            ##if(length(ppi.bait.idx) > 0){
-
-            ##}
-
             ## some astethics
             p <- layout(p,
                         title='',
@@ -3537,7 +3570,6 @@ shinyServer(
             }
             ## store a copy of IDs before zoom
             IDs.all <- IDs
-            ##else
 
             ## which filter has been used?
             filter.str <- paste('filter:', global.param$filter.type, '\ncutoff:', global.param$filter.value)
@@ -3646,8 +3678,6 @@ shinyServer(
 
             #############################
             ## color gradient
-            ##col=myColorRamp(c('black', 'grey20', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=1)
-            ##col.opac=myColorRamp(c('black', 'grey20', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=0.2)
             col=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=1)
             col.opac=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=0.2)
 
@@ -3693,8 +3723,6 @@ shinyServer(
                 ppi.int.vec <- rep(FALSE, length(IDs))
                 ppi.int.vec[ppi.int.idx] <- TRUE
 
-                ##cat(ppi.col[])
-
                 ## udpate color vector
                 col[ nchar(ppi.col) > 0] <- ppi.col[ nchar(ppi.col) > 0]
                 col.opac[ nchar(ppi.col) > 0] <- ppi.col[ nchar(ppi.col) > 0 ]
@@ -3703,32 +3731,16 @@ shinyServer(
                 ## ###############################
                 ## plot if there are interactors
                 if(length(ppi.int.idx) > 0) {
-
-                    ##points(logFC[ppi.int.idx], logPVal[ppi.int.idx], col=ppi.col[ppi.int.idx], bg=ppi.col[ppi.int.idx], pch=pch.vec[ppi.int.idx], cex=cex.vec[ppi.int.idx])
-
                     ## labels
                     if(input[[paste('ppi.show.labels', group, sep='.')]]){
 
                         volc.add.X <- c(volc.add.X, logFC[ppi.int.idx])
                         volc.add.Y <- c(volc.add.Y, logPVal[ppi.int.idx])
                         volc.add.text <- c( volc.add.text, as.character(IDs[ppi.int.idx]))
-                        ##volc.add.col <- c(volc.add.col, rep('black', length(ppi.int.idx)))
                         volc.add.col <- c(volc.add.col, col[ppi.int.idx])
                     }
                 }
-                ## add bait
-               ## if(length(ppi.bait.idx) > 0)
-               ##     points(logFC[ppi.bait.idx], logPVal[ppi.bait.idx], col='green', bg='green', pch=pch.vec[ppi.bait.idx], cex=cex.vec[ppi.bait.idx])
-
-                ## legend('topleft', legend=leg, col=leg.col, pch=16, bty='n', cex=1.5, title=paste('Known interactors\n(sig/det/tot)'))
-
             }
-
-
-
-
-
-
 
             ## ##################################################################
             ##
@@ -4174,7 +4186,34 @@ shinyServer(
 
         })
 
-
+        ## #################################################################################
+        ## 
+        ##                               Morpheus
+        ##
+        ## #################################################################################
+        output$HM.morpheus <- renderMorpheus({
+          
+          if(!is.null(error$msg)) return()
+          
+          ## extract results
+          res = global.results$filtered
+          
+        
+          ## require at least three significant hits
+          validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
+          
+          
+          ## extract expression values
+          res <- res[, names(global.param$grp)]
+          res <- data.matrix(res)
+          
+          ## morpheus
+          withProgress({
+            setProgress(message = 'Creating morpheus widget...', detail= 'hold on')
+            morpheus(res, Rowv = F, Colv = F)
+          })
+          
+        })
 
         ####################################################################################
         ##

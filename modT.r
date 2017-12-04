@@ -239,11 +239,16 @@ moderated.t <- function (data, design=NULL) {
 
     #cat('here1 ')
     ##save(data.matrix, file='data.matrix.RData')
-    #############################################
+		
+		## use robust eBayes
+		## see Phipson, B., Lee, S., Majewski, I. J., Alexander, W. S., & Smyth, G. (2013). Tech Report.
+		##     Empirical Bayes in the presence of exceptional cases, with application to microarray data.
+    
+		#############################################
     ## two sample test
     if(!is.null(design)){
         m <- lmFit (data.matrix, design)
-        m <- eBayes (m)
+        m <- eBayes (m, robust=TRUE)
         sig <- topTable (m, coef=colnames (design)[2], number=nrow(data), sort.by='none')
     } else {
     #############################################
@@ -251,7 +256,7 @@ moderated.t <- function (data, design=NULL) {
         ##cat('here2 ')
         m <- lmFit (data.matrix, method='robust')
         ##cat('here3 ')
-        m <- eBayes (m)
+        m <- eBayes (m, robust=TRUE)
         ##at('here4 ')
         sig <- topTable (m, number=nrow(data), sort.by='none')
         ##cat('here5 ')

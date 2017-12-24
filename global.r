@@ -22,19 +22,21 @@
 ##                     - outsourced Mani's code to a separate file 'modT.r'
 ################################################################################################################
 
-##R package managing tool
+## R package managing tool
 ## - the only package that is required to install manually
 library(pacman)
 
-source('modT.r')
-source('pheatmap.r')
-source('helptext.r')
+source('src/modT.r')
+source('src/pheatmap.r')
+source('src/helptext.r')
+source('src/gct-io.r')
+
 
 #################################################################
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.8"
+VER="0.7.8.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -72,6 +74,7 @@ p_load(shinydashboard)
 p_load(shinyjs)
 ## heatmap
 ##p_load(pheatmap)
+#p_load(heatmapply)
 p_load(scales)
 p_load(gtable)
 ## moderated tests

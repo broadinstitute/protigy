@@ -1,0 +1,12 @@
+name: modtdev2
+title: modTdev
+username: karsten
+account: karsten
+server: shiny-proteomics.broadinstitute.org
+hostUrl: http://shiny-proteomics.broadinstitute.org:3939/__api__
+appId: 4
+bundleId: 22
+url: http://shiny-proteomics.broadinstitute.org:3939/content/4/
+when: 1512490798.95145
+asMultiple: FALSE
+asStatic: FALSE

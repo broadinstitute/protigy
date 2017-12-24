@@ -56,8 +56,15 @@ shinyServer(
             ids=NULL,
             gene.names=NULL
         )
+        
         ## input data
-        global.input <- reactiveValues()
+        global.input <- reactiveValues(
+          
+          ## meta data (gct 1.3)
+          rdesc=NULL,
+          cdesc=NULL
+          
+        )
 
         ##################################################
         ## parameters
@@ -70,6 +77,7 @@ shinyServer(
             grp.colors.legend=NULL,      ## group colors, names are group names
             grp.done=F,                  ## group assignment finished?
             which.test='One-sample mod T', ## specify test
+            
             log.transform='none',        ## log transformation
             norm.data='none',            ## data normalization
             filt.data='none',            ## data filtering
@@ -97,7 +105,7 @@ shinyServer(
 
         #####################################################
         ## plotting parameter
-        plotparams <- reactiveValues(
+        global.plotparam <- reactiveValues(
 
             ## multiscatter
             ms.max=FALSE,
@@ -494,11 +502,11 @@ shinyServer(
                                                      fluidRow(
     
     
-                                                              column(3, numericInput( paste("cex.volcano",groups.comp[i], sep='.'), "Point size", value=plotparams$volc.ps, min=1, step=1, width='100px')),
+                                                              column(3, numericInput( paste("cex.volcano",groups.comp[i], sep='.'), "Point size", value=global.plotparam$volc.ps, min=1, step=1, width='100px')),
                                                               ##column(1, numericInput( paste("opac.volcano",groups.comp[i],sep='.'), "Opacity %", value=50, min=0, max=100, step=10)),
-                                                              column(3, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=plotparams$volc.ls, min=.1, step=.1, width='100px')),
-                                                              column(3, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=plotparams$volc.grid, width='100px')),
-                                                              column(3, numericInput( paste( "max.logP", groups.comp[i], sep='.'), "Max. Log10(P-value)", value=plotparams$volc.maxp, min=20, max=300, step=10, width='100px') )
+                                                              column(3, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=global.plotparam$volc.ls, min=.1, step=.1, width='100px')),
+                                                              column(3, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=global.plotparam$volc.grid, width='100px')),
+                                                              column(3, numericInput( paste( "max.logP", groups.comp[i], sep='.'), "Max. Log10(P-value)", value=global.plotparam$volc.maxp, min=20, max=300, step=10, width='100px') )
     
                                                               ##column(1, downloadButton(paste('downloadVolcano', groups.comp[i],sep='.'), 'Download (pdf)'))
                                                           )
@@ -525,8 +533,8 @@ shinyServer(
                                                           column(3, checkboxInput( paste('ppi.show.labels', groups.comp[i], sep='.' ), 'Show labels', value=F) ),
     
                                                           column(1, checkboxInput( paste('ppi.hyper.filt', groups.comp[i], sep='.' ), 'Hyperbolic curve', value=F)),
-                                                          column(1, numericInput(paste( "ppi.min.fc", groups.comp[i], sep='.'), 'Min. FC', value=plotparams$volc.hyper.fc, min=0, max=100, step=0.1)),
-                                                          column(1, numericInput(paste( "ppi.curve", groups.comp[i], sep='.'), 'Curvation', value=plotparams$volc.hyper.fc, min=0.1, max=100, step=0.1) )
+                                                          column(1, numericInput(paste( "ppi.min.fc", groups.comp[i], sep='.'), 'Min. FC', value=global.plotparam$volc.hyper.fc, min=0, max=100, step=0.1)),
+                                                          column(1, numericInput(paste( "ppi.curve", groups.comp[i], sep='.'), 'Curvation', value=global.plotparam$volc.hyper.fc, min=0.1, max=100, step=0.1) )
                                                           ##column(1)
                                                       )),
     
@@ -559,12 +567,12 @@ shinyServer(
             hm.tab <-  tabPanel('Heatmap',
                                       box(title='Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
                                         fluidRow(
-                                        column(2, numericInput( "cexCol", "Font size column", value=ifelse( !is.null(plotparams$hm.cexCol), plotparams$hm.cexCol, 12  ), min=1, step=1)),
-                                        column(2, numericInput( "cexRow", "Font size row", value=ifelse( !is.null(plotparams$hm.cexRow), plotparams$hm.cexRow, 6), min=1, step=1)),
-                                        column(2, selectInput( "hm.scale", "Scale", c("row","column","none"), selected=plotparams$hm.scale)),
+                                        column(2, numericInput( "cexCol", "Font size column", value=ifelse( !is.null(global.plotparam$hm.cexCol), global.plotparam$hm.cexCol, 12  ), min=1, step=1)),
+                                        column(2, numericInput( "cexRow", "Font size row", value=ifelse( !is.null(global.plotparam$hm.cexRow), global.plotparam$hm.cexRow, 6), min=1, step=1)),
+                                        column(2, selectInput( "hm.scale", "Scale", c("row","column","none"), selected=global.plotparam$hm.scale)),
                                         column(2, selectInput( "hm.clust", "Cluster", c("column","row","both","none"), selected=ifelse(global.param$which.test != "mod F", "none" ,"both"))),
-                                        column(2, checkboxInput('hm.max', 'Cap values', value=plotparams$hm.max)),
-                                        column(2, numericInput( "hm.max.val", "Max. value", value=plotparams$hm.max.val, step=1, min=2))
+                                        column(2, checkboxInput('hm.max', 'Cap values', value=global.plotparam$hm.max)),
+                                        column(2, numericInput( "hm.max.val", "Max. value", value=global.plotparam$hm.max.val, step=1, min=2))
                                         ),
                                         fluidRow(
                                             column(12, align='center', plotOutput("HM", height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ), width=dynamicWidthHM(length(global.param$grp))) )
@@ -611,9 +619,9 @@ shinyServer(
 
                                           fluidRow(
                                             box( title = 'Select principle components', status='primary', solidHeader = T, align='center',
-                                              column(width=4, selectInput('pca.x', 'x-axis', paste('PC', 1:10)), selected=plotparams$pca.x),
-                                              column(width=4, selectInput('pca.y', 'y-axis', paste('PC', 1:10), selected=plotparams$pca.y)),
-                                              column(width=4, selectInput('pca.z', 'z-axis', paste('PC', 1:10), selected=plotparams$pca.z))
+                                              column(width=4, selectInput('pca.x', 'x-axis', paste('PC', 1:10)), selected=global.plotparam$pca.x),
+                                              column(width=4, selectInput('pca.y', 'y-axis', paste('PC', 1:10), selected=global.plotparam$pca.y)),
+                                              column(width=4, selectInput('pca.z', 'z-axis', paste('PC', 1:10), selected=global.plotparam$pca.z))
                                             )
                                           ),
                                           fluidRow(
@@ -645,9 +653,9 @@ shinyServer(
                                       fluidPage(
                                         fluidRow(
                                             column(width=12,
-                                            box(title='Loadings by Ozan Aygun', solidHeader=T, status='primary', width=1000,## height=min( nrow(global.results$filtered), plotparams$pca.load.topn )*20+50,
+                                            box(title='Loadings by Ozan Aygun', solidHeader=T, status='primary', width=1000,## height=min( nrow(global.results$filtered), global.plotparam$pca.load.topn )*20+50,
                                                 sliderInput("pca.load.topn", "Choose number of loadings", 1, 100, 20),
-                      ##                          plotOutput("pca.loadings")##, width=1000, height=min(nrow(global.results$filtered), plotparams$pca.load.topn )*20 )
+                      ##                          plotOutput("pca.loadings")##, width=1000, height=min(nrow(global.results$filtered), global.plotparam$pca.load.topn )*20 )
                       ##                        ),
                       ##                      box(title = "PCA loadings scatterplots",solidHeader = T, status = 'primary',width = 1000,
                                                 background = "navy",
@@ -766,9 +774,9 @@ shinyServer(
                                                          fluidPage(
                                                              fluidRow(
                                                                  box(title='Parameters', solidHeader=T, status="primary",
-                                                                     column(3,  selectInput( "cm.upper", "Upper triangle", c("pearson","spearman","kendall"), selected=plotparams$cm.upper)),
-                                                                     column(3,  selectInput( "cm.lower", "Lower triangle", c("pearson","spearman","kendall"), selected=plotparams$cm.lower)),
-                                                                     column(1,  checkboxInput('cm.numb', 'Show numbers', value=plotparams$cm.numb)),
+                                                                     column(3,  selectInput( "cm.upper", "Upper triangle", c("pearson","spearman","kendall"), selected=global.plotparam$cm.upper)),
+                                                                     column(3,  selectInput( "cm.lower", "Lower triangle", c("pearson","spearman","kendall"), selected=global.plotparam$cm.lower)),
+                                                                     column(1,  checkboxInput('cm.numb', 'Show numbers', value=global.plotparam$cm.numb)),
                                                                      column(5))
                                                              ),
                                                              fluidRow(
@@ -785,9 +793,9 @@ shinyServer(
 
                                                          fluidPage(
                                                              fluidRow(
-                                                                 column(1,  selectInput( "cm.upper", "Upper triangle", c("pearson","spearman","kendall"), selected=plotparams$cm.upper)),
-                                                                 column(1,  selectInput( "cm.lower", "Lower triangle", c("pearson","spearman","kendall"), selected=plotparams$cm.lower)),
-                                                                 column(1,  checkboxInput('cm.numb', 'Show numbers', value=plotparams$cm.numb)),
+                                                                 column(1,  selectInput( "cm.upper", "Upper triangle", c("pearson","spearman","kendall"), selected=global.plotparam$cm.upper)),
+                                                                 column(1,  selectInput( "cm.lower", "Lower triangle", c("pearson","spearman","kendall"), selected=global.plotparam$cm.lower)),
+                                                                 column(1,  checkboxInput('cm.numb', 'Show numbers', value=global.plotparam$cm.numb)),
                                                                  column(9)
                                                              ),
                                                              fluidRow(
@@ -1050,7 +1058,16 @@ shinyServer(
             global.param$saved.sessions <- saved.sessions
 
             list(
-                selectInput('session.browse', paste('My saved sessions',sep=''), choices=names(saved.sessions)),
+                ##selectInput('session.browse', paste('My saved sessions',sep=''), choices=names(saved.sessions)),
+                selectizeInput(inputId = 'session.browse', 
+                               label = 'Saved sessions:',
+                               choices=names(saved.sessions), 
+                               options=list( 
+                                 placeholder = 'Search sessions',
+                                 onInitialize = I('function() { this.setValue(""); }')
+                               )
+                               ),
+              
                 ##selectInput('session.browse', paste('Saved sessions (', sub('_at_','@',global.param$user),')',sep=''), choices=sort(names(saved.sessions))),
                 actionButton('session.browse.import', 'Import'),
                 actionButton('session.manage', 'Manage sessions', onclick =paste("window.open('", CONFAPP,"', 'newwindow', 'width=500 height=600'); return false;", sep=''))
@@ -1257,7 +1274,7 @@ shinyServer(
             #############################################################
             if(input$export.cm){
                 withProgress(message='Exporting', detail='correlation matrix',{
-                fn.cm <- paste(global.param$session.dir, '/correlation_matrix_lo_',plotparams$cm.lower, '_up_',plotparams$cm.upper, '.pdf', sep='')
+                fn.cm <- paste(global.param$session.dir, '/correlation_matrix_lo_',global.plotparam$cm.lower, '_up_',global.plotparam$cm.upper, '.pdf', sep='')
                 ##                plotCorrMat(lower=input$cm.lower, upper=input$cm.upper, display_numbers=F, filename=fn.cm)
                 ## cat('------------ ', dynamicWidthHM(length(global.param$grp), unit='in'), '\n')
 
@@ -1535,27 +1552,27 @@ shinyServer(
             #########################################################
 
             ## heatmap
-            plotparams$hm.scale <- input$hm.scale
-            plotparams$hm.clust <- input$hm.clust
-            plotparams$hm.cexCol <- input$hm.cexCol
-            plotparams$hm.cexRow <- input$hm.cexRow
-            plotparams$hm.max <- input$hm.max
-            plotparams$hm.max.val <- input$hm.max.val
+            global.plotparam$hm.scale <- input$hm.scale
+            global.plotparam$hm.clust <- input$hm.clust
+            global.plotparam$hm.cexCol <- input$hm.cexCol
+            global.plotparam$hm.cexRow <- input$hm.cexRow
+            global.plotparam$hm.max <- input$hm.max
+            global.plotparam$hm.max.val <- input$hm.max.val
             ## pca
-            plotparams$pca.x <- input$pca.x
-            plotparams$pca.y <- input$pca.y
-            plotparams$pca.z <- input$pca.z
+            global.plotparam$pca.x <- input$pca.x
+            global.plotparam$pca.y <- input$pca.y
+            global.plotparam$pca.z <- input$pca.z
             ## multiscatter
-            plotparams$ms.max <- input$ms.max
-            plotparams$ms.min <- input$ms.min
-            plotparams$ms.max <- input$ms.max
+            global.plotparam$ms.max <- input$ms.max
+            global.plotparam$ms.min <- input$ms.min
+            global.plotparam$ms.max <- input$ms.max
             ## correlation matrix
-            plotparams$cm.upper <- input$cm.upper
-            plotparams$cm.lower <- input$cm.lower
-            plotparams$cm.numb <- input$cm.numb
+            global.plotparam$cm.upper <- input$cm.upper
+            global.plotparam$cm.lower <- input$cm.lower
+            global.plotparam$cm.numb <- input$cm.numb
 
             ## convert to list
-            plotparams.imp <- reactiveValuesToList(plotparams)
+            global.plotparam.imp <- reactiveValuesToList(global.plotparam)
 
             ## volcano coordinates
             volc.imp <-  reactiveValuesToList(volc)
@@ -1567,7 +1584,7 @@ shinyServer(
 
                 fn.tmp <- paste(global.param$session.dir, paste('session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep='/')
 
-                save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=fn.tmp)
+                save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
                 fn.zip <- paste( gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
 
             }
@@ -1576,7 +1593,7 @@ shinyServer(
 
                 fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
 
-                save(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp, file=fn.tmp)
+                save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
                 fn.zip <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
 
             }
@@ -1611,7 +1628,7 @@ shinyServer(
             ##            create an archive
             ## ############################################################
             fn.all <- grep('pdf$|xlsx$|txt$|gct$|RData$',  dir(global.param$session.dir) , value=T, ignore.case=T)
-	    fn.all.abs <- grep('pdf$|xlsx$|txt$|gct$|RData$', dir(global.param$session.dir, full.names=T, ignore.case=T), value=T)
+	          fn.all.abs <- grep('pdf$|xlsx$|txt$|gct$|RData$', dir(global.param$session.dir, full.names=T, ignore.case=T), value=T)
 
             ## #################################################
             ## handle special characters in file names
@@ -1696,26 +1713,12 @@ shinyServer(
             ## store
             global.input$table <- tab
 
-            #############################################
-            ## initialize group assignemnt
-            ##groups <- rep(NA, ncol(global.input$table))
-            ##names(groups) <- colnames(global.input$table)
-
-            ## remove id column
-            ##groups <- groups[-c( which(global.param$id.col.value == names(groups))) ]
-
-            ## set group assingment
-            ##global.param$grp <- groups
-
-            ## set number of assinged groups
-            ##global.param$N.grp <- 0
-
-            ##View(global.input$table)
         })
 
         #################################################################################
-        ##
+        ##                   IMPORT DATA
         ## 2) - upload file
+        ##    - determine file type
         ##    - import file
         ##    - user folders are create here
         ##    - extract label from filename
@@ -1760,11 +1763,48 @@ shinyServer(
                 global.param$label <- chopString( sub('.*/', '', fn) , 10, add.dots=F)
             }
 
-
-            ## ################################
-            ## GCT ?
-            if( length( grep( '^\\#1\\.', readLines(fn,n=1))) > 0){
-                tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS, skip=2)
+            ########################################################
+            #               file import
+            
+            # GCT 1.2
+            if( length( grep( '^\\#1\\.2', readLines(fn,n=1))) > 0){
+                  tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS, skip=2)
+                  
+                  ## shorten column names and store together with the original names
+                  colnames.tmp <- chopString(colnames(tab), STRLENGTH)
+                  names(colnames.tmp) <- colnames(tab)
+                  
+                  ## store values
+                  global.input$table <- global.input$table.org <- tab
+                  global.input$file <- input$file
+                  global.input$table.colnames <- colnames.tmp
+                  
+                  rm(tab, colnames.tmp)
+                  
+            # GCT 1.3
+            } else if( length( grep( '^\\#1\\.3', readLines(fn,n=1))) > 0){
+              
+              # parse gct file
+              gct <- parse.gctx(fn)
+              
+              # expression table
+              tab <- cbind(gct@rdesc, gct@mat)
+              
+              colnames.tmp <- chopString(colnames(tab), STRLENGTH)
+              names(colnames.tmp) <- colnames(tab)
+              
+              ## store values
+              global.input$table <- global.input$table.org <- tab
+              global.input$file <- input$file
+              global.input$table.colnames <- colnames.tmp
+              
+              # meta data
+              global.input$rdesc <- gct@rdesc
+              global.input$cdesc <- gct@cdesc
+              
+              rm(tab, colnames.tmp)
+              
+            # other text file
             } else {
 
                 ## ################################
@@ -1789,19 +1829,19 @@ shinyServer(
                 } else {
                     tab <- read.table( fn, sep=global.param$tabsep, header=T, stringsAsFactors=F, na.strings=NASTRINGS, quote = "\"", dec = ".", fill = TRUE, comment.char = "")
                 }
-
+                ## shorten column names and store together with the original names
+                colnames.tmp <- chopString(colnames(tab), STRLENGTH)
+                names(colnames.tmp) <- colnames(tab)
+                
+                ## store values
+                global.input$table <- global.input$table.org <- tab
+                global.input$file <- input$file
+                global.input$table.colnames <- colnames.tmp
+                
+                rm(tab, colnames.tmp)
             }## end if GCT
 
-            ## shorten column names and store together with the original names
-            colnames.tmp <- chopString(colnames(tab), STRLENGTH)
-            names(colnames.tmp) <- colnames(tab)
-
-            ## store values
-            global.input$table <- global.input$table.org <- tab
-            global.input$file <- input$file
-            global.input$table.colnames <- colnames.tmp
-
-            rm(tab, colnames.tmp)
+            
         })
 
         ## ###############################################################
@@ -1827,8 +1867,8 @@ shinyServer(
             for(i in names(global.results.imp)){
                 global.results[[i]] <- global.results.imp[[i]]
             }
-            for(i in names(plotparams.imp)){
-                plotparams[[i]] <- plotparams.imp[[i]]
+            for(i in names(global.plotparam.imp)){
+                global.plotparam[[i]] <- global.plotparam.imp[[i]]
             }
             for(i in names(volc.imp)){
                 volc[[i]] <- volc.imp[[i]]
@@ -1851,28 +1891,28 @@ shinyServer(
           ## ##############################################################
 
           ## heatmap
-          updateNumericInput(session, inputId='hm.cexCol', value=plotparams$hm.cexCol)
-          updateNumericInput(session, inputId='hm.cexRow', value=plotparams$hm.cexRow)
-          updateSelectInput(session, inputId='hm.scale', selected=plotparams$hm.scale)
-          updateSelectInput(session, inputId='hm.clust', selected=plotparams$hm.clust)
-          updateNumericInput(session, inputId='hm.max.val', value=plotparams$hm.max.val)
-          updateCheckboxInput(session, inputId='hm.max', value=plotparams$hm.max)
+          updateNumericInput(session, inputId='hm.cexCol', value=global.plotparam$hm.cexCol)
+          updateNumericInput(session, inputId='hm.cexRow', value=global.plotparam$hm.cexRow)
+          updateSelectInput(session, inputId='hm.scale', selected=global.plotparam$hm.scale)
+          updateSelectInput(session, inputId='hm.clust', selected=global.plotparam$hm.clust)
+          updateNumericInput(session, inputId='hm.max.val', value=global.plotparam$hm.max.val)
+          updateCheckboxInput(session, inputId='hm.max', value=global.plotparam$hm.max)
           ## hm clust missing
 
           ## PCA
-          updateSelectInput(session, inputId='pca.x', selected=plotparams$pca.x)
-          updateSelectInput(session, inputId='pca.y', selected=plotparams$pca.y)
-          updateSelectInput(session, inputId='pca.z', selected=plotparams$pca.z)
+          updateSelectInput(session, inputId='pca.x', selected=global.plotparam$pca.x)
+          updateSelectInput(session, inputId='pca.y', selected=global.plotparam$pca.y)
+          updateSelectInput(session, inputId='pca.z', selected=global.plotparam$pca.z)
 
           ## multiscatter
-          updateCheckboxInput(session, inputId='ms.max', value=plotparams$ms.max)
-          updateNumericInput(session, inputId='ms.max.val', value=plotparams$ms.max.val)
-          updateNumericInput(session, inputId='ms.min.val', value=plotparams$ms.min.val)
+          updateCheckboxInput(session, inputId='ms.max', value=global.plotparam$ms.max)
+          updateNumericInput(session, inputId='ms.max.val', value=global.plotparam$ms.max.val)
+          updateNumericInput(session, inputId='ms.min.val', value=global.plotparam$ms.min.val)
 
           ## correlation matrix
-          updateCheckboxInput(session, inputId='cm.numb', value=plotparams$cm.numb)
-          updateSelectInput(session, inputId='cm.upper', selected=plotparams$cm.upper)
-          updateSelectInput(session, inputId='cm.lower', selected=plotparams$cm.lower)
+          updateCheckboxInput(session, inputId='cm.numb', value=global.plotparam$cm.numb)
+          updateSelectInput(session, inputId='cm.upper', selected=global.plotparam$cm.upper)
+          updateSelectInput(session, inputId='cm.lower', selected=global.plotparam$cm.lower)
 
 
           ## ################################
@@ -1886,7 +1926,7 @@ shinyServer(
 
           ## ################################
           ## clean up
-          rm(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp)
+          rm(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp)
 
           ## #################################################################
           ##            insert the panels for the volcanos
@@ -1946,8 +1986,8 @@ shinyServer(
             for(i in names(global.results.imp)){
                 global.results[[i]] <- global.results.imp[[i]]
             }
-            for(i in names(plotparams.imp)){
-                plotparams[[i]] <- plotparams.imp[[i]]
+            for(i in names(global.plotparam.imp)){
+                global.plotparam[[i]] <- global.plotparam.imp[[i]]
             }
             for(i in names(volc.imp)){
                 volc[[i]] <- volc.imp[[i]]
@@ -1971,28 +2011,28 @@ shinyServer(
             ## ##############################################################
 
             ## heatmap
-            updateNumericInput(session, inputId='cexCol', value=plotparams$hm.cexCol)
-            updateNumericInput(session, inputId='cexRow', value=plotparams$hm.cexRow)
-            updateSelectInput(session, inputId='hm.scale', selected=plotparams$hm.scale)
-            updateSelectInput(session, inputId='hm.clust', selected=plotparams$hm.clust)
-            updateNumericInput(session, inputId='hm.max.val', value=plotparams$hm.max.val)
-            updateCheckboxInput(session, inputId='hm.max', value=plotparams$hm.max)
+            updateNumericInput(session, inputId='cexCol', value=global.plotparam$hm.cexCol)
+            updateNumericInput(session, inputId='cexRow', value=global.plotparam$hm.cexRow)
+            updateSelectInput(session, inputId='hm.scale', selected=global.plotparam$hm.scale)
+            updateSelectInput(session, inputId='hm.clust', selected=global.plotparam$hm.clust)
+            updateNumericInput(session, inputId='hm.max.val', value=global.plotparam$hm.max.val)
+            updateCheckboxInput(session, inputId='hm.max', value=global.plotparam$hm.max)
             ## hm clust missing
 
             ## PCA
-            updateSelectInput(session, inputId='pca.x', selected=plotparams$pca.x)
-            updateSelectInput(session, inputId='pca.y', selected=plotparams$pca.y)
-            updateSelectInput(session, inputId='pca.z', selected=plotparams$pca.z)
+            updateSelectInput(session, inputId='pca.x', selected=global.plotparam$pca.x)
+            updateSelectInput(session, inputId='pca.y', selected=global.plotparam$pca.y)
+            updateSelectInput(session, inputId='pca.z', selected=global.plotparam$pca.z)
 
             ## multiscatter
-            updateCheckboxInput(session, inputId='ms.max', value=plotparams$ms.max)
-            updateNumericInput(session, inputId='ms.max.val', value=plotparams$ms.max.val)
-            updateNumericInput(session, inputId='ms.min.val', value=plotparams$ms.min.val)
+            updateCheckboxInput(session, inputId='ms.max', value=global.plotparam$ms.max)
+            updateNumericInput(session, inputId='ms.max.val', value=global.plotparam$ms.max.val)
+            updateNumericInput(session, inputId='ms.min.val', value=global.plotparam$ms.min.val)
 
             ## correlation matrix
-            updateCheckboxInput(session, inputId='cm.numb', value=plotparams$cm.numb)
-            updateSelectInput(session, inputId='cm.upper', selected=plotparams$cm.upper)
-            updateSelectInput(session, inputId='cm.lower', selected=plotparams$cm.lower)
+            updateCheckboxInput(session, inputId='cm.numb', value=global.plotparam$cm.numb)
+            updateSelectInput(session, inputId='cm.upper', selected=global.plotparam$cm.upper)
+            updateSelectInput(session, inputId='cm.lower', selected=global.plotparam$cm.lower)
 
 
 
@@ -2007,7 +2047,7 @@ shinyServer(
 
             ##################################
             ## clean up
-            rm(global.input.imp, global.param.imp, global.results.imp, plotparams.imp, volc.imp)
+            rm(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp)
 
             ###################################################################
             ##            insert the panels for the volcanos
@@ -4000,13 +4040,13 @@ shinyServer(
         output$multi.scatter <- renderPlot({
             ##cat('tesssttt')
             if(is.null(global.results$data)) return()
-            plotparams$ms.max <- input$ms.max
+            global.plotparam$ms.max <- input$ms.max
 
-            plotparams$ms.max.val <- isolate( input$ms.max.val )
-            plotparams$ms.min.val <- isolate( input$ms.min.val )
+            global.plotparam$ms.max.val <- isolate( input$ms.max.val )
+            global.plotparam$ms.min.val <- isolate( input$ms.min.val )
 
-            ##cat('maxval: ', plotparams$ms.max.val,'\n')
-            plotMultiScatter( define.max=plotparams$ms.max, min.val=plotparams$ms.min.val, max.val=plotparams$ms.max.val )
+            ##cat('maxval: ', global.plotparam$ms.max.val,'\n')
+            plotMultiScatter( define.max=global.plotparam$ms.max, min.val=global.plotparam$ms.min.val, max.val=global.plotparam$ms.max.val )
             ##plotMultiScatter( define.max=input$ms.max, min.val=input$ms.min.val, max.val=input$ms.max.val )
         },
         width = function(){120*(ncol(data.frame(global.input$table))-1)},

@@ -123,7 +123,7 @@ shinyUI(
                 inlineCSS(appCSS),
 
                 ## #######################
-                ## loading animantion
+                ## loading animation
                 div(
                     id = "loading-content",
                     h2("Loading...")

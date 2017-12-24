@@ -11,3 +11,4 @@ CohesinRound-Round1and3-5reps-2peps-acrossAll	schenone@broadinstitute.org	tothov
 PURA-experiment	hartigan@broadinstitute.org	mathias@broadinstitute.org;schenone@broadinstitute.org;karsten@broadinstitute.org
 RTFDC-Final-experiment	hartigan@broadinstitute.org	bchia@broadinstitute.org;karsten@broadinstitute.org
 SHOC2-MultiMedian-noKRTN	schenone@broadinstitute.org	aapffel@broadinstitute.org;walsh@broadinstitute.org;karsten@broadinstitute.org
+zbtb33-control-left	cstan@broadinstitute.org	embeau@broadinstitute.org;karsten@broadinstitute.org

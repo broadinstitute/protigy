@@ -37,7 +37,10 @@ shinyServer(
 
         ## error messages
         error <- reactiveValues()
-
+        
+        # flags
+        
+        
         ## test results
         global.results <-  reactiveValues(
 
@@ -69,13 +72,24 @@ shinyServer(
         ##################################################
         ## parameters
         global.param <-  reactiveValues(
+          
+            file.done=F,
+            id.done=F,
+            grp.done=F,                  ## group assignment finished?
+            session.imported=F,          ## flag whether this is an imported session
+            session.import.init=F,       ## flag for initiate the session (used for to switch between default values for 'filter.value' and user=sepcified, i.e. after importing a session)
+            analysis.run=F,              ## flag whether the analysis has been run
+            
+            
+            file.gct3=F,                 ## special case> GCT v1.3 file
+            
             session=NULL,                ## session id
             user=NULL,                   ## user
             grp=NULL,                    ## the actual group assignment
             N.grp=NULL,                  ## number of defined groups
             grp.colors=NULL,             ## group color assignment
             grp.colors.legend=NULL,      ## group colors, names are group names
-            grp.done=F,                  ## group assignment finished?
+            
             which.test='One-sample mod T', ## specify test
             
             log.transform='none',        ## log transformation
@@ -87,11 +101,7 @@ shinyServer(
             ##sd.filt='no',              ## sd filter
             sd.filt.val=10,              ## remove lower 10 percent of features with lowest sd
 
-            session.imported=F,          ## flag whether this is an imported session
-
-            session.import.init=F,       ## flag for initiate the session (used for to switch between default values for 'filter.value' and user=sepcified, i.e. after importing a session)
-            analysis.run=F,              ## flag whether the analysis has been run
-
+            
             filter.type='adj.p',         ## default filter
             filter.value=0.05,           ## default filter value
 
@@ -179,6 +189,7 @@ shinyServer(
         callModule(printHTML, id='getting.started', what='gs', global.input = global.input)
         callModule(printHTML, id='change.log', what='cl', global.input = global.input)
         callModule(printHTML, id='id.column', what='id', global.param=global.param, global.input=global.input)
+        callModule(printHTML, id='gct3.file', what='gct3',global.param=global.param, global.input=global.input)
         callModule(printHTML, id='exp.design', what='ed', global.param=global.param, global.input=global.input)
         callModule(printHTML, id='analysis', what='ana', global.param=global.param, global.input=global.input)
         
@@ -919,23 +930,25 @@ shinyServer(
 
 
         #########################################################################################
-        ##
-        ##                                  user input
-        ##
+        #  
+        #                                  user input
+        #
         #########################################################################################
 
-        ## #########################################################################
-        ##
-        ## 1) UI file upload
-        ## - entry point for the app
-        ## - session id is generated here
-        ## - search path to browse saved sessions
-        ##
+        # #########################################################################
+        #
+        # 1) UI file upload
+        # - entry point for the app
+        # - session id is generated here
+        # - search path to browse saved sessions
+        #
         output$file.upload <- renderUI({
 
-            if(!is.null(input$file)) return()
-            if(!is.null( global.input$file)) return()
-
+            #if(!is.null(input$file)) return()
+            #if(!is.null( global.input$file)) return()
+            if(global.param$file.done) return()
+          
+          
             ##View(ppi$iw[1:10, ])
 
             ## ######################################
@@ -1005,22 +1018,7 @@ shinyServer(
             )
         })
 
-        ##@####################################
-        ## 1a) UI import session
-        output$import.session <- renderUI({
-
-            if(!is.null(input$file)) return()
-            if(!is.null( global.input$file)) return()
-
-            ## upload form
-            list(
-                HTML('<font size=\"3\"><b>Import previously saved session:</b></font>'),
-                fileInput("session.import", "", accept=c('.RData')),
-                HTML('<hr border-width:\"10px\">')
-            )
-
-        })
-
+        
         ##@##################################
         ## 1b) UI browse saved sessions
         ## only available on the server
@@ -1074,6 +1072,121 @@ shinyServer(
             )
         })
 
+        
+        # ###################################################
+        #       group assignment for gct 1.3 files
+        # - id column defined as first column in gct
+        # - group assingment from column annotations
+        #
+        output$define.groups.gct3 <- renderUI({
+          
+          if(!global.param$file.gct3) return()
+          if(global.param$grp.done) return()
+          
+
+          list(
+            ## experimental design
+            #HTML('<font size=\"3\"><b>Found GCT v1.3 file with', ncol(global.input$cdesc),'annotation columns. Choose one column as class vector for marker selection.</b></font><br>'),
+            radioButtons("grp.gct3", "Choose column", colnames(global.input$cdesc)),
+            actionButton("update.grp.gct3", 'OK')
+          )
+          
+        })
+        # preview levels current selection
+        output$grp.gct3.prev <- renderText({
+          if(is.null(input$grp.gct3)) return()
+          if(global.param$grp.done) return()
+          
+          HTML(paste('<br><p><font size=\"4\"><b>Current selection:</b><b>', input$grp.gct3,'</b></p><br>'))
+          
+        })
+        
+        # preview levels current selection
+        output$grp.gct3.prev.tab <- renderTable({
+          if(is.null(input$grp.gct3)) return()
+          if(global.param$grp.done) return()
+          
+          tab <- table(global.input$cdesc[, input$grp.gct3]) 
+          tab <- data.frame(Level=names(tab), Freq=unlist(tab))
+          
+          list(
+            tab
+          )
+        })
+        # #####################################
+        # define groups for GCTv3
+        observeEvent(input$update.grp.gct3, {
+          
+          tab <- global.input$table
+          cdesc <- global.input$cdesc
+          
+          cat('\n\n', cdesc[, input$grp.gct3],'\n\n')
+          
+          # initialize grp file
+          Column.Name <- colnames(tab)
+          Experiment <- rep('', length(Column.Name))
+          names(Experiment) <- Column.Name
+          Experiment[ rownames(cdesc) ] <- cdesc[, input$grp.gct3]
+          
+          # data frame
+          grp.file=data.frame(
+            Column.Name,
+            Experiment,
+            stringsAsFactors = F
+              )
+          
+         # global.input$cdesc
+          #View(grp.file)
+          ## ################################
+          ## ANNOTATION: extract empty cells
+          ## - corresponding columns will be carried over as
+          ##   annotation columns in the result file
+          grp.anno <- grp.file[which(nchar( Experiment) == 0 ), ]
+          grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
+          
+          #View(grp.anno)
+          
+          if(length(grp.anno)>0)
+            global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
+          
+          ## ################################
+          ## EXPRESSION
+          ## - extract all non-empty cells in the 'Experiment' column
+          exprs.idx <- rownames(cdesc)
+          grp.exprs <- grp.file[exprs.idx, ]
+          
+          ## order alphabetically to make coloring consistent
+          grp.exprs <- grp.exprs[order(grp.exprs$Experiment), ]
+          
+          ## class vector
+          grp=grp.exprs$Experiment
+          names(grp)=grp.exprs$Column.Name
+          
+          ## update input table, keep id and expression columns
+          global.input$table <- global.input$table[ , c(global.param$id.col.value, names(grp))]
+          
+          ################################
+          ## update number of groups
+          global.param$N.grp <- length(unique( na.omit(grp)) )
+          ## store group assignment
+          global.param$grp <- grp
+          ## group colors
+          grp.col <- rep(GRPCOLORS[1], length(grp))
+          for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
+          global.param$grp.colors <- grp.col
+          
+          ## group colors for figure legend
+          idx <- !duplicated(grp)
+          grp.col.legend = grp.col[idx]
+          names(grp.col.legend) <- grp[idx]
+          global.param$grp.colors.legend <- grp.col.legend
+          
+          ## all done
+          global.param$grp.done = T
+          
+        })
+        
+        
         ## ##################################################
         ##
         ##           2) UI pick id column
@@ -1081,11 +1194,14 @@ shinyServer(
         output$choose.id.column <- renderUI({
 
             if(global.param$analysis.run) return()
-
-            if(is.null(global.input$table)) return()
-            if(!is.null(input$id.col))
-                if(input$id.col > 0 && !is.null(input$id.col.value)) return()
-
+            if(!global.param$file.done) return()
+            if(global.param$id.done) return()
+            
+            #if(is.null(global.input$table)) return()
+          
+           # if(!is.null(input$id.col))
+            #    if(input$id.col > 0 && !is.null(input$id.col.value)) return()
+            
             ## get uploaded table and column names
             tab <- global.input$table
             tab.colnames <- global.input$table.colnames
@@ -1157,7 +1273,7 @@ shinyServer(
             res <- list(
                   conditionalPanel(condition = "input['filter.type'] == 'top.n'", numericInput( "filter.value.top.n", "Top N features", value=50, min=2, step=1)),
                   conditionalPanel(condition = "input['filter.type'] == 'nom.p'", numericInput( "filter.value.nom.p", "P-value filter", value=0.01, min=0, max=1, step=1e-2)),
-                conditionalPanel(condition = "input['filter.type'] == 'adj.p'", numericInput( "filter.value.adj.p", "Corrected P-Value (FDR)", value=0.05, min=0, max=1, step=1e-2))
+                  conditionalPanel(condition = "input['filter.type'] == 'adj.p'", numericInput( "filter.value.adj.p", "Corrected P-Value (FDR)", value=0.05, min=0, max=1, step=1e-2))
             )
 
             res
@@ -1707,16 +1823,23 @@ shinyServer(
             ## ############################################
             map.res <- mapIDs(ids)
             global.results$keytype <- map.res$keytype
-            global.results$id.map <- data.frame(id=ids, map.res$id.map)
-
+            #global.results$id.map <- data.frame(id=ids, map.res$id.map)
+            global.results$id.map <- map.res$id.map
+            
+            #View(data.frame(id=ids, map.res$id.map))
+            
             ########################################
             ## store
             global.input$table <- tab
+            
+            # #######################
+            # flag
+            global.param$id.done <- T
 
         })
 
         #################################################################################
-        ##                   IMPORT DATA
+        # IMPORT DATA
         ## 2) - upload file
         ##    - determine file type
         ##    - import file
@@ -1725,7 +1848,6 @@ shinyServer(
         #################################################################################
         observeEvent( input$file, {
 
-            ##
             global.input$id.col <- 0
 
             ########################################
@@ -1743,7 +1865,7 @@ shinyServer(
             } else{
                  global.param$session.dir <- paste(DATADIR, global.param$session, '/' ,sep='')
             }
-            ## ## create directory on server to store the results
+            ## create directory on server to store the results
             dir.create(global.param$session.dir)
 
             ## ############################################
@@ -1764,9 +1886,10 @@ shinyServer(
             }
 
             ########################################################
-            #               file import
+            # file import
             
-            # GCT 1.2
+            # ###############################################
+            #                     GCT 1.2
             if( length( grep( '^\\#1\\.2', readLines(fn,n=1))) > 0){
                   tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS, skip=2)
                   
@@ -1780,15 +1903,15 @@ shinyServer(
                   global.input$table.colnames <- colnames.tmp
                   
                   rm(tab, colnames.tmp)
-                  
-            # GCT 1.3
+            # ###################################################      
+            #                     GCT 1.3
             } else if( length( grep( '^\\#1\\.3', readLines(fn,n=1))) > 0){
               
               # parse gct file
               gct <- parse.gctx(fn)
               
               # expression table
-              tab <- cbind(gct@rdesc, gct@mat)
+              tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
               
               colnames.tmp <- chopString(colnames(tab), STRLENGTH)
               names(colnames.tmp) <- colnames(tab)
@@ -1802,9 +1925,30 @@ shinyServer(
               global.input$rdesc <- gct@rdesc
               global.input$cdesc <- gct@cdesc
               
+              # id column 
+              global.param$id.col.value='id'
+              global.param$id.done=T
+              
+              # robustify ids
+              ids <- make.unique( as.character(tab[, global.param$id.col.value] ), sep='_')
+              ## replace values in id column
+              tab[, global.param$id.col.value] <- ids
+              ## use id as rownames
+              rownames(tab) <- ids
+              
+              ## #################
+              ## map to gene names
+              map.res <- mapIDs(ids)
+              global.results$keytype <- map.res$keytype
+              global.results$id.map <- map.res$id.map
+              
+              # flag
+              global.param$file.gct3 <- T
+              
               rm(tab, colnames.tmp)
               
-            # other text file
+            # ##########################################################  
+            #                    other text file
             } else {
 
                 ## ################################
@@ -1841,127 +1985,12 @@ shinyServer(
                 rm(tab, colnames.tmp)
             }## end if GCT
 
+            # flag
+            global.param$file.done <- T
             
         })
 
-        ## ###############################################################
-        ##
-        ## import session via file upload
-        ##
-        ## ###############################################################
-        observeEvent(input$session.import, {
-
-            #################################
-            ## import workspace
-            load( input$session.import$datapath )
-
-            #################################
-            ## assign the imported values to the global reactive variables
-            for(i in names(global.input.imp)){
-                global.input[[i]] <- global.input.imp[[i]]
-            }
-            for(i in names(global.param.imp)){
-                global.param[[i]] <- global.param.imp[[i]]
-                ##cat(i,'\t',global.param[[i]], '\n')
-            }
-            for(i in names(global.results.imp)){
-                global.results[[i]] <- global.results.imp[[i]]
-            }
-            for(i in names(global.plotparam.imp)){
-                global.plotparam[[i]] <- global.plotparam.imp[[i]]
-            }
-            for(i in names(volc.imp)){
-                volc[[i]] <- volc.imp[[i]]
-            }
-
-            ## ################################
-            ## update filter
-            if(global.param$filter.type == 'top.n'){
-                updateNumericInput(session, inputId='filter.value.top.n', value=global.param$filter.value)
-            }
-            if(global.param$filter.type == 'nom.p'){
-                updateNumericInput(session, inputId='filter.value.nom.p', value=global.param$filter.value)
-            }
-            if(global.param$filter.type == 'adj.p'){
-                updateNumericInput(session, inputId='filter.value.adj.p', value=global.param$filter.value)
-            }
-
-          ## ##############################################################
-          ##                 update plotting parameters
-          ## ##############################################################
-
-          ## heatmap
-          updateNumericInput(session, inputId='hm.cexCol', value=global.plotparam$hm.cexCol)
-          updateNumericInput(session, inputId='hm.cexRow', value=global.plotparam$hm.cexRow)
-          updateSelectInput(session, inputId='hm.scale', selected=global.plotparam$hm.scale)
-          updateSelectInput(session, inputId='hm.clust', selected=global.plotparam$hm.clust)
-          updateNumericInput(session, inputId='hm.max.val', value=global.plotparam$hm.max.val)
-          updateCheckboxInput(session, inputId='hm.max', value=global.plotparam$hm.max)
-          ## hm clust missing
-
-          ## PCA
-          updateSelectInput(session, inputId='pca.x', selected=global.plotparam$pca.x)
-          updateSelectInput(session, inputId='pca.y', selected=global.plotparam$pca.y)
-          updateSelectInput(session, inputId='pca.z', selected=global.plotparam$pca.z)
-
-          ## multiscatter
-          updateCheckboxInput(session, inputId='ms.max', value=global.plotparam$ms.max)
-          updateNumericInput(session, inputId='ms.max.val', value=global.plotparam$ms.max.val)
-          updateNumericInput(session, inputId='ms.min.val', value=global.plotparam$ms.min.val)
-
-          ## correlation matrix
-          updateCheckboxInput(session, inputId='cm.numb', value=global.plotparam$cm.numb)
-          updateSelectInput(session, inputId='cm.upper', selected=global.plotparam$cm.upper)
-          updateSelectInput(session, inputId='cm.lower', selected=global.plotparam$cm.lower)
-
-
-          ## ################################
-          ## set flags
-          global.param$session.imported=T
-          global.param$analysis.run=T
-
-          global.param$session.import.init=T
-
-          global.results$export.results=F
-
-          ## ################################
-          ## clean up
-          rm(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp)
-
-          ## #################################################################
-          ##            insert the panels for the volcanos
-          ## #################################################################
-          if(!(global.param$which.test %in% c('mod F', 'none'))){
-              withProgress({
-                setProgress( message='Preparing volcanos...')
-                ins.volc()
-              })
-              }
-
-          ## ##################################################################
-          ##         insert panels for scatterplots
-          ## ##################################################################
-          ins.scat()
-
-
-          ## #####################################
-          ## generate id.map for compatibility with < v0.7.0
-          if(is.null(global.results$id.map)){
-
-              ## ############################################
-              ## map to gene names
-              ## ############################################
-              map.res <- mapIDs(rownames( global.results$data$output ))
-              global.results$keytype <- map.res$keytype
-              global.results$id.map <- map.res$id.map
-              global.results$data$output <- left_join(global.results$data$output, map.res$id.map, 'id')
-              ##View(global.results$data$output)
-              ##rownames(global.results$data$output) <- global.results$id.map$id.concat
-
-          }
-        })
-
-
+   
         ## ###############################################################
         ##
         ## import saved session from the server via drop down menu
@@ -2038,6 +2067,8 @@ shinyServer(
 
             ##################################
             ## set flags
+            global.param$file.done=T
+            global.param$id.done=T
             global.param$session.imported=T
             global.param$analysis.run=T
 
@@ -2080,6 +2111,8 @@ shinyServer(
             }
         })
 
+        #
+        
         ## ###############################################################
         ## 4c)       upload experimental design file
         ##

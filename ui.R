@@ -84,6 +84,11 @@ shinyUI(
                           ## define groups
                           uiOutput("define.groups"),
 
+                          # #############################
+                          # gct3
+                          uiOutput('define.groups.gct3'),
+                      
+                      
                           ###############################
                           ## show experimental design
                           uiOutput("list.groups"),
@@ -139,10 +144,15 @@ shinyUI(
                          printHTMLUI('change.log'),
                          printHTMLUI('id.column'),
                          printHTMLUI('exp.design'),
+                         printHTMLUI('gct3.file'),
                          printHTMLUI('analysis'),
                          printHTMLUI('results'),
-
-                         ## the actual content
+                         
+                         htmlOutput('grp.gct3.prev'),
+                         tableOutput('grp.gct3.prev.tab'),
+                         
+                         
+                         # the actual content
                          uiOutput('navbar'),
 
 

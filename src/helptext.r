@@ -33,7 +33,7 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     ##@###############################
     ## changelog
     if(what == 'cl'){
-        txt=paste('<hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
+        txt=paste('<hr><hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
 <b>v0.7.8 December 4, 2017</b>
 <ul>
@@ -262,10 +262,12 @@ Choose a column from the list on the left that contains <b>unique</b> identifier
         output$html <- renderText({
 
             if(global.param$analysis.run) return()
+            if(global.param$id.done) return()
+            if(!global.param$file.done) return()
+            
+            #if(is.null(global.input$id.col)) return() ## start page
 
-            if(is.null(global.input$id.col)) return() ## start page
-
-            if(global.input$id.col > 0 && !is.null(global.param$id.col.value)) return() ## after id column is choosen
+            #if(global.input$id.col > 0 && !is.null(global.param$id.col.value)) return() ## after id column is choosen
 
             HTML(txt)
         })
@@ -280,17 +282,42 @@ Choose a column from the list on the left that contains <b>unique</b> identifier
         output$html <- renderText({
 
             if(global.param$analysis.run) return()
+            if(!global.param$file.done) return()
 
             ##if( !is.null(error$msg) ) return()
 
-            if(is.null(global.input$id.col)) return()
-            if(global.input$id.col ==0) return()
-            if(global.param$grp.done == T) return()
+            #if(is.null(global.input$id.col)) return()
+            #if(global.input$id.col ==0) return()
+            if(global.param$file.gct3) return()
+            #if(global.param$id.done) return()  
+            if(global.param$grp.done) return()
 
             HTML(txt)
         })
     }
-
+    #####################################################################
+    ## gct v3
+    if(what == 'gct3'){
+      
+      #txt <- paste('<br><br><p><font size=\"4\">Found GCT v1.3 file with', ncol(global.input$cdesc),'annotation columns. Choose one column as class vector for marker selection.</p></font></p>')
+      txt <- paste('<br><p><font size=\"4\"><b>Found GCT v1.3 file</b><br>Choose the annotation column to use as class vector for marker selection.</p></font></p>')
+      
+      ## render HTML
+      output$html <- renderText({
+        
+        if(global.param$analysis.run) return()
+        if(!global.param$file.gct3) return()
+        
+        #if(global.param$id.done) return()  
+        if(global.param$grp.done) return()
+        
+        HTML(txt)
+      })
+    }
+    
+    
+    
+    
     ## ####################################################################
     ## analysis
     if(what == 'ana'){

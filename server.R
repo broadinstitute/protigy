@@ -81,7 +81,7 @@ shinyServer(
             analysis.run=F,              ## flag whether the analysis has been run
             
             
-            file.gct3=F,                 ## special case> GCT v1.3 file
+            file.gct3=F,                 ## special case: GCT v1.3 file
             
             session=NULL,                ## session id
             user=NULL,                   ## user
@@ -131,7 +131,7 @@ shinyServer(
             volc.hyper.curv=.5,  ## curvation parameter for hyperbol. curve
 
             ## heatmap
-            hm.cexCol=12,
+            hm.cexCol=8,
             hm.cexRow=3,
             hm.scale="none",
             hm.max=FALSE,
@@ -1120,7 +1120,10 @@ shinyServer(
           tab <- global.input$table
           cdesc <- global.input$cdesc
           
-          cat('\n\n', cdesc[, input$grp.gct3],'\n\n')
+          #cat('\n\n', cdesc[, input$grp.gct3],'\n\n')
+          
+          # store grp coloum
+          global.param$grp.gct3 <- input$grp.gct3
           
           # initialize grp file
           Column.Name <- colnames(tab)
@@ -1168,8 +1171,11 @@ shinyServer(
           ################################
           ## update number of groups
           global.param$N.grp <- length(unique( na.omit(grp)) )
+          
           ## store group assignment
-          global.param$grp <- grp
+          global.param$grp <- global.param$grp.all <- grp
+          global.param$grp.comp.all <- global.param$grp.comp <- unique(grp)
+          
           ## group colors
           grp.col <- rep(GRPCOLORS[1], length(grp))
           for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
@@ -1279,7 +1285,34 @@ shinyServer(
             res
         })
 
-
+        
+        # ##########################################################
+        #
+        #     Modal window: group selection
+        #
+        # ###########################################################
+        observeEvent(input$select.groups.button, {
+          
+          showModal(modalDialog(
+            size='m',
+            title = "Select groups",
+            footer = 'OK',
+            checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection)),
+            easyClose = TRUE
+          ))
+          
+        })
+        observeEvent(input$select.groups, {
+          global.param$grp.comp.selection <- input$select.groups
+          
+          ## update class vector
+          grp.selection <- global.param$grp.all
+          grp.unique <- unique( unlist( strsplit( sub('\\.vs\\.', ' ', input$select.groups), ' ')))
+          grp.selection <- grp.selection[ grep(paste('^', paste(grp.unique, collapse='|'), '$', sep=''), grp.selection) ]
+          global.param$grp.selection <- grp.selection
+        })
+        
+        
         ## #####################################################################
         ## UI: set up analysis
         ##
@@ -1294,7 +1327,7 @@ shinyServer(
             if( is.null(input$filt.data)){
 
                 list(
-
+                    
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
 
@@ -1303,7 +1336,10 @@ shinyServer(
                      ##radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected=global.param$sd.filt),
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
 
-                     actionButton('run.test', 'Run analysis!')
+                     actionButton('run.test', 'Run analysis!'),
+                     br(),
+                     hr(),
+                     actionButton('select.groups.button', 'Select Groups')
                 )
             }
             ## ###################################################
@@ -1311,6 +1347,7 @@ shinyServer(
             else if(input$filt.data == 'none'){
 
                 list(
+                  
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
 
@@ -1318,7 +1355,10 @@ shinyServer(
 
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
 
-                     actionButton('run.test', 'Run analysis!')
+                     actionButton('run.test', 'Run analysis!'),
+                     br(),
+                     hr(),
+                     actionButton('select.groups.button', 'Select Groups')
                 )
             }
 
@@ -1327,6 +1367,7 @@ shinyServer(
             else if(input$filt.data == 'Reproducibility'){
 
                 list(
+                  
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
 
@@ -1335,7 +1376,10 @@ shinyServer(
 
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
 
-                     actionButton('run.test', 'Run analysis!')
+                     actionButton('run.test', 'Run analysis!'),
+                     br(),
+                     hr(),
+                     actionButton('select.groups.button', 'Select Groups')
                 )
             }
 
@@ -1344,6 +1388,7 @@ shinyServer(
             else if(input$filt.data == 'StdDev'){
 
                 list(
+                  
                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
 
@@ -1351,7 +1396,10 @@ shinyServer(
                     sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
 
                     radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
-                    actionButton('run.test', 'Run analysis!')
+                    actionButton('run.test', 'Run analysis!'),
+                    br(),
+                    hr(),
+                    actionButton('select.groups.button', 'Select Groups')
                 )
             }
 
@@ -1417,14 +1465,14 @@ shinyServer(
 
                     if(input$hm.max){
                         ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, cellheight=min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
-                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow(global.results$filtered), unit='in'), 20 ) )
+                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow(global.results$filtered), unit='in'), 20 ), cdesc=global.input$cdesc, cdesc.grp=global.param$grp.gct3)
 
 
 
                     } else {
 
                         ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm, cellheight= min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
-                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm,  width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow( global.results$filtered ), unit='in'), 20 ))
+                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm,  width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow( global.results$filtered ), unit='in'), 20 ), cdesc=global.input$cdesc, cdesc.grp=global.param$grp.gct3)
                     }
                     })
                 } ## end if nrow(res)>3
@@ -2153,7 +2201,7 @@ shinyServer(
                 global.param$label <- paste(global.param$label, label, sep='-')
             }
 
-  cat('\n',nchar(Experiment),'\n')
+           #cat('\n',nchar(Experiment),'\n')
             ###############################################################
             ##
             ## - do some sanity checks
@@ -2218,8 +2266,11 @@ shinyServer(
             ################################
             ## update number of groups
             global.param$N.grp <- length(unique( na.omit(grp)) )
+            
             ## store group assignment
-            global.param$grp <- grp
+            global.param$grp <- global.param$grp.all <- grp
+            global.param$grp.comp.all <- global.param$grp.comp <- unique(grp)
+            
             ## group colors
             grp.col <- rep(GRPCOLORS[1], length(grp))
             for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
@@ -2239,6 +2290,54 @@ shinyServer(
 
         })
 
+        # #####################################
+        #     determine groups to test
+        # 
+        observeEvent(input$which.test, {
+          
+          test <- input$which.test
+          
+          ## #############################################
+          ## specify which comparisons should be performed
+          if(test %in% c('One-sample mod T', 'mod F', 'none')){
+            ## each group separetely
+            groups.comp <- global.param$grp.all
+            
+            #if( global.param$run.test == 0  ){
+            global.param$grp.comp.all <- groups.comp
+            #}
+            global.param$grp.comp.selection <- groups.comp
+            global.param$grp.selection <- groups.comp
+          }
+          ## #############################################
+          ## pairwise combinations for 2-sample test
+          if(test == 'Two-sample mod T'){
+            
+            ## all pairwise combinations
+            groups.unique <- unique(global.param$grp.all)
+            
+            groups.comp <- c()
+            count=1
+            for(i in 1:(length(groups.unique)-1))
+              for(j in (i+1):length(groups.unique)){
+                ## order alphabetically
+                groups.tmp <- sort( groups.unique[c(i,j)] )
+                ##groups.comp[count] <- paste(groups.unique[i], groups.unique[j], sep='.vs.')
+                groups.comp[count] <- paste(groups.tmp[1], groups.tmp[2], sep='.vs.')
+                count <- count+1
+              }
+            #if( global.param$run.test == 0  ){
+              global.param$grp.comp.all <- groups.comp
+            #}
+            global.param$grp.comp.selection <- groups.comp
+            #global.param$grp.selection <- 
+          }
+          
+          
+        })
+        
+        
+        
         ################################################################################
         ##
         ##                once the 'run test' button was pressed...
@@ -2274,20 +2373,20 @@ shinyServer(
             #####################################################################
             ## if the 'Run test' - button has been pressed for the first time,
             ## store a copy of the original input matrix (unnormalized, unfiltered)
-            ##if (global.input$run.test == 1){
             if(!(global.param$analysis.run)){
                 global.input$table.org <- global.input$table
                 tab <- data.frame(global.input$table)
             }
-            ##if(global.input$run.test > 1 ){
             if(global.param$analysis.run){
                 tab <- data.frame(global.input$table.org)
             }
             ##View(tab)
             ## id column
             id.col = global.param$id.col.value
+            
             ## all group labels
-            groups=global.param$grp
+            groups=global.param$grp.selection
+            global.param$grp <- groups
             ##View(tab[, id.col])
 
             ###############################################
@@ -2311,33 +2410,36 @@ shinyServer(
             sd.filt.val = global.param$sd.filt.val
             log.trans = global.param$log.transform
 
-
-            ## #############################################
-            ## specify which comparisons should be performed
-            if(test %in% c('One-sample mod T', 'mod F', 'none')){
-                ## each group separetely
-                groups.comp <- global.param$grp
-                global.param$grp.comp <- groups.comp
-            }
-            ## #############################################
-            ## pairwise combinations for 2-sample test
-            if(test == 'Two-sample mod T'){
-
-                ## all pairwise combinations
-                groups.unique <- unique(global.param$grp)
-
-                groups.comp <- c()
-                count=1
-                for(i in 1:(length(groups.unique)-1))
-                    for(j in (i+1):length(groups.unique)){
-                        ## order alphabetically
-                        groups.tmp <- sort( groups.unique[c(i,j)] )
-                        ##groups.comp[count] <- paste(groups.unique[i], groups.unique[j], sep='.vs.')
-                        groups.comp[count] <- paste(groups.tmp[1], groups.tmp[2], sep='.vs.')
-                        count <- count+1
-                    }
-                global.param$grp.comp <- groups.comp
-            }
+            # update group selection
+            groups.comp = global.param$grp.comp.selection
+            global.param$grp.comp = groups.comp
+            
+            # ## #############################################
+            # ## specify which comparisons should be performed
+            # if(test %in% c('One-sample mod T', 'mod F', 'none')){
+            #     ## each group separetely
+            #     groups.comp <- global.param$grp
+            #     global.param$grp.comp <- groups.comp
+            # }
+            # ## #############################################
+            # ## pairwise combinations for 2-sample test
+            # if(test == 'Two-sample mod T'){
+            # 
+            #     ## all pairwise combinations
+            #     groups.unique <- unique(global.param$grp)
+            # 
+            #     groups.comp <- c()
+            #     count=1
+            #     for(i in 1:(length(groups.unique)-1))
+            #         for(j in (i+1):length(groups.unique)){
+            #             ## order alphabetically
+            #             groups.tmp <- sort( groups.unique[c(i,j)] )
+            #             ##groups.comp[count] <- paste(groups.unique[i], groups.unique[j], sep='.vs.')
+            #             groups.comp[count] <- paste(groups.tmp[1], groups.tmp[2], sep='.vs.')
+            #             count <- count+1
+            #         }
+            #     global.param$grp.comp <- groups.comp
+            # }
 
             ## ###########################################
             ## log transformation
@@ -2472,6 +2574,7 @@ shinyServer(
 
                 ##################################
                 ## reorder table
+                    #save(groups, res.comb, file='groups.RData')
                 res.id <- res.comb$id ## id column
                 res.exprs <- res.comb[, names(groups)] ## expression values
                 res.test <- res.comb[, grep('^logFC|^AveExpr|^t\\.|^P\\.Value|^adj.P.Val|^Log\\.P\\.Value', colnames(res.comb))] ## test results
@@ -2547,9 +2650,12 @@ shinyServer(
             if(test == 'mod F'){
                 ##cat('test F...')
                 withProgress(message='moderated F-test', value=0, {
-
-                        res.comb <- modF.test( tab, id.col=id.col, class.vector=groups, nastrings=NASTRINGS, na.rm=FALSE)$output
-                        colnames(res.comb) <- sub('^X', '', colnames(res.comb))
+                    tab.group <- cbind(tab[, id.col], tab[, names(groups)])
+                    colnames(tab.group)[1] <- id.col
+                  
+                    #save(groups, file='groups.RData')
+                    res.comb <- modF.test( tab.group, id.col=id.col, class.vector=groups, nastrings=NASTRINGS, na.rm=FALSE)$output
+                    colnames(res.comb) <- sub('^X', '', colnames(res.comb))
                 })
                 ##################################
                 ## reorder table
@@ -3620,17 +3726,25 @@ shinyServer(
                 logPVal <- res[, paste('Log.P.Value',  sep='')]
             }
 
+            # ###############################
+            # adjusted p-values
+            adjPVal <- res[, paste('adj.P.Val.', group, sep='')]
+            PVal <- res[, paste('P.Value.', group, sep='')]
+            
             ## ##############################
             ## log fold change
             logFC <- res[, paste('logFC.', group, sep='')]
 
             ## ##############################
             ## ids
-            IDs <- global.results$id.map$id.concat
-
+            #IDs <- global.results$id.map$id.concat
+            IDs <- res[ , 'id.concat']
+            #View(head(res))
+            #cat(IDs[1:4])
+            
             ## ###################################################
             ##             use IDs as vector names
-            names(logPVal) <- names(logFC) <- IDs
+            names(logPVal) <- names(adjPVal) <- names(logFC) <- names(PVal) <- IDs
 
             ## index of missing values
             rm.idx <- union( which(is.na(logFC)), which(is.na(logPVal)) )
@@ -3639,7 +3753,9 @@ shinyServer(
                 res <- res[-rm.idx, ]
                 logFC <- logFC[-rm.idx]
                 logPVal <- logPVal[-rm.idx]
+                PVal <- PVal[-rm.idx]
                 IDs <- IDs[-rm.idx]
+                adjPVal <- adjPVal[ -rm.idx ]
             }
             ## store a copy of IDs before zoom
             IDs.all <- IDs
@@ -3671,7 +3787,7 @@ shinyServer(
                 c <- as.numeric(input[[paste( "ppi.curve", group, sep='.')]])
 
                 y.hc=function(x, x0, y0, c) return(c/(x-x0) + y0)
-                x.hc <- seq(x0, xlim, 0.01)
+                x.hc <- seq(x0, xlim, 0.1)
             }
 
             ######################################################################
@@ -3680,23 +3796,24 @@ shinyServer(
             ## one/two sample
             if( global.param$which.test != 'mod F'){
                 if(global.param$filter.type == 'top.n'){
-                    PVal <- res[, paste('P.Value.', group, sep='')]
+                    #PVal <- res[, paste('P.Value.', group, sep='')]
                     sig.idx = order(PVal, decreasing=F)[1:global.param$filter.value]
 
                 }
                 if(global.param$filter.type == 'nom.p'){
-                    PVal <- res[, paste('P.Value.', group, sep='')]
+                    #PVal <- res[, paste('P.Value.', group, sep='')]
                     sig.idx = which(PVal < global.param$filter.value)
                 }
                 ## ##################################
                 ## adjusted p
                 if(global.param$filter.type == 'adj.p'){
+                  
                     ## hyperbol
                     if(hyperbol){
-                        adjPVal <- res[, paste('adj.P.Val.', group, sep='')]
+                        #adjPVal <- res[, paste('adj.P.Val.', group, sep='')]
 
                         sig.idx = which(adjPVal < global.param$filter.value)
-                        names(sig.idx) <- IDs[sig.idx]
+                        #names(sig.idx) <- IDs[sig.idx]
 
                         y0 <- min(logPVal[names(sig.idx)], na.rm=T)
 
@@ -3704,8 +3821,10 @@ shinyServer(
 
                     ## adjusted p only
                     } else {
-                        adjPVal <- res[, paste('adj.P.Val.', group, sep='')]
+                        #adjPVal <- res[, paste('adj.P.Val.', group, sep='')]
                         sig.idx = which(adjPVal < global.param$filter.value)
+                        #names(sig.idx) <- IDs[sig.idx]
+                        
                     }
                 }
             ######################################
@@ -3765,7 +3884,7 @@ shinyServer(
 
             ## ##############################################
             ##
-            ## if the bait is was detected
+            ## if the bait was detected
             ##
             ## ###############################################
             PPI <- FALSE
@@ -3903,7 +4022,14 @@ shinyServer(
             ## add filter
             ## minimal log P-value for given filter
             if(length(sig.idx) > 0 & !(input[[paste('ppi.hyper.filt', group, sep='.' )]])){
-                filt.minlogPVal <- min(logPVal[names(sig.idx)], na.rm=T)
+                
+              filt.minlogPVal <- min(logPVal[names(sig.idx)], na.rm=T)
+              #filt.minlogPVal <- min(logPVal[sig.idx], na.rm=T)
+              
+                #cat(filt.minlogPVal, ' /////\n')
+                
+                #View(logPVal[names(sig.idx)])
+                
                 abline(h=filt.minlogPVal, col=my.col2rgb('grey30', 50), lwd=2, lty='dashed')
                 text( xlim[2]-(xlim[2]*.05), filt.minlogPVal, paste(global.param$filter.type, global.param$filter.value, sep='='), pos=3, col='grey30')
             }
@@ -3914,9 +4040,12 @@ shinyServer(
             ## ############################
             ## indicate directionality for two-sample tests
             if(global.param$which.test == 'Two-sample mod T'){
-                legend('topleft', legend=sub('\\.vs.*', '', group), cex=2, text.col='darkblue', bty='n')
-                legend('topright', legend=sub('.*\\.vs\\.', '', group), cex=2, text.col='darkblue', bty='n')
-            }
+                #legend('topleft', legend=sub('\\.vs.*', '', group), cex=2, text.col='darkblue', bty='n')
+                #legend('topright', legend=sub('.*\\.vs\\.', '', group), cex=2, text.col='darkblue', bty='n')
+                mtext(sub('\\.vs.*', '', group), side=3, line=1, at=xlim[1], cex=2, col='darkblue')
+                mtext(sub('.*\\.vs\\.', '', group), side=3, line=1, at=xlim[2], cex=2, col='darkblue')
+                
+                }
 
 
             ## ###########################################################
@@ -4327,20 +4456,30 @@ shinyServer(
             ##  dimensions depending on no. rows/columns
             cw <- cwHM(ncol(res))
 
+            
+            if(!is.null(global.input$cdesc))
+              hm.cdesc <- global.input$cdesc
+            else
+              hm.cdesc <- global.param$grp
+            
             ######################################
             ## plot
             if(input$hm.max){
                 withProgress({
                      setProgress(message = 'Processing...', detail= 'Generating Heatmap')
                      ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test)
-                     plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test)
-                 })
+                     #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test)
+                     plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, cdesc=global.input$cdesc, cdesc.grp=global.param$grp.gct3)
+                  
+                  })
             } else {
                  withProgress({
                      setProgress(message = 'Processing...', detail= 'Generating Heatmap')
                      ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test)
-                     plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test)
-                 })
+                     #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test)
+                    plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, cdesc=global.input$cdesc, cdesc.grp=global.param$grp.gct3)
+                   
+                   })
             }
         },
         width = function(){

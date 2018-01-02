@@ -36,7 +36,7 @@ source('src/gct-io.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.8.1"
+VER="0.7.8.2"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -202,7 +202,15 @@ mapIDs <- function(ids){
             ## ###################################
             ##            try to map gene names
             ## ###################################
-            id.query <- sub('(-|;|\\.|_|\\|).*', '', ids) ## first id
+            if(keytype == 'UNIPROT' ){
+              id.query <- sub('(-|;|\\.|_|\\|).*', '', ids) ## first id
+              #cat('test\n\n')
+              #cat(id.query[1:3], '\n')
+            } else if(keytype == 'REFSEQ') {
+              id.query <- sub('(\\.|;).*', '', ids) ## first id
+            } else {
+              id.query <- ids
+            }
             names(id.query) <- ids
 
             ## ##################################
@@ -214,16 +222,18 @@ mapIDs <- function(ids){
 
             #cat(class(id.map.tmp), '\n')
             #cat(is.null( class(id.map.tmp) ))
-
+            #save(id.map.tmp, id.query, ids, keytype, file='tmp.RData')
             if(class(id.map.tmp) == 'try-error' | is.null( class(id.map.tmp) ) | class(id.map.tmp) == 'NULL' ){
               #cat('test1')
-              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query), stringsAsFactors=F)
+              #id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query), stringsAsFactors=F)
+              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(ids), stringsAsFactors=F)
+              
               keytype <- 'UNKNOWN'
               
             } else {
               #cat('test2')
               ##id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(names(id.query), id.map.tmp, sep='_'), stringsAsFactors=F)
-              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(id.query, id.map.tmp, sep='_'), stringsAsFactors=F)
+              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(ids, id.map.tmp, sep='_'), stringsAsFactors=F)
               }
 
             ## results
@@ -252,28 +262,50 @@ plotHM <- function(res,
                    style,
                    hc.method='ward.D2',
                    hc.dist='euclidean',
-                   filename=NA, cellwidth=NA, cellheight=NA, max.val=NA, fontsize_col, fontsize_row, height=height, width=width, ...){
+                   filename=NA, 
+                   cellwidth=NA, 
+                   cellheight=NA, 
+                   max.val=NA, 
+                   fontsize_col, 
+                   fontsize_row, 
+                   height=height, 
+                   width=width,
+                   cdesc=NULL,
+                   cdesc.grp=NULL,
+                   ...){
 
     ## convert to data matrix
     res <- data.matrix(res)
 
+    #grp <- data.frame(grp)  
+    #View(grp)
+    
+    #View(head(res))
+    
+    #sum(rownames(gr))
+    
+    res <- res[, names(grp[order(grp)])]
+    
+    
+    
     #########################################
     ## different 'styles' for different tests
     ## - reorder columns
     ## - gaps between experiments
     if(style == 'One-sample mod T'){
-        res <- res[, names(grp[order(grp)])]
+        #res <- res[, names(grp[order(grp)])]
         gaps_col=cumsum(table(grp[order(grp)]))
         gapsize_col=20
     }
     if(style == 'Two-sample mod T'){
-        res <- res[, names(grp[order(grp)])]
+        #res <- res[, names(grp[order(grp)])]
         gaps_col=NULL
         gapsize_col=0
     }
     if(style == 'mod F' | style == 'none'){
-        res <- res[, names(grp[order(grp)])]
-        gaps_col=NULL
+        #res <- res[, names(grp[order(grp)])]
+      
+      gaps_col=NULL
         gapsize_col=0
     }
     #########################################
@@ -362,9 +394,18 @@ plotHM <- function(res,
 
     ##############################################
     ## annotation of columns
-    anno.col=data.frame(Group=grp)
-    anno.col.color=list(Group=grp.col.legend)
-
+    if(!is.null(cdesc)){
+      save(cdesc, cdesc.grp, file = 'tmp.RData')
+      # reorder
+      anno.col <- cdesc[, c( colnames(cdesc)[-which(colnames(cdesc) == cdesc.grp)] , colnames(cdesc)[which(colnames(cdesc) == cdesc.grp)])]
+      anno.col.color=list(grp.col.legend)
+      names(anno.col.color) <- cdesc.grp
+      
+    }
+    else {
+      anno.col=data.frame(Group=grp)
+      anno.col.color=list(Group=grp.col.legend)
+    }
     ##############################################
     ## heatmap title
     if(length(na.idx.row) > 0| length(na.idx.col) > 0)

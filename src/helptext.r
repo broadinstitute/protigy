@@ -35,6 +35,17 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.7.8.2 December 26, 2017</b>
+<ul>
+<li>Volcano: fixed overlaping legends.</li>
+<li>Volcano: fixed fdr line bug.</li>
+<li>Volcano: IDs are site-specific. Also effects PPI panel.</li>
+<li>Heatmap: gct1.3 annotation columns shown as tracks.</li>
+</ul>
+<b>v0.7.8.1 December 25, 2017</b>
+<ul>
+<li>Misc: added support for gct 1.3 files. Class vector can be selected from column meta data.</li>
+</ul>
 <b>v0.7.8 December 4, 2017</b>
 <ul>
 <li>Heatmap: had to disable Morpheus widget since it would interfere with interactivity of volcono plots.</li>

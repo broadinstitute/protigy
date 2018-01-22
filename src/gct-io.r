@@ -5,8 +5,8 @@
 
 
 ## install and load libraries automatically
-if (!require("pacman")) install.packages ("pacman")
-pacman::p_load (rhdf5) 
+#if (!require("pacman")) install.packages ("pacman")
+#pacman::p_load (rhdf5) 
 
 # load dependencies
 # library(rhdf5)

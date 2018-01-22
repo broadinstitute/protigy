@@ -12,3 +12,4 @@ PURA-experiment	hartigan@broadinstitute.org	mathias@broadinstitute.org;schenone@
 RTFDC-Final-experiment	hartigan@broadinstitute.org	bchia@broadinstitute.org;karsten@broadinstitute.org
 SHOC2-MultiMedian-noKRTN	schenone@broadinstitute.org	aapffel@broadinstitute.org;walsh@broadinstitute.org;karsten@broadinstitute.org
 zbtb33-control-left	cstan@broadinstitute.org	embeau@broadinstitute.org;karsten@broadinstitute.org
+KOdataForKatherineWalsh	aapffel@broadinstitute.org	schenone@broadinstitute.org;walsh@broadinstitute.org;karsten@broadinstitute.org

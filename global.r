@@ -24,7 +24,9 @@
 
 ## R package managing tool
 ## - the only package that is required to install manually
-library(pacman)
+if (!require("pacman")) install.packages ("pacman")
+require('pacman')
+
 
 source('src/modT.r')
 source('src/pheatmap.r')
@@ -36,7 +38,7 @@ source('src/gct-io.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.8.2"
+VER="0.7.8.3"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -53,7 +55,7 @@ OS <<- Sys.info()['sysname']
 TMPDIR <<- ifelse(OS=='Windows', "./", "/tmp/")
 ## app name
 ##APPNAME <<- sub('.*/','',getwd())
-APPNAME <<- 'PROTigy'
+APPNAME <<- 'Protigy'
 ## app folder
 APPDIR <<- getwd()
 ## directory to store data files
@@ -117,6 +119,9 @@ if(!require(morpheus))
   devtools::install_github('cmap/morpheus.R')
 p_load(morpheus)
 
+# Required for cmpaR gctx file format. Fails to install on shiny-proteomics, but not reuqired as of now.
+#p_load (rhdf5) 
+
 ## #####################################
 ## CSS for loading animantion
 appCSS <- "
@@ -140,14 +145,7 @@ appCSS <- "
 ppi.db.col <- c('InWeb'='deepskyblue',
                 'BioGRID'='yellow',
                 'Reactome'='magenta',
-
-                'Shared'='orange'##,
-                ##'InWeb-BioGRID'='darkolivegreen4',
-                ##'InWeb-Reactome'='darkviolet',
-                ##'BioGRID-Reactome'='orange',
-
-                ##'InWeb-BioGRID-Reactome'='cyan'
-                ##'Three'='cyan'
+                'Shared'='orange'
                 )
 
 ## ##################################################################
@@ -155,31 +153,42 @@ ppi.db.col <- c('InWeb'='deepskyblue',
 ##                    import PPi databases
 ##
 ## ##################################################################
-ppi <- list()
-
-## ###################################
-##             InWeb
-ppi$iw <- readRDS('ppi/core.psimitab.rds')
-## uniprot
-ppi$iw$V1 <- toupper(sub('uniprotkb\\:', '', ppi$iw$V1))
-ppi$iw$V2 <- toupper(sub('uniprotkb\\:', '', ppi$iw$V2))
-## gene names
-ppi$iw$V5 <- toupper(sub('^uniprotkb\\:(.*?)\\(gene name\\).*', '\\1', ppi$iw$V5))
-ppi$iw$V6 <- toupper(sub('^uniprotkb\\:(.*?)\\(gene name\\).*', '\\1', ppi$iw$V6))
-
-## ###################################
-##            biogrid
-ppi$bg <- readRDS('ppi/BIOGRID-HUMAN-3.4.147.mitab.rds')
-ppi$bg$Alt.IDs.Interactor.A <- sapply(strsplit(ppi$bg$Alt.IDs.Interactor.A, '\\|'), function(x) sub('.*\\:','',x[2]) )
-ppi$bg$Alt.IDs.Interactor.B <- sapply(strsplit(ppi$bg$Alt.IDs.Interactor.B, '\\|'), function(x) sub('.*\\:','',x[2]) )
-
-## ###################################
-##           Reactome
-ppi$react <- readRDS('ppi/homo_sapiens.mitab.interactions.rds')
-ppi$react$alternative.id.A <- sub('^.*_(.*?)\\(.*$','\\1', ppi$react$alternative.id.A)
-ppi$react$alternative.id.B <- sub('^.*_(.*?)\\(.*$','\\1', ppi$react$alternative.id.B)
-
-
+import.ppi.db <- function(){
+  
+  if( file.exists('ppi/ppi.RData')){
+    load('ppi/ppi.RData')
+  } else {
+    ppi <- list()
+    
+    ## ###################################
+    ##             InWeb
+    ppi$iw <- readRDS('ppi/core.psimitab.rds')
+    ## uniprot
+    ppi$iw$V1 <- toupper(sub('uniprotkb\\:', '', ppi$iw$V1))
+    ppi$iw$V2 <- toupper(sub('uniprotkb\\:', '', ppi$iw$V2))
+    ## gene names
+    ppi$iw$V5 <- toupper(sub('^uniprotkb\\:(.*?)\\(gene name\\).*', '\\1', ppi$iw$V5))
+    ppi$iw$V6 <- toupper(sub('^uniprotkb\\:(.*?)\\(gene name\\).*', '\\1', ppi$iw$V6))
+    
+    ## ###################################
+    ##            biogrid
+    ppi$bg <- readRDS('ppi/BIOGRID-HUMAN-3.4.147.mitab.rds')
+    ppi$bg$Alt.IDs.Interactor.A <- sapply(strsplit(ppi$bg$Alt.IDs.Interactor.A, '\\|'), function(x) sub('.*\\:','',x[2]) )
+    ppi$bg$Alt.IDs.Interactor.B <- sapply(strsplit(ppi$bg$Alt.IDs.Interactor.B, '\\|'), function(x) sub('.*\\:','',x[2]) )
+    
+    ## ###################################
+    ##           Reactome
+    ppi$react <- readRDS('ppi/homo_sapiens.mitab.interactions.rds')
+    ppi$react$alternative.id.A <- sub('^.*_(.*?)\\(.*$','\\1', ppi$react$alternative.id.A)
+    ppi$react$alternative.id.B <- sub('^.*_(.*?)\\(.*$','\\1', ppi$react$alternative.id.B)
+    
+    # export 
+    save(ppi, file='ppi/ppi.RData')
+  }
+  return(ppi)
+}
+# run the function to import 
+ppi <- import.ppi.db()
 
 ## ###############################################
 ##
@@ -204,8 +213,6 @@ mapIDs <- function(ids){
             ## ###################################
             if(keytype == 'UNIPROT' ){
               id.query <- sub('(-|;|\\.|_|\\|).*', '', ids) ## first id
-              #cat('test\n\n')
-              #cat(id.query[1:3], '\n')
             } else if(keytype == 'REFSEQ') {
               id.query <- sub('(\\.|;).*', '', ids) ## first id
             } else {
@@ -226,13 +233,17 @@ mapIDs <- function(ids){
             if(class(id.map.tmp) == 'try-error' | is.null( class(id.map.tmp) ) | class(id.map.tmp) == 'NULL' ){
               #cat('test1')
               #id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query), stringsAsFactors=F)
-              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(ids), stringsAsFactors=F)
-              
+              #cat('test1\n')
+              #save(id.query, ids, file='tmp.RData')
+              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=ids, stringsAsFactors=F)
+              #cat('test2\n')
               keytype <- 'UNKNOWN'
               
             } else {
               #cat('test2')
               ##id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(names(id.query), id.map.tmp, sep='_'), stringsAsFactors=F)
+              # replace NA by 'NotFound'
+              id.map.tmp[which(is.na(id.map.tmp))] <- 'NotFound'
               id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(ids, id.map.tmp, sep='_'), stringsAsFactors=F)
               }
 
@@ -395,7 +406,7 @@ plotHM <- function(res,
     ##############################################
     ## annotation of columns
     if(!is.null(cdesc)){
-      save(cdesc, cdesc.grp, file = 'tmp.RData')
+      #save(cdesc, cdesc.grp, file = 'tmp.RData')
       # reorder
       anno.col <- cdesc[, c( colnames(cdesc)[-which(colnames(cdesc) == cdesc.grp)] , colnames(cdesc)[which(colnames(cdesc) == cdesc.grp)])]
       anno.col.color=list(grp.col.legend)
@@ -1262,8 +1273,12 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 ## ppi.db.col  - colors for different ppi databases, defined in 'global.r'
 get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), ppi.db, ppi.db.col){
 
-    IDs <- toupper(sub('.*_', '', IDs) )
-    ppi.bait <-  toupper(sub('.*_', '', ppi.bait))
+    # extract gene symbol
+    #IDs <- toupper(sub('.*_', '', IDs) )
+    #ppi.bait <-  toupper(sub('.*_', '', ppi.bait))
+    IDs <- toupper(sub('.*_(.*)$', '\\1', IDs) )
+    ppi.bait <-  toupper(sub('.*_(.*)$', '\\1', ppi.bait))
+  
 
     ## #########################################################
     ##

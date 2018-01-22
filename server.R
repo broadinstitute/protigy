@@ -10,7 +10,7 @@
 ## This file defines the server logical of the app. It also takes care of most of the user interface.
 ##
 ################################################################################################################
-library(shiny)
+p_load(shiny)
 
 ############################################
 ## set maximum file size for upload
@@ -128,7 +128,7 @@ shinyServer(
             volc.grid=T,       ## grid
             volc.maxp=100,     ## max. -log10 p-value
             volc.hyper.fc=1,    ## min. FC for hyperbolic curve
-            volc.hyper.curv=.5,  ## curvation parameter for hyperbol. curve
+            volc.hyper.curv=3,  ## curvation parameter for hyperbol. curve
 
             ## heatmap
             hm.cexCol=8,
@@ -412,11 +412,11 @@ shinyServer(
                                           tableOutput('summary.test'))
                                       ),
                                      fluidRow(
-                                      box(title="Non-missing values:", solidHeader = T, status = "primary",width = 12,
+                                      box(title="Quantified features", solidHeader = T, status = "primary",width = 12,
                                           plotlyOutput('summary.nonmissing.data'))
                                     ),
                                     fluidRow(
-                                        box(title="Non-missing values:", solidHeader = T, status = "primary",width = 12,
+                                        box(title="Quantified features (cumulative)", solidHeader = T, status = "primary",width = 12,
                                             plotlyOutput('summary.missing.data.row'))
                                     )
                           ) ## end tab panel
@@ -469,8 +469,8 @@ shinyServer(
 
                                                                             )
                                                              ),
-                                                      column(3, checkboxGroupInput(paste('ppi.db.scat', grp.unique[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw', 'Reactome (human)' = 'react'), selected=c('bg', 'iw', 'react') )),
-                                                      column(3, checkboxInput( paste('ppi.show.labels.scat', grp.unique[i], sep='.' ), 'Show labels', value=F) )
+                                                      column(3, checkboxGroupInput(paste('ppi.db.scat', grp.unique[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw', 'Reactome (human)' = 'react'), selected=c('bg', 'iw', 'react') ))#,
+                                                      #column(3, checkboxInput( paste('ppi.show.labels.scat', grp.unique[i], sep='.' ), 'Show labels', value=F) )
 
                                                       ##column(1)
                                                   )),
@@ -575,7 +575,7 @@ shinyServer(
             ## HEATMAP
             ##
             ############################################
-            hm.tab <-  tabPanel('Heatmap',
+            hm.tab <-  tabPanel('Clustering',
                                       box(title='Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
                                         fluidRow(
                                         column(2, numericInput( "cexCol", "Font size column", value=ifelse( !is.null(global.plotparam$hm.cexCol), global.plotparam$hm.cexCol, 12  ), min=1, step=1)),
@@ -1010,11 +1010,12 @@ shinyServer(
             ##########################################
             ## upload form
             list(
-                HTML('<font size=\"3\"><b>Upload file:</b></font>'),
-                fileInput("file", "", accept=c('text/csv',
+              br(),
+              HTML('<font size=\"3\"><b>Upload file (txt, csv, gct):</b></font>'),
+              fileInput("file", "", accept=c('text/csv',
                        'text/comma-separated-values,text/plain',
                        '.csv', '.txt', '.tsv', '.gct')),
-                HTML('<hr border-width:\"10px\">')
+              HTML('<hr border-width:\"10px\">')
             )
         })
 
@@ -1296,9 +1297,9 @@ shinyServer(
           showModal(modalDialog(
             size='m',
             title = "Select groups",
-            footer = 'OK',
+            footer = modalButton('OK'),
             checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection)),
-            easyClose = TRUE
+            easyClose = FALSE
           ))
           
         })
@@ -1805,13 +1806,13 @@ shinyServer(
 
             ###################################################
             ## run command
-	    if(OS == 'Windows')
+	          if(OS == 'Windows')
                 system( paste('zip -0 ', paste(global.param$session.dir, fn.zip, sep='/'), ' ', paste(fn.all.abs, collapse=' '),sep='') )
             else
                 system( paste('cd ', global.param$session.dir,' && zip -0 ', fn.zip, ' ', paste(fn.all, collapse=' '), sep='') )
 
             ## store file.name
-	    global.param$zip.name=fn.zip
+	          global.param$zip.name=fn.zip
             ## cat('test16\n')
 
             ###############################################################
@@ -2046,12 +2047,17 @@ shinyServer(
         ## ###############################################################
         observeEvent(input$session.browse.import, {
 
-            ##@ ###############################
+            ## ###############################
             ## import workspace
             ## identify selected session file
             load(global.param$saved.sessions[[ input$session.browse ]])
-
-            ##@###############################
+           
+            # for backwards compatibility
+            if(!exists('global.plotparam.imp')){
+              global.plotparam.imp <- plotparams.imp 
+            }
+            
+            ## ###############################
             ## assign the imported values to the global reactive variables
             for(i in names(global.input.imp)){
                 global.input[[i]] <- global.input.imp[[i]]
@@ -3143,11 +3149,9 @@ shinyServer(
             else
                 tab <- data.frame(global.results$table.log)
 
-            grp <- global.param$grp
-            N.grp <- global.param$N.grp
-            grp.colors.legend <- global.param$grp.colors.legend
-
-
+            #grp <- global.param$grp
+            #N.grp <- global.param$N.grp
+            #grp.colors.legend <- global.param$grp.colors.legend
 
             ## extract expression values
             dat <- tab[, -which(colnames(tab) == global.param$id.col.value)]
@@ -3158,8 +3162,20 @@ shinyServer(
             ## number of missing values per row
             na.row.idx <- table(apply(dat, 1, function(x) sum(is.na(x))))
 
-            p <- plot_ly( x=names(na.row.idx)[2:length(na.row.idx)], y=na.row.idx[2:length(na.row.idx)], type='bar' )
-            p <- layout(p, title=paste('Fully quantified features:', na.row.idx[1]), xaxis=list(title=paste('# missing values')), yaxis=list(title=paste('# data rows')))
+            
+            #n.miss <- seq(as.numeric(names(na.row.idx)[1]):as.numeric(names(na.row.idx)[length(na.row.idx)]) )
+            n.miss <- rep(0, ncol(dat)+1)
+            names(n.miss) <- 0:ncol(dat)
+            n.miss[names(na.row.idx)] <- na.row.idx
+            n.miss <- cumsum(n.miss)
+            
+            p <- plot_ly( x=as.numeric(names(n.miss)), y=n.miss, type='scatter', mode='lines+markers', marker=list(color = 'black'), line=list(color='black') )
+            p <- layout(p, title=paste('Fully quantified features:', n.miss[1]), xaxis=list(title=paste('# missing values')), yaxis=list(title=paste('# quantified features')))
+            
+            save(na.row.idx, dat, n.miss, file='tmp.RData')
+            
+            #p <- plot_ly( x=names(na.row.idx)[2:length(na.row.idx)], y=na.row.idx[2:length(na.row.idx)], type='bar' )
+            #p <- layout(p, title=paste('Fully quantified features:', na.row.idx[1]), xaxis=list(title=paste('# missing values')), yaxis=list(title=paste('# data rows')))
             p
         })
         ## #############################################################################
@@ -3208,8 +3224,6 @@ shinyServer(
             ##p <- plot_ly( x=names(na.col.idx), y=na.col.idx,  color=grp, colors=grp.colors.legend, type='bar')
             p <- plot_ly(dat.plot, x=~x, y=~y, color=grp, colors=grp.colors.legend, type='bar')
             p <- layout(p, title='Number of valid data points per data column', xaxis=list(title=paste('Data columns')), yaxis=list(title=paste('# data points')))
-
-
 
             ##################################################
             ##global.param$session.import.init <- F
@@ -3266,26 +3280,6 @@ shinyServer(
         ##                             Volcano plot
         ##
         ## ################################################################################
-
-        ## for(i in 1:length( unique( global.param$grp.comp ) ))
-        ##updateSelectizeInput( session=session, inputId = 'ppibaitLenalidomide12hvsPomalidomide12h', label='Bait protein', choices=cbind(a=c('test', 'adasdad', 'test2'), name=c('AA', 'BB', 'CC')), selected=NULL, server=T )
-
-
-        ## #################################################################
-        ## function to generate the panels for the volcanos
-        ## insert the plots into the webpage
-        ## #################################################################
-        ##observe({
-            ##if()
-        ##    grp.comp <- unique( global.param$grp.comp )
-        ##    for(i in 1:length(grp.comp)){
-        ##        if(!is.null(input[[gsub('\\.','', paste0('ppi.bait.',  grp.comp[i])) ]] )){
-        ##            choices=unlist(global.results$id.map$id.concat)
-        ##            updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices,selected=choices[1], server=T)
-        ##        }
-        ##    }
-        ##})
-
 
 
         ## ##################################################################
@@ -3591,7 +3585,8 @@ shinyServer(
 
             ## ##############################
             ## ids
-            IDs <- global.results$id.map$id.concat
+            #IDs <- global.results$id.map$id.concat
+            IDs <- res[ , 'id.concat'] 
             names(x.ax) <- names(y.ax) <- names(pval) <- IDs
 
             ## index of missing values
@@ -3628,7 +3623,7 @@ shinyServer(
             ##        set up the  plot
             ## ##############################
             if(PPI)
-                p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs, alpha=.1, showlegend=F )
+                p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs, opacity=.2, showlegend=F, name='non-interactors' )
                 ##p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col, showlegend=FALSE), text=IDs, alpha=.1 )
             else
                 p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs, showlegend=F )
@@ -3665,7 +3660,7 @@ shinyServer(
                     col[ppi.int.idx] <- ppi.col[ nchar(ppi.col) > 0 ]
                     ppi.idx <- ppi.int.idx
 
-                    p <- p %>% add_trace(x=dat.plot$x.ax[ppi.int.idx], y=dat.plot$y.ax[ppi.int.idx], type='scatter', mode = 'markers', marker=list( size=10, color=col[ppi.int.idx]), text=IDs[ppi.int.idx], name='Interactors' )
+                    p <- p %>% add_trace(x=dat.plot$x.ax[ppi.int.idx], y=dat.plot$y.ax[ppi.int.idx], type='scatter', mode = 'markers', marker=list( size=10, color=col[ppi.int.idx]), text=IDs[ppi.int.idx], name='Interactors', opacity=1 )
                 }
                 ## ################################
                 ## add bait
@@ -3673,7 +3668,7 @@ shinyServer(
                     col[ppi.bait.idx] <- 'green'
                     ppi.idx <- c(ppi.idx, ppi.int.idx)
 
-                    p <- p %>% add_trace(x=dat.plot$x.ax[ppi.bait.idx], y=dat.plot$y.ax[ppi.bait.idx], type='scatter', mode = 'markers', marker=list( size=15, color=col[ppi.bait.idx]), text=IDs[ppi.bait.idx], name=paste('Bait protein:', ppi.bait) )
+                    p <- p %>% add_trace(x=dat.plot$x.ax[ppi.bait.idx], y=dat.plot$y.ax[ppi.bait.idx], type='scatter', mode = 'markers', marker=list( size=15, color=col[ppi.bait.idx]), text=IDs[ppi.bait.idx], name=paste('Bait protein:', ppi.bait), opacity=1 )
                 }
             }
 
@@ -3854,6 +3849,11 @@ shinyServer(
 
             sig.idx.all <- sig.idx
 
+            ## ####################################################
+            ## PPI?
+            ppi.bait <- input[[ gsub('\\.', '', paste0('ppi.bait.', group)) ]]
+            PPI <- toupper(ppi.bait) %in% toupper(IDs.all)
+            
             ## #################################################
             ##
             ##              pch and cex
@@ -3864,14 +3864,21 @@ shinyServer(
 
             if(length(sig.idx) > 0){
                 pch.vec[ sig.idx ] <- sig.pch
-                cex.vec[ sig.idx ] <- cex.vec[1]+.5
+                #cex.vec[ sig.idx ] <- cex.vec[1]+.5
             }
-
 
             #############################
             ## color gradient
-            col=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=1)
-            col.opac=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=0.2)
+            if(PPI){
+              opac1 = 0.3
+              opac2 = 0.2
+            } else{
+              opac1 = 1
+              opac2 = 0.2
+            }
+
+            col=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=opac1)
+            col.opac=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=opac2)
 
 
 
@@ -3880,18 +3887,15 @@ shinyServer(
             ##                Query PPI databases
             ##
             ## ##########################################################
-            ppi.bait <- input[[ gsub('\\.', '', paste0('ppi.bait.', group)) ]]
-
+           
             ## ##############################################
             ##
             ## if the bait was detected
             ##
             ## ###############################################
-            PPI <- FALSE
-            if(toupper(ppi.bait) %in% toupper(IDs.all)) {
-
-                PPI <- TRUE
-
+            
+            if(PPI) {
+                # extract interactors
                 ppi.map <- get.interactors( ppi.bait=ppi.bait,
                                            IDs=IDs.all,
                                            sig.idx=sig.idx.all,
@@ -3909,16 +3913,21 @@ shinyServer(
                 leg.col <- ppi.map$leg.col
                 ppi.col <- ppi.map$ppi.col
 
-                ppi.bait.idx <- which(toupper(IDs) == toupper(ppi.bait))
+                #ppi.bait.idx <- which(toupper(IDs) == toupper(ppi.bait))
+                ppi.bait.idx <- ppi.map$ppi.bait.idx
                 ppi.col[ ppi.bait.idx ] <- 'green'
-
+                
+                cex.vec[ ppi.bait.idx ] <- cex.vec[ ppi.bait.idx ] + 1
+                cex.vec[ ppi.int.idx ] <- cex.vec[ ppi.int.idx ] + 1
+                
                 ppi.int.vec <- rep(FALSE, length(IDs))
                 ppi.int.vec[ppi.int.idx] <- TRUE
 
                 ## udpate color vector
                 col[ nchar(ppi.col) > 0] <- ppi.col[ nchar(ppi.col) > 0]
                 col.opac[ nchar(ppi.col) > 0] <- ppi.col[ nchar(ppi.col) > 0 ]
-
+                
+                
 
                 ## ###############################
                 ## plot if there are interactors
@@ -4024,12 +4033,7 @@ shinyServer(
             if(length(sig.idx) > 0 & !(input[[paste('ppi.hyper.filt', group, sep='.' )]])){
                 
               filt.minlogPVal <- min(logPVal[names(sig.idx)], na.rm=T)
-              #filt.minlogPVal <- min(logPVal[sig.idx], na.rm=T)
-              
-                #cat(filt.minlogPVal, ' /////\n')
-                
-                #View(logPVal[names(sig.idx)])
-                
+            
                 abline(h=filt.minlogPVal, col=my.col2rgb('grey30', 50), lwd=2, lty='dashed')
                 text( xlim[2]-(xlim[2]*.05), filt.minlogPVal, paste(global.param$filter.type, global.param$filter.value, sep='='), pos=3, col='grey30')
             }
@@ -4042,8 +4046,8 @@ shinyServer(
             if(global.param$which.test == 'Two-sample mod T'){
                 #legend('topleft', legend=sub('\\.vs.*', '', group), cex=2, text.col='darkblue', bty='n')
                 #legend('topright', legend=sub('.*\\.vs\\.', '', group), cex=2, text.col='darkblue', bty='n')
-                mtext(sub('\\.vs.*', '', group), side=3, line=1, at=xlim[1], cex=2, col='darkblue')
-                mtext(sub('.*\\.vs\\.', '', group), side=3, line=1, at=xlim[2], cex=2, col='darkblue')
+                mtext(sub('\\.vs.*', '', group), side=3, line=1, at=(xlim[1]+xlim[1]*0.05), cex=2, col='darkblue')
+                mtext(sub('.*\\.vs\\.', '', group), side=3, line=1, at=(xlim[2]-xlim[2]*0.05), cex=2, col='darkblue')
                 
                 }
 
@@ -4533,11 +4537,6 @@ shinyServer(
         ######################################################################################
         output$run.pca <- renderText({
             if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
-
-            ##filter.res()
-            ##tab.select <- input$mainPage
-            ###filter.res()#--
-            ##updateNavbarPage(session, 'mainPage', selected=tab.select)
 
             res <- global.results$filtered
 

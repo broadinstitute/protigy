@@ -10,6 +10,7 @@ The app can run locally on your Desktop computer (Windows/Linux/MAC) or can depl
 * Supported file formats:
     + text files (tsv, csv, txt)
     + gct 1.2
+    * <span style="color:red">*NEW*</span> gct 1.3
 
 #### Data manipulation:
 * Transformation

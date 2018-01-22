@@ -35,20 +35,34 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
-<b>v0.7.8.2 December 26, 2017</b>
+<b>v0.7.8.3 January 22, 2018</b>
+<ul>
+<li>PPI scatterplots: reduced opacity for non-interactors.</li>
+<li>PPI: robustified extraction of gene symbols in function"get.interactors()".</li>
+<li>Summary: new plot for missing values.</li>
+<li>Import: backwards compatibility, sessions saved from older versions can be imported.</li>
+<li>Gene name mapping: fixed bug that would cause a crash if neither UniProt nor RefSeq ids were found.</li>
+<li>Gene name mapping: gene names that could not mapped are indicated by "NotFound".</li>
+<li>Misc: improved start up time of the app using function "import.ppi.db()"</li>
+<li>Misc: working button in the "Select Groups" modal window.</li>
+</ul>
+<b>v0.7.8.2 December 29, 2017</b>
 <ul>
 <li>Volcano: fixed overlaping legends.</li>
 <li>Volcano: fixed fdr line bug.</li>
-<li>Volcano: IDs are site-specific. Also effects PPI panel.</li>
-<li>Heatmap: gct1.3 annotation columns shown as tracks.</li>
+<li>Volcano: IDs are site-specific. Also effects PPI panel, i.e. a query always returns a single site rather than all sites mapping to a gene symbol.</li>
+<li>Heatmap: GCT v1.3 annotation columns shown as tracks.</li>
+<li>Misc: Groups defined in the experimental design or in GCT v1.3 annotation tracks can be enabled/disabled for testing.</li>
+<li>Gene name mapping: finally works with RefSeq ids.</li>
 </ul>
 <b>v0.7.8.1 December 25, 2017</b>
 <ul>
-<li>Misc: added support for gct 1.3 files. Class vector can be selected from column meta data.</li>
+<li>Misc: added support for GCT v1.3 files. Class vector can be selected from column meta data.</li>
 </ul>
 <b>v0.7.8 December 4, 2017</b>
 <ul>
 <li>Heatmap: had to disable Morpheus widget since it would interfere with interactivity of volcono plots.</li>
+<li>Misc: switched to "selectizeInput" to select saved sessions.</li>
 <li>Misc: re-organization of navbarPage creation to fix an error thrown after Shiny R-packge update (v1.0.5)</li>
 <li>Misc: integrated Readme.html into entry page.</li>
 </ul>

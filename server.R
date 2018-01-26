@@ -571,12 +571,17 @@ shinyServer(
                 } ## end for i
             } # end if 
 
+            ################################################
+            ##
+            ##                 clustering
+            ##
+            ## #############################################
+            
             ############################################
             ## HEATMAP
-            ##
             ############################################
-            hm.tab <-  tabPanel('Clustering',
-                                      box(title='Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
+            hm.tab <-  tabPanel('Static heatmap',
+                                      box(title='Static Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
                                         fluidRow(
                                         column(2, numericInput( "cexCol", "Font size column", value=ifelse( !is.null(global.plotparam$hm.cexCol), global.plotparam$hm.cexCol, 12  ), min=1, step=1)),
                                         column(2, numericInput( "cexRow", "Font size row", value=ifelse( !is.null(global.plotparam$hm.cexRow), global.plotparam$hm.cexRow, 6), min=1, step=1)),
@@ -587,11 +592,42 @@ shinyServer(
                                         ),
                                         fluidRow(
                                             column(12, align='center', plotOutput("HM", height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ), width=dynamicWidthHM(length(global.param$grp))) )
-                                            ##column(12, align='center', plotOutput("HM"))
                                         )
                                       )
                                     
             )
+            ## ###########################################
+            ##   HEATMAPPLY
+            ## ###########################################
+            hm.int.tab <-  tabPanel('Interactive heatmap',
+                                box(title='Interactive Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
+                                    fluidRow(
+                                      column(2, selectInput( "hm.int.scale", "Scale", c("row","column","none"), selected=global.plotparam$hm.scale)),
+                                      column(2, selectInput( "hm.int.clust", "Cluster", c("column","row","both","none"), selected=ifelse(global.param$which.test != "mod F", "none" ,"both"))),
+                                      column(2, checkboxInput('hm.int.max', 'Cap values', value=global.plotparam$hm.max)),
+                                      column(2, numericInput( "hm.int.max.val", "Max. value", value=global.plotparam$hm.max.val, step=1, min=2))
+                                    ),
+                                    fluidRow(
+                                      column(12, align='center', plotlyOutput("HM.int", height=1000, width=1000 ))
+                                    )
+                                )
+            )
+            
+            ## #############################################
+            ##   FANPLOT
+            ## #############################################
+            hc.fanplot <-  tabPanel('Fanplot',
+                                    box(title='Fanplot', status = 'primary', solidHeader = T, width="100%", height="100%",
+                                        fluidRow(
+                                          column(12, align='center', plotOutput("HC.fan" ))
+                                        )
+                                    )
+            )
+            
+            clust.tab <- vector('list', 3)
+            clust.tab[[1]] <- hm.tab
+            clust.tab[[2]] <- hm.int.tab
+            clust.tab[[3]] <- hc.fanplot
             
             ## ##############################################
             ##  MORPHEUS widget
@@ -841,7 +877,9 @@ shinyServer(
                         #######################################
                         ##              insert heatmap
                         #######################################
-                        hm.tab,
+                        ##hm.tab,
+                        navbarMenu('Clustering', clust.tab[[1]], clust.tab[[2]], clust.tab[[3]]),
+                        
                         ##do.call(navbarMenu, hm.tab),
                         #morph.tab,
                         
@@ -891,7 +929,8 @@ shinyServer(
                       #######################################
                       ##              insert heatmap
                       #######################################
-                      hm.tab,
+                      ##hm.tab,
+                      navbarMenu('Clustering', clust.tab[[1]], clust.tab[[2]], clust.tab[[3]]),
                       ##do.call(navbarMenu, hm.tab),
                       #morph.tab,
                       
@@ -1114,6 +1153,7 @@ shinyServer(
             tab
           )
         })
+        
         # #####################################
         # define groups for GCTv3
         observeEvent(input$update.grp.gct3, {
@@ -1132,6 +1172,12 @@ shinyServer(
           names(Experiment) <- Column.Name
           Experiment[ rownames(cdesc) ] <- cdesc[, input$grp.gct3]
           
+          #grp.gct3 <- input$grp.gct3
+          #save(tab, cdesc, grp.gct3, file='tmp.RData')
+          
+          
+          global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  input$grp.gct3)
+          
           # data frame
           grp.file=data.frame(
             Column.Name,
@@ -1139,8 +1185,6 @@ shinyServer(
             stringsAsFactors = F
               )
           
-         # global.input$cdesc
-          #View(grp.file)
           ## ################################
           ## ANNOTATION: extract empty cells
           ## - corresponding columns will be carried over as
@@ -1148,8 +1192,7 @@ shinyServer(
           grp.anno <- grp.file[which(nchar( Experiment) == 0 ), ]
           grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
           
-          #View(grp.anno)
-          
+
           if(length(grp.anno)>0)
             global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
           
@@ -1179,6 +1222,8 @@ shinyServer(
           
           ## group colors
           grp.col <- rep(GRPCOLORS[1], length(grp))
+          names(grp.col) <- names(grp)
+          
           for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
           global.param$grp.colors <- grp.col
           
@@ -1186,8 +1231,16 @@ shinyServer(
           idx <- !duplicated(grp)
           grp.col.legend = grp.col[idx]
           names(grp.col.legend) <- grp[idx]
-          global.param$grp.colors.legend <- grp.col.legend
           
+          global.param$grp.colors.legend.all <- global.param$grp.colors.legend <- grp.col.legend
+          
+          # ####################################################  
+          # colors for other annotation tracks
+          col.tmp <- cdesc.colors(cdesc, global.param$grp.gct3, grp.col.legend)
+          global.param$anno.col.all <- global.param$anno.col <- col.tmp$anno.col
+          global.param$anno.col.color.all <- global.param$anno.col.color <- col.tmp$anno.col.color
+          
+
           ## all done
           global.param$grp.done = T
           
@@ -1203,11 +1256,6 @@ shinyServer(
             if(global.param$analysis.run) return()
             if(!global.param$file.done) return()
             if(global.param$id.done) return()
-            
-            #if(is.null(global.input$table)) return()
-          
-           # if(!is.null(input$id.col))
-            #    if(input$id.col > 0 && !is.null(input$id.col.value)) return()
             
             ## get uploaded table and column names
             tab <- global.input$table
@@ -1242,9 +1290,6 @@ shinyServer(
             if(!is.null(global.param$grp)){            ## group assignment has been RUN
                 if(sum(is.na(global.param$grp)) == 0) return() ## group assignemnt has been DONE
             }
-
-            ## number of assigned groups
-           ##N.grp = global.param$N.grp + 1
 
             list(
                 ## upload template
@@ -1294,24 +1339,111 @@ shinyServer(
         # ###########################################################
         observeEvent(input$select.groups.button, {
           
-          showModal(modalDialog(
-            size='m',
-            title = "Select groups",
-            footer = modalButton('OK'),
-            checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection)),
-            easyClose = FALSE
-          ))
-          
+        ##  if(global.param$run.test > 0){
+              showModal(modalDialog(
+                size='m',
+                title = "Modify selection",
+                footer = fluidRow(
+                  column(6),
+                  column(3, actionButton(inputId = 'update.groups.button.modal' , label='Update')),
+                  column(3, modalButton(label='Close'))
+                  ),
+                #footer = actionButton(inputId = '.groups.button.modal' , label='OK'),
+                fluidPage(
+                  fluidRow(
+                    column(6, HTML('<b>Select groups</b>')),
+                    column(6, HTML('<b>Select annotation tracks</b>'))
+                    
+                  ),
+                  fluidRow(
+                    column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection))),
+                    column( 6, checkboxGroupInput('select.anno', label=' ', choices = unique(global.param$cdesc.all), selected = unique(global.param$cdesc.selection)))
+                  )
+                ),
+                easyClose = FALSE
+              ))
+          # } else {
+          #   showModal(modalDialog(
+          #     size='m',
+          #     title = "Modify selection",
+          #     footer = fluidRow(
+          #       column(6),
+          #       column(3, actionButton(inputId = 'update.groups.button.modal' , label='Update')),
+          #       column(3, modalButton(label='Close'))
+          #     ),
+          #     #footer = actionButton(inputId = '.groups.button.modal' , label='OK'),
+          #     fluidPage(
+          #       fluidRow(
+          #         column(6, HTML('<b>Select groups</b>')),
+          #         column(6, HTML('<b>Select annotation tracks</b>'))
+          #         
+          #       ),
+          #       fluidRow(
+          #         column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection))),
+          #         column( 6)
+          #       )
+          #     ),
+          #     easyClose = FALSE
+          #   ))
+          #   
+          # }
+          # 
         })
-        observeEvent(input$select.groups, {
-          global.param$grp.comp.selection <- input$select.groups
+        # ##################################################
+        # update based on selection
+        observeEvent(input$update.groups.button.modal,{  
           
+          ## ####################
           ## update class vector
+          
+          # super important! to memorize previous selections in the modal window
+          global.param$grp.comp.selection <- input$select.groups
           grp.selection <- global.param$grp.all
+          
+          ## extract groups selected in the modal window
           grp.unique <- unique( unlist( strsplit( sub('\\.vs\\.', ' ', input$select.groups), ' ')))
+          
+          ## update selection
           grp.selection <- grp.selection[ grep(paste('^', paste(grp.unique, collapse='|'), '$', sep=''), grp.selection) ]
           global.param$grp.selection <- grp.selection
+          
+          ## ANNOTATION TRACKS: GCT v1.3
+          if(!is.null(global.param$anno.col)){
+            
+            cdesc.selection <- input$select.anno
+            global.param$cdesc.selection <- cdesc.selection
+            
+            # update data tracks and colors
+            anno.col <- global.param$anno.col.all
+            anno.col.color <- global.param$anno.col.color.all
+            
+            # preserve last column (class vector)
+            global.param$anno.col <- anno.col[names(global.param$grp.selection), c( cdesc.selection, global.param$grp.gct3) ]
+            global.param$anno.col.color <- anno.col.color[ c(cdesc.selection, global.param$grp.gct3 ) ]
+          }
+          
+          #save(cdesc.selection, file='tmp.RData')
+          ## update class vector
+          #cdesc.selection <- global.param$cdesc.all
+          #grp.unique <- unique( unlist( strsplit( sub('\\.vs\\.', ' ', input$select.groups), ' ')))
+          #grp.selection <- grp.selection[ grep(paste('^', paste(grp.unique, collapse='|'), '$', sep=''), grp.selection) ]
+          #global.param$cdesc.selection <- cdesc.selection
+          
+    
         })
+        
+        # ##################################################
+        # update ANNOTATION TRACKS based on selection
+        #observeEvent(input$select.anno, {
+        #  global.param$cdesc.selection <- input$select.anno
+        #  
+        #  ## update class vector
+        #  cdesc.selection <- global.param$cdesc.all
+        #  #grp.unique <- unique( unlist( strsplit( sub('\\.vs\\.', ' ', input$select.groups), ' ')))
+        #  #grp.selection <- grp.selection[ grep(paste('^', paste(grp.unique, collapse='|'), '$', sep=''), grp.selection) ]
+        #  global.param$cdesc.selection <- cdesc.selection
+          
+        #})
         
         
         ## #####################################################################
@@ -1341,6 +1473,10 @@ shinyServer(
                      br(),
                      hr(),
                      actionButton('select.groups.button', 'Select Groups')
+                     #fluidRow(
+                    #  column(6, actionButton('select.groups.button', 'Select Groups')),
+                    #  column(6, actionButton('select.anno.button', 'Select Annotation Tracks'))
+                    # )
                 )
             }
             ## ###################################################
@@ -1359,6 +1495,10 @@ shinyServer(
                      actionButton('run.test', 'Run analysis!'),
                      br(),
                      hr(),
+                    # fluidRow(
+                    #   column(6, actionButton('select.groups.button', 'Select Groups')),
+                    #   column(6, actionButton('select.anno.button', 'Select Annotation Tracks'))
+                     #)
                      actionButton('select.groups.button', 'Select Groups')
                 )
             }
@@ -1464,16 +1604,21 @@ shinyServer(
                     hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
                     hm.title <- paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
 
+                    # column annotation
+                    if(!is.null(global.input$cdesc))
+                      hm.cdesc <- global.input$cdesc[global.param$cdesc.selection,  ]
+                    else
+                      hm.cdesc <- NULL
+                    
                     if(input$hm.max){
                         ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, cellheight=min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
-                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow(global.results$filtered), unit='in'), 20 ), cdesc=global.input$cdesc, cdesc.grp=global.param$grp.gct3)
-
-
-
+                        #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow(global.results$filtered), unit='in'), 20 ), cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
+                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=global.parma$anno.col, anno.col.color=global.param$anno.col.color)
+                      
                     } else {
-
-                        ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm, cellheight= min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
-                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm,  width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow( global.results$filtered ), unit='in'), 20 ), cdesc=global.input$cdesc, cdesc.grp=global.param$grp.gct3)
+                      plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=global.param$anno.col, anno.col.color=global.param$anno.col.color)
+                      
+                      ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm,  width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow( global.results$filtered ), unit='in'), 20 ), cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
                     }
                     })
                 } ## end if nrow(res)>3
@@ -1561,8 +1706,15 @@ shinyServer(
                     grp.col <- global.param$grp.colors
                     grp.col.leg <- global.param$grp.colors.legend
 
+                    # update selection
+                    tab <- tab[, c(id.col.value, names(grp))]
+                    grp.col <- grp.col[names(grp)]
+                    grp.col.leg <- grp.col.leg[unique(grp)]
+                    
+                    
                     ## pdf
-                    pdf(fn.box, 12, max(3, .8*ncol(global.input$table)))
+                    #pdf(fn.box, 12, max(3, .6*ncol(global.input$table)))
+                    pdf(fn.box, 12, max(3, .6*length(global.param$grp)))
                     makeBoxplot(tab, id.col.value, grp, grp.col, grp.col.leg)
                     dev.off()
 
@@ -1572,8 +1724,9 @@ shinyServer(
                         fn.box <- paste(global.param$session.dir, paste('boxplots_', global.param$norm.data,'.pdf', sep=''), sep='/')
                         ## normalized ratios
                         tab <- data.frame(global.results$table.norm)
+                        
                         ## pdf
-                        pdf(fn.box, 12, max(3, .8*ncol(global.input$table)))
+                        pdf(fn.box, 12, max(3, .6*length(global.param$grp)))
                         makeBoxplot(tab, id.col.value, grp, grp.col, grp.col.leg)
                         dev.off()
                     }
@@ -1602,6 +1755,13 @@ shinyServer(
                     grp.col <- global.param$grp.colors
                     grp.col.leg <- global.param$grp.colors.legend
 
+                    # update selection
+                    tab <- tab[, c(id.col.value, names(grp))]
+                    grp.col <- grp.col[names(grp)]
+                    grp.col.leg <- grp.col.leg[unique(grp)]
+                    
+                    
+                    
                     ################################################
                     ## normalized
                     if(!is.null(global.results$table.norm) ){
@@ -1814,10 +1974,22 @@ shinyServer(
             ## store file.name
 	          global.param$zip.name=fn.zip
             ## cat('test16\n')
+	          
+            #----------------------------------------------------------------------
+            #             clean up
+	          # remove archived files: all files except RData
+	          fn.rm <- gsub('"|\'', '', fn.all.abs[-grep('\\.RData[\\"|\']$', fn.all.abs)]) 
+            file.remove(fn.rm)
+            
+            # keep only the latest zip file
+            all.zip <- dir(global.param$session.dir, pattern = '\\.zip$', full.names = T)
+            if(length(all.zip) > 1){
+              all.zip <- all.zip[ -which.max(file.info(all.zip)$ctime) ]
+              file.remove(all.zip)
+            }
+            #
 
-            ###############################################################
-            ## remove archived files: all files except RData
-            file.remove(gsub('"|\'', '', fn.all.abs[-grep('\\.RData$', fn.all.abs)]) )
+            # remove Rdata file, if session won;t be saved            
             if(!input$export.save.session)
                 file.remove(fn.tmp)
 
@@ -1972,7 +2144,11 @@ shinyServer(
               
               # meta data
               global.input$rdesc <- gct@rdesc
+              
               global.input$cdesc <- gct@cdesc
+              rownames(global.input$cdesc) <- make.names(rownames(global.input$cdesc)) # convert to proper names
+              
+              global.param$cdesc.all <- global.param$cdesc.selection <- colnames(global.input$cdesc)
               
               # id column 
               global.param$id.col.value='id'
@@ -2075,6 +2251,12 @@ shinyServer(
             for(i in names(volc.imp)){
                 volc[[i]] <- volc.imp[[i]]
             }
+            
+            ## backwards compatibility II
+            if(is.null(names(global.param$grp.colors)))
+              names(global.param$grp.colors) <- names(global.param$grp.colors)
+          
+          
 
             ## ##############################################################
             ##                       update filter
@@ -2279,6 +2461,8 @@ shinyServer(
             
             ## group colors
             grp.col <- rep(GRPCOLORS[1], length(grp))
+            names(grp.col) <- names(grp)
+            
             for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
             global.param$grp.colors <- grp.col
 
@@ -3154,7 +3338,8 @@ shinyServer(
             #grp.colors.legend <- global.param$grp.colors.legend
 
             ## extract expression values
-            dat <- tab[, -which(colnames(tab) == global.param$id.col.value)]
+            #dat <- tab[, -which(colnames(tab) == global.param$id.col.value)]
+            dat <- tab[, names(global.param$grp)]
             dat <- data.matrix(dat)
 
             dat[is.infinite(dat)] <- NA
@@ -3172,7 +3357,7 @@ shinyServer(
             p <- plot_ly( x=as.numeric(names(n.miss)), y=n.miss, type='scatter', mode='lines+markers', marker=list(color = 'black'), line=list(color='black') )
             p <- layout(p, title=paste('Fully quantified features:', n.miss[1]), xaxis=list(title=paste('# missing values')), yaxis=list(title=paste('# quantified features')))
             
-            save(na.row.idx, dat, n.miss, file='tmp.RData')
+           # save(na.row.idx, dat, n.miss, file='tmp.RData')
             
             #p <- plot_ly( x=names(na.row.idx)[2:length(na.row.idx)], y=na.row.idx[2:length(na.row.idx)], type='bar' )
             #p <- layout(p, title=paste('Fully quantified features:', na.row.idx[1]), xaxis=list(title=paste('# missing values')), yaxis=list(title=paste('# data rows')))
@@ -3241,11 +3426,7 @@ shinyServer(
             if(is.null(global.results$data)) return()
             if(!is.null(error$msg)) return()
 
-            ##filter.res()
-            ##tab.select <- input$mainPage
-            ###filter.res()#--
-            ##updateNavbarPage(session, 'mainPage', selected=tab.select)
-
+  
             tab <- global.results$filtered
             colnames(tab) <- sub('^X','',colnames(tab))
             ##rownames(tab) <- tab[, input$id.col.value]
@@ -3265,9 +3446,9 @@ shinyServer(
             }
 
             if(nrow(tab) > 0){
-                ## add links to uniprot
+                ## add links to GeneCard
                 up.id <- tab$id
-                up.link <- paste("<a href='http://www.uniprot.org/uniprot/", sub('(_|,|;|\\.).*', '', up.id),"' target='_blank'>", up.id, "</a>", sep='')
+                up.link <- link.db(up.id, global.results$keytype)
                 tab[, 'id'] <- up.link
             }
             tab
@@ -3508,7 +3689,8 @@ shinyServer(
 
                       dat.select = data.frame(id=unlist(volc[[paste('text', grp.comp[my_i], sep='.')]]), logFC=unlist(volc[[paste('x', grp.comp[my_i], sep='.')]]), P.Value=unlist(volc[[paste('P.Value', grp.comp[my_i], sep='.')]]), adj.P.Value=unlist(volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]]) )
                       up.id <- dat.select[, 'id']
-                      up.link <- paste("<a href='http://www.uniprot.org/uniprot/", sub('(_|,|;|\\.).*', '', up.id),"' target='_blank'>", up.id, "</a>", sep='')
+                      #up.link <- paste("<a href='http://www.uniprot.org/uniprot/", sub('(_|,|;|\\.).*', '', up.id),"' target='_blank'>", up.id, "</a>", sep='')
+                      up.link <- link.db(up.id, global.results$keytype) 
                       dat.select[, 'id'] <- up.link
 
                       dat.select
@@ -4046,8 +4228,8 @@ shinyServer(
             if(global.param$which.test == 'Two-sample mod T'){
                 #legend('topleft', legend=sub('\\.vs.*', '', group), cex=2, text.col='darkblue', bty='n')
                 #legend('topright', legend=sub('.*\\.vs\\.', '', group), cex=2, text.col='darkblue', bty='n')
-                mtext(sub('\\.vs.*', '', group), side=3, line=1, at=(xlim[1]+xlim[1]*0.05), cex=2, col='darkblue')
-                mtext(sub('.*\\.vs\\.', '', group), side=3, line=1, at=(xlim[2]-xlim[2]*0.05), cex=2, col='darkblue')
+                mtext(sub('\\.vs.*', '', group), side=3, line=1, at=(xlim[1]+abs(xlim[1])*0.05), cex=2, col='darkblue')
+                mtext(sub('.*\\.vs\\.', '', group), side=3, line=1, at=(xlim[2]-abs(xlim[2])*0.05), cex=2, col='darkblue')
                 
                 }
 
@@ -4117,6 +4299,11 @@ shinyServer(
             grp.col <- global.param$grp.colors
             grp.col.leg <- global.param$grp.colors.legend
 
+            # update selection
+            tab <- tab[, c(id.col.value, names(grp))]
+            grp.col <- grp.col[names(grp)]
+            grp.col.leg <- grp.col.leg[unique(grp)]
+              
             withProgress({
                    setProgress(message = 'Processing...', detail= 'Generating profile plots')
                    makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, main='Before normalization')
@@ -4139,6 +4326,13 @@ shinyServer(
             grp.col <- global.param$grp.colors
             grp.col.leg <- global.param$grp.colors.legend
 
+            
+            # update selection
+            tab <- tab[, c(id.col.value, names(grp))]
+            grp.col <- grp.col[names(grp)]
+            grp.col.leg <- grp.col.leg[unique(grp)]
+            
+            
             withProgress({
                    setProgress(message = 'Processing...', detail= 'Generating profile plots')
                    makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, main=paste(global.param$norm.data, 'normalized'))
@@ -4171,6 +4365,13 @@ shinyServer(
             ## group colors
             grp.col <- global.param$grp.colors
             grp.col.leg <- global.param$grp.colors.legend
+            
+            
+            # update selection
+            tab <- tab[, c(id.col.value, names(grp))]
+            grp.col <- grp.col[names(grp)]
+            grp.col.leg <- grp.col.leg[unique(grp)]
+            
                ##withProgress({
                ##    setProgress(message = 'Processing...', detail= 'Generating Boxplots')
             makeBoxplot(tab, id.col.value, grp, grp.col, grp.col.leg)
@@ -4194,6 +4395,13 @@ shinyServer(
             ## group colors
             grp.col <- global.param$grp.colors
             grp.col.leg <- global.param$grp.colors.legend
+            
+            
+            # update selection
+            tab <- tab[, c(id.col.value, names(grp))]
+            grp.col <- grp.col[names(grp)]
+            grp.col.leg <- grp.col.leg[unique(grp)]
+            
 
             makeBoxplot(tab, id.col.value, grp, grp.col, grp.col.leg, legend=T)
         })
@@ -4459,30 +4667,32 @@ shinyServer(
             ##@#####################################
             ##  dimensions depending on no. rows/columns
             cw <- cwHM(ncol(res))
-
-            
-            if(!is.null(global.input$cdesc))
-              hm.cdesc <- global.input$cdesc
-            else
-              hm.cdesc <- global.param$grp
-            
+         
+            #if(!is.null(global.input$cdesc)){
+            if(!is.null(global.param$anno.col)){
+              #hm.cdesc <- data.frame( global.input$cdesc[names(global.param$grp),  global.param$cdesc.selection], stringsAsFactors = F )
+              anno.col=global.param$anno.col
+              anno.col.color=global.param$anno.col.color
+            } else {
+              anno.col=data.frame(Group=global.param$grp)
+              anno.col.color=list(Group=global.param$grp.colors.legend)
+            }
+              #hm.cdesc <- global.param$grp
+            #save(hm.cdesc, file='hm.cdesc.RData')
             ######################################
             ## plot
             if(input$hm.max){
                 withProgress({
                      setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                     ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test)
-                     #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test)
-                     plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, cdesc=global.input$cdesc, cdesc.grp=global.param$grp.gct3)
+                     #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
+                  plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color)
                   
                   })
             } else {
                  withProgress({
-                     setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                     ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test)
-                     #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test)
-                    plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, cdesc=global.input$cdesc, cdesc.grp=global.param$grp.gct3)
-                   
+                    setProgress(message = 'Processing...', detail= 'Generating Heatmap')
+                    #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
+                   plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color)
                    })
             }
         },
@@ -4495,7 +4705,110 @@ shinyServer(
             height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 )
             return(height)}
         )
+        ####################################################################################
+        ##
+        ##                                interactive  Heatmap
+        ##
+        ####################################################################################
+        output$HM.int <- renderPlotly({
+          
+          ## if(is.null(global.results$data)) return()
+          if(!is.null(error$msg)) return()
+          
+          ######################################
+          ## extract results
+          res = global.results$filtered
+  
+          ######################################
+          ## require at least three significant hits
+          validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
+          
+          #######################################
+          ## heatmap title
+          hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
+          hm.title <- paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
+          
+          #######################################
+          ## extract expression values
+          res = res[, names(global.param$grp)]
+          
+          ##@#####################################
+          ##  dimensions depending on no. rows/columns
+          cw <- cwHM(ncol(res))
+          
+          if(!is.null(global.param$anno.col)){
+            #hm.cdesc <- data.frame( global.input$cdesc[names(global.param$grp),  global.param$cdesc.selection], stringsAsFactors = F )
+            anno.col=global.param$anno.col
+            anno.col.color=global.param$anno.col.color
+          } else {
+            anno.col=data.frame(Group=global.param$grp)
+            anno.col.color=list(Group=global.param$grp.colors.legend)
+          }
+          
+          #if(!is.null(global.input$cdesc))
+          #  hm.cdesc <- data.frame(global.input$cdesc[names(global.param$grp), global.param$cdesc.selection], stringsAsFactors = F)
+          #else
+          #  hm.cdesc <- NULL
+          #  hm.cdesc <- global.param$grp
+          
+          ######################################
+          ## plot
+          if(input$hm.int.max){
+            withProgress({
+              setProgress(message = 'Processing...', detail= 'Generating Heatmap')
+              #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, max.val=input$hm.int.max.val, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3, plotly = T)
+              plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, max.val=input$hm.int.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, plotly = T)
+            })
+          } else {
+            withProgress({
+              setProgress(message = 'Processing...', detail= 'Generating Heatmap')
+              #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3, plotly = T)
+              plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, plotly = T)
+              
+            })
+          }
+        }
+        )
+        ## ################################################################
+        ##   
+        ##                         fanplot 
+        ##
+        ## ################################################################
+        output$HC.fan <- renderPlot({
+          
+          if(!is.null(error$msg)) return()
+          
+          ######################################
+          ## extract results
+          res = global.results$filtered
+          
+          ######################################
+          ## require at least three significant hits
+          validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
+        
+          #######################################
+          ## extract expression values
+          res = res[, names(global.param$grp)]
+          
+          if(!is.null(global.input$cdesc))
+            hm.cdesc <- global.input$cdesc
+          else
+            hm.cdesc <- NULL
+            #hm.cdesc <- global.param$grp
+          
+          ######################################
+          ## plot
+            withProgress({
+              setProgress(message = 'Processing...', detail= 'Fanplot')
+              plotFAN(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend)
+            })
 
+          
+        })
+        
+        
+        
+        
         ##@################################################################################
         ## histogram of p-values
         ##@################################################################################
@@ -4581,17 +4894,29 @@ shinyServer(
           ##if(!is.null(error$msg)) return()
 
           pca <- global.results$pca
+          grp <- global.param$grp
+          grp.unique <- unique(grp)
+          grp.colors <- global.param$grp.colors[names(grp)]
+
+          # selected PCs
           pca.x <- as.numeric(sub('PC ','', input$pca.x))
           pca.y <- as.numeric(sub('PC ','', input$pca.y))
 
+          # build a data frame for plotly
           pca.mat = data.frame(
             PC1=pca$scores[, pca.x],
             PC2=pca$scores[, pca.y]
           )
           rownames(pca.mat) <- rownames(pca$scores)
 
-
-          p <- plot_ly( x=pca.mat$PC1, y=pca.mat$PC2, type='scatter', mode='markers', marker=list(size=20, color=global.param$grp.colors), text=rownames(pca.mat) )
+          p <- plot_ly( pca.mat, type='scatter', mode='markers' )
+          
+          for(g in grp.unique){
+            grp.tmp <- names(grp)[grp == g]
+            p <-  add_trace(p, x=pca.mat[grp.tmp , 'PC1'], y=pca.mat[grp.tmp, 'PC2'], type='scatter', mode='markers', marker=list(size=15, color=grp.colors[grp.tmp]), text=grp.tmp, name=g  )
+            #p <- plot_ly( x=pca.mat$PC1, y=pca.mat$PC2, type='scatter', mode='markers', marker=list(size=20, color=grp.colors), text=rownames(pca.mat) )
+          }
+          
           p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, sep=''), xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)) )
 
         })
@@ -4607,7 +4932,11 @@ shinyServer(
             ##if(length(global.param$grp) < 3) return()
 
             pca <- global.results$pca
-
+            grp <- global.param$grp
+            grp.unique <- unique(grp)
+            grp.colors <- global.param$grp.colors[names(grp)]
+            
+            # selected PCs
             pca.x <- as.numeric(sub('PC ','', input$pca.x))
             pca.y <- as.numeric(sub('PC ','', input$pca.y))
             pca.z <- as.numeric(sub('PC ','', input$pca.z))
@@ -4621,7 +4950,12 @@ shinyServer(
 
             ###########################
             ## plot
-            p <- plot_ly(  x=pca.mat$PC1, y=pca.mat$PC2, z=pca.mat$PC3, type='scatter3d', mode='markers', marker=list(size=15, color=global.param$grp.colors), text=rownames(pca.mat) )
+            p <- plot_ly( pca.mat, type='scatter3d', mode='markers' )
+            for(g in grp.unique){
+              grp.tmp <- names(grp)[grp == g]
+              p <- add_trace(p, x=pca.mat[grp.tmp, 'PC1'], y=pca.mat[grp.tmp,'PC2'], z=pca.mat[grp.tmp,'PC3'], type='scatter3d', mode='markers', marker=list(size=15, color=grp.colors[grp.tmp]), text=grp.tmp, name=g  )
+            }
+            #p <- plot_ly(  x=pca.mat$PC1, y=pca.mat$PC2, z=pca.mat$PC3, type='scatter3d', mode='markers', marker=list(size=15, color=grp.colors), text=rownames(pca.mat) )
             p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, 'vs. PC', pca.z, sep=''), scene=list( xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)), zaxis=list(title=paste('PC', pca.z))) )
 
         })
@@ -4696,6 +5030,11 @@ shinyServer(
             grp.col <- global.param$grp.colors
             grp.col.leg <- global.param$grp.colors.legend
 
+            # update selection
+            grp.col <- grp.col[names(grp)]
+            grp.col.leg <- grp.col.leg[unique(grp)]
+            #res <- res[, names(grp)]
+            
             ## remove missing values
             rm.idx <- apply(res, 1, function(x) sum(is.na(x)) + sum(is.infinite(x)))
             rm.idx <- which(rm.idx > 0)
@@ -4710,14 +5049,6 @@ shinyServer(
 
             return(pca)
         }
-
-
-        ## ###########################################################
-        ##
-        ##            plotly 2D scatterplo
-        ##
-        ## ###########################################################
-
 
 
 })

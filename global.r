@@ -38,7 +38,7 @@ source('src/gct-io.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.7.8.3"
+VER="0.8.0"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -74,11 +74,23 @@ CONFAPP <<- 'http://shiny-proteomics.broadinstitute.org:3838/modTconf/'
 p_load(shiny)
 p_load(shinydashboard)
 p_load(shinyjs)
+
 ## heatmap
 ##p_load(pheatmap)
-#p_load(heatmapply)
+p_load(heatmaply)
+
+# clustering
+p_load(ape)
+p_load(dendextend)
 p_load(scales)
 p_load(gtable)
+p_load(fastcluster)
+
+# correlations
+#p_load(GO.db) ## reguired by WGCNA
+#p_load(impute) ## reguired by WGCNA
+#p_load(WGCNA)
+
 ## moderated tests
 p_load(limma)
 p_load(statmod)
@@ -257,6 +269,28 @@ mapIDs <- function(ids){
     return(res)
 }
 
+## ##############################################################################
+##
+##            generate links to external databases
+##
+## ##############################################################################
+link.db <- function(id, # vetcor of ids
+                    keytype=c('UNKNOWN', 'UNIPROT', 'REFSEQ'),
+                    db=c('GENECARDS', 'UNIPROT')){
+  
+  keytype <- match.arg(keytype)
+  db <- match.arg(db)
+  
+  if(keytype == 'UNIPROT'){
+    up.link <- paste("<a href='https://www.uniprot.org/uniprot/", sub('(_|,|;|\\.).*', '', id),"' target='_blank'>", id, "</a>", sep='')
+  }
+  if(keytype %in% c('REFSEQ', 'UNKNOWN')){
+    up.link <- paste("<a href='http://www.genecards.org/Search/Keyword?queryString=", sub('^(NP_|NM_|NR_.*?)(_|,|;|\\.).*', '\\1', id),"' target='_blank'>", id, "</a>", sep='')
+  }
+  return(up.link)
+}
+
+
 #################################################################################
 ##     Heatmap of expression values combining all of the results from all tests
 ##
@@ -272,7 +306,7 @@ plotHM <- function(res,
                    hm.scale,
                    style,
                    hc.method='ward.D2',
-                   hc.dist='euclidean',
+                   hc.dist='pearson',
                    filename=NA, 
                    cellwidth=NA, 
                    cellheight=NA, 
@@ -281,20 +315,15 @@ plotHM <- function(res,
                    fontsize_row, 
                    height=height, 
                    width=width,
-                   cdesc=NULL,
-                   cdesc.grp=NULL,
+                   anno.col,
+                   anno.col.color,
+                   #cdesc=NULL,
+                   #cdesc.grp=NULL,
+                   plotly=F,
                    ...){
 
     ## convert to data matrix
     res <- data.matrix(res)
-
-    #grp <- data.frame(grp)  
-    #View(grp)
-    
-    #View(head(res))
-    
-    #sum(rownames(gr))
-    
     res <- res[, names(grp[order(grp)])]
     
     
@@ -319,64 +348,25 @@ plotHM <- function(res,
       gaps_col=NULL
         gapsize_col=0
     }
-    #########################################
-    ## scaling
-    ## if(hm.scale == 'row')
-    ##     res <- t(apply(res, 1, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T)))
-    ## if(hm.scale == 'column')
-    ##     res <- apply(res, 2, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T))
 
     ##########################################
     ##          cluster
-    ## 20160309 NA handling
-    ##
     ##########################################
-    na.idx.row <- na.idx.col <- NULL
+    hc.tmp <- HCluster(res, hm.clust = hm.clust, hc.method=hc.method, hc.dist=hc.dist)
+    Rowv <- hc.tmp$Rowv
+    Colv <- hc.tmp$Colv
+    #rowv.dist <- hc.tmp$rowv.dist
+    #colv.dist <- hc.tmp$colv.dist
+    na.idx.row <- hc.tmp$na.idx.row
+    na.idx.col <- hc.tmp$na.idx.col
 
-    ## column clustering
-    if(hm.clust == 'column'){
-        Rowv=FALSE
-        colv.dist = dist(t(res), method=hc.dist, diag=T, upper=T)
-        na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
-        if(length(na.idx.col)> 0){
-            colv.dist <- colv.dist[-na.idx.col, ]
-            colv.dist <- colv.dist[, -na.idx.col]
-        }
-        Colv=hclust(as.dist(colv.dist), method=hc.method)
-    ## row clustering
-    } else if( hm.clust == 'row'){
-        rowv.dist <- as.matrix(dist(res, method=hc.dist, diag=T, upper=T))
-        na.idx.row <- which(apply(as.matrix(rowv.dist), 1, function(x) sum(is.na(x))) > 0)
-        if(length(na.idx.row)> 0){
-            rowv.dist <- rowv.dist[-na.idx.row, ]
-            rowv.dist <- rowv.dist[, -na.idx.row]
-        }
-        Rowv=hclust(as.dist(rowv.dist), method=hc.method)
-        Colv=FALSE
-
-    ## row and column clustering
-    } else if(hm.clust == 'both'){
-
-        ## row clustering
-        rowv.dist <- as.matrix(dist(res, method=hc.dist, diag=T, upper=T))
-        na.idx.row <- which(apply(as.matrix(rowv.dist), 1, function(x) sum(is.na(x))) > 0)
-        if(length(na.idx.row)> 0){
-            rowv.dist <- rowv.dist[-na.idx.row, ]
-            rowv.dist <- rowv.dist[, -na.idx.row]
-        }
-        Rowv=hclust(as.dist(rowv.dist), method=hc.method)
-
-        ## column clustering
-        colv.dist = dist(t(res), method=hc.dist, diag=T, upper=T)
-        na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
-        if(length(na.idx.col)> 0){
-            colv.dist <- colv.dist[-na.idx.col, ]
-            colv.dist <- colv.dist[, -na.idx.col]
-        }
-        Colv=hclust(as.dist(colv.dist), method=hc.method)
-    } else {
-        Rowv=Colv=FALSE
-    }
+    # update result table
+    if(length(na.idx.col) > 0)
+      res <- res[, -na.idx.col]
+    if(length(na.idx.row) > 0)
+      res <- res[-na.idx.row, ]
+    
+    #save(anno.col, anno.col.color, res, Rowv, Colv, file='tmp.RData')
 
     #########################################
     ## scaling
@@ -401,22 +391,12 @@ plotHM <- function(res,
     ## colors
     color.breaks = seq( min.val, max.val, length.out=12 )
     color.hm = rev(brewer.pal (length(color.breaks)-1, "RdBu"))
-    ##color.hm = rev(brewer.pal (length(color.breaks)-1, "Spectral"))
 
-    ##############################################
-    ## annotation of columns
-    if(!is.null(cdesc)){
-      #save(cdesc, cdesc.grp, file = 'tmp.RData')
-      # reorder
-      anno.col <- cdesc[, c( colnames(cdesc)[-which(colnames(cdesc) == cdesc.grp)] , colnames(cdesc)[which(colnames(cdesc) == cdesc.grp)])]
-      anno.col.color=list(grp.col.legend)
-      names(anno.col.color) <- cdesc.grp
-      
-    }
-    else {
-      anno.col=data.frame(Group=grp)
-      anno.col.color=list(Group=grp.col.legend)
-    }
+    if(hm.clust %in% c('row', 'both'))
+      margins <- c(150, 50, 150, 150) # heatmaply
+    else
+      margins <- c(50, 50, 150, 150) # heatmaply
+    
     ##############################################
     ## heatmap title
     if(length(na.idx.row) > 0| length(na.idx.col) > 0)
@@ -426,15 +406,202 @@ plotHM <- function(res,
     hm.title <- paste(hm.title, '\nscaling: ',hm.scale, sep='')
 
     hm.rownames <- chopString(rownames(res), STRLENGTH)
-   ## hm.rownames <- chopString(rownames(res$id.concat), STRLENGTH)
 
 
     ############################################
     ## plot the heatmap
-    pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
-             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, labels_row=hm.rownames, na_col='black', scale='none', height=height, width=width)
+    if(!plotly){
+      # pheatmap
+      pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
+             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, 
+             annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), 
+             breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, 
+             labels_row=hm.rownames, na_col='black', scale='none', 
+             annotation_names_col = F, height=height, width=width)
+    } else {
+      # heatmaply
+      names(anno.col.color) <- NULL
+      anno.col.color <- unlist(anno.col.color)
+     # save(anno.col.color, anno.col, res, file='tmp.RData')
+      heatmaply(res, labCol = NA, margins = margins,
+                labRow = NA, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
+                limits=c(min.val, max.val), col_side_colors = anno.col, col_side_palette = anno.col.color,
+                colorbar_xanchor = 'right', colorbar_yanchor = 'bottom', row_dend_left = TRUE,
+                plot_method = "ggplot", seriate = 'mean', key=FALSE, hide_colorbar = T) 
+                
+    }
 }
 
+## #####################################################################
+##
+##   - create column annotation object for the heatmap
+##   - create color palettes for each data track
+##
+## ######################################################################
+cdesc.colors <- function(cdesc, cdesc.grp, grp.col.legend){
+  
+  # reorder
+  #save(cdesc.grp, cdesc, grp.col.legend, file='tmp.RData')    
+  anno.col <- cdesc[, c( colnames(cdesc)[-which(colnames(cdesc) == cdesc.grp)] , colnames(cdesc)[which(colnames(cdesc) == cdesc.grp)])]
+  
+  # COLORS for class vector used for marker selection
+  anno.col.color=list(grp.col.legend)
+  names(anno.col.color) <- cdesc.grp
+  
+  # COLORS for annotation tracks
+  # all brewer.pals
+  all.brews <- brewer.pal.info
+  
+  # annotation track names, without the one used for marker selection
+  anno.track.names <- setdiff(colnames(anno.col), cdesc.grp) 
+  for(i in  1:length(anno.track.names)){
+    # track name
+    anno.track.tmp <- anno.track.names[i]
+    
+    # brewer palette
+    brew.tmp <- all.brews[min(i, nrow(all.brews)), ]
+    brew.tmp.name <- rownames(all.brews)[min(i, nrow(all.brews)) ]
+    
+    # number of category levels
+    n.cat <- length(unique(anno.col[, anno.track.tmp]))
+    
+    if(n.cat > brew.tmp[['maxcolors']]){
+      brew.tmp <-  colorRampPalette(c('grey90', 'grey10'))(n.cat)
+    } else {
+      # list of color palettes
+      brew.tmp <- brewer.pal(n.cat, brew.tmp.name)
+      brew.tmp <- brew.tmp[1:n.cat]
+    }
+    names(brew.tmp) <- unique(anno.col[, anno.track.tmp])
+    
+    anno.col.color <- append(anno.col.color, list( brew.tmp))
+    names(anno.col.color)[ length(anno.col.color) ] <- anno.track.tmp
+    
+  }   
+  return(list(anno.col.color=anno.col.color, anno.col=anno.col))
+}
+  
+  
+
+
+## #########################################################
+## - function to perform hierarchical clustering
+## - robustified against missing values
+## - used by function plotHM and PlotFAN
+##
+##  res       - (filtered) data tables
+##  hm.clust  - 'row', 'column', 'both'
+##  hc.method - method, passed to 'hclust'
+##  hc.dist   - distance metric, passed to 'dist'
+HCluster <- function(res, hm.clust, hc.method='ward.D2', hc.dist=c('euclidean', 'pearson')){
+ # res.org <- res
+  na.idx.row <- na.idx.col <- NULL
+  
+  hc.dist <- match.arg(hc.dist)
+  cor.dist <- ifelse(hc.dist == 'pearson', T, F)
+  
+  #########################
+  ## column clustering
+  if(hm.clust == 'column'){
+    Rowv=FALSE
+    rowv.dist = NULL
+    #colv.dist = dist(t(res), method=hc.dist, diag=T, upper=T)
+    
+    if(cor.dist)
+      colv.dist <- as.matrix(as.dist(1- cor(res, use='pairwise.complete')))
+    else
+      colv.dist = dist(t(res), method=hc.dist)
+    na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
+    
+    if(length(na.idx.col)> 0){
+      colv.dist <- colv.dist[-na.idx.col, ]
+      colv.dist <- colv.dist[, -na.idx.col]
+    }
+    #Colv=hclust(as.dist(colv.dist), method=hc.method)
+    Colv = fastcluster::hclust(as.dist(colv.dist), method=hc.method)
+    
+    ## #################################
+    ## row clustering
+  } else if( hm.clust == 'row'){
+    #rowv.dist <- as.matrix(dist(res, method=hc.dist, diag=T, upper=T))
+    if(cor.dist)
+      rowv.dist <- as.matrix(as.dist(1- cor(t(res), use='pairwise.complete')))
+    else
+      rowv.dist <- as.matrix(dist(res, method=hc.dist))
+    
+    na.idx.row <- which(apply(as.matrix(rowv.dist), 1, function(x) sum(is.na(x))) > 0)
+    if(length(na.idx.row)> 0){
+      rowv.dist <- rowv.dist[-na.idx.row, ]
+      rowv.dist <- rowv.dist[, -na.idx.row]
+    }
+    #Rowv=hclust(as.dist(rowv.dist), method=hc.method)
+    Rowv= fastcluster::hclust(as.dist(rowv.dist), method=hc.method)
+    Colv=FALSE
+    colv.dist = NULL
+    
+    ## row and column clustering
+  } else if(hm.clust == 'both'){
+    
+    ## row clustering
+    #rowv.dist <- as.matrix(dist(res, method=hc.dist, diag=T, upper=T))
+    if(cor.dist)
+      rowv.dist <- as.matrix(as.dist(1- cor(t(res), use='pairwise.complete')))
+    else
+      rowv.dist <- as.matrix(dist(res, method=hc.dist))
+    
+    na.idx.row <- which(apply(as.matrix(rowv.dist), 1, function(x) sum(is.na(x))) > 0)
+    if(length(na.idx.row)> 0){
+      rowv.dist <- rowv.dist[-na.idx.row, ]
+      rowv.dist <- rowv.dist[, -na.idx.row]
+    }
+    Rowv=fastcluster::hclust(as.dist(rowv.dist), method=hc.method)
+    
+    ## column clustering
+    #colv.dist = dist(t(res), method=hc.dist, diag=T, upper=T)
+    if(cor.dist)
+      colv.dist <- as.matrix(as.dist(1- cor(res, use='pairwise.complete')))
+    else
+      colv.dist = dist(t(res), method=hc.dist)
+    
+    na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
+    if(length(na.idx.col)> 0){
+      colv.dist <- colv.dist[-na.idx.col, ]
+      colv.dist <- colv.dist[, -na.idx.col]
+    }
+    Colv=fastcluster::hclust(as.dist(colv.dist), method=hc.method)
+  } else {
+    Rowv=Colv=FALSE
+    rowv.dist <- colv.dist <- NULL
+  }
+  
+  #save(res, Rowv, Colv, colv.dist, rowv.dist, na.idx.col, na.idx.row, file='cluster.RData')
+  return(list(Rowv=Rowv, rowv.dist=rowv.dist, colv.dist=colv.dist, Colv=Colv, na.idx.col=na.idx.col, na.idx.row=na.idx.row))
+}
+
+## ##############################################################################################
+##
+##                                 FANPLOT
+##  - circular visualization of dendrograms
+##  - based on hierarchical clustering of samples
+## ##############################################################################################
+plotFAN <-function(res, grp, grp.col, grp.col.legend) {
+  
+  ## convert to data matrix
+  res <- data.matrix(res)
+  res <- res[, names(grp[order(grp)])]
+  
+  ## cluster 
+  hc.tmp <- HCluster(res, hm.clust = 'column')
+  
+  dist <- hc.tmp$colv.dist
+  hc <- hc.tmp$Colv
+  dend <- as.dendrogram(hc)
+  
+ # save(res, hc.tmp, dist, hc, dend, file='tmp.RData')
+  par(mfrow=c(1,2))
+  plot(as.phylo(dend), type = 'fan', label.offset = 1, cex=0.7, tip.color=grp.col, main='')
+
+}
 
 
 #################################################################################################
@@ -546,7 +713,7 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
                     dat.repro <- dat[not.valid.idx, ]
                     ##cat(not.valid.idx)
                     ##cat(dim(dat.repro))
-                    p = p + geom_point( aes(x=x, y=y ), data=dat.repro, colour=my.col2rgb('red', 50), size=1)
+                    p = p + geom_point( aes(x=x, y=y ), data=dat.repro, colour=my.col2rgb('blue', 50), size=1)
                 }
             }
             ###########################
@@ -1499,4 +1666,22 @@ get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), p
 
     return(out)
 
+}
+
+# ##########################################################
+# Function to plot color bar
+# https://stackoverflow.com/questions/9314658/colorbar-from-custom-colorramppalette
+# example: 
+# color.bar(colorRampPalette(c("light green", "yellow", "orange", "red"))(100), -1)
+
+color.bar <- function(lut, min, max=-min, nticks=11, ticks=seq(min, max, len=nticks), title='') {
+  scale = (length(lut)-1)/(max-min)
+  
+  dev.new(width=1.75, height=5)
+  plot(c(0,10), c(min,max), type='n', bty='n', xaxt='n', xlab='', yaxt='n', ylab='', main=title)
+  axis(2, ticks, las=1)
+  for (i in 1:(length(lut)-1)) {
+    y = (i-1)/scale + min
+    rect(0,y,10,y+1/scale, col=lut[i], border=NA)
+  }
 }

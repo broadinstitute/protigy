@@ -35,12 +35,27 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     if(what == 'cl'){
         txt=paste('<hr><hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.8.0 January 25, 2018</b>
+<ul>
+<li>Session import: improved backwards compatibility.</li>
+<li>Export: data directory is cleaned up now. All RData sesssion files and the latest zip archive remain in the user/session directory.</li>
+</ul>
+<b>v0.7.8.4 January 24, 2018</b>
+<ul>
+<li>Heatmap: interactive heatmap using "heatmaply".</li>
+<li>Heatmap: annotation tracks (GCT 1.3) can be selected/deselected.</li>
+<li>Clustering: default distance metric switched from <b>euclidean</b> to <b>1-Pearson</b>.</li>
+<li>Clustering: Fanplot v0.1 - circular dendrogram to visualize sample clustering.</li>
+<li>PCA: added legend to plots.</li>
+<li>Misc: links to "Genecards" if ids are not UniProt.</li>
+<li>Multiscatter: BA-filtered values shown in blue.</li>
+</ul>
 <b>v0.7.8.3 January 22, 2018</b>
 <ul>
 <li>PPI scatterplots: reduced opacity for non-interactors.</li>
 <li>PPI: robustified extraction of gene symbols in function"get.interactors()".</li>
 <li>Summary: new plot for missing values.</li>
-<li>Import: backwards compatibility, sessions saved from older versions can be imported.</li>
+<li>SSP import: backwards compatibility, sessions saved from older versions can be imported.</li>
 <li>Gene name mapping: fixed bug that would cause a crash if neither UniProt nor RefSeq ids were found.</li>
 <li>Gene name mapping: gene names that could not mapped are indicated by "NotFound".</li>
 <li>Misc: improved start up time of the app using function "import.ppi.db()"</li>

@@ -38,7 +38,7 @@ source('src/gct-io.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.0"
+VER="0.8.0.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -66,7 +66,8 @@ DATADIR <<- ifelse(OS=='Linux', "/local/shiny-data/", '.')
 MAIL <<- 'karsten@broadinstitute.org'
 ## URL to configuration app (SSP only)
 CONFAPP <<- 'http://shiny-proteomics.broadinstitute.org:3838/modTconf/'
-
+## PIWIK location
+PIWIKURL <<- '//shiny-proteomics.broadinstitute.org/piwik/'
 
 #################################################################
 ## load required packages
@@ -584,23 +585,37 @@ HCluster <- function(res, hm.clust, hc.method='ward.D2', hc.dist=c('euclidean', 
 ##  - circular visualization of dendrograms
 ##  - based on hierarchical clustering of samples
 ## ##############################################################################################
-plotFAN <-function(res, grp, grp.col, grp.col.legend) {
+plotFAN <-function(res, grp, grp.col, grp.col.legend, show.tip.label=T, tip.cex=0.7, tip.pch = '*') {
   
   ## convert to data matrix
   res <- data.matrix(res)
   res <- res[, names(grp[order(grp)])]
   
+  
   ## cluster 
   hc.tmp <- HCluster(res, hm.clust = 'column')
   
-  dist <- hc.tmp$colv.dist
+  #dist <- hc.tmp$colv.dist
   hc <- hc.tmp$Colv
   dend <- as.dendrogram(hc)
+  phyl <- as.phylo(dend)
+  if(show.tip.label)
+    phyl$tip.label <- grp
+  else
+    phyl$tip.label <- rep(tip.pch, length(phyl$tip.label))
   
- # save(res, hc.tmp, dist, hc, dend, file='tmp.RData')
+  # ##########################  
+  # plot
   par(mfrow=c(1,2))
-  plot(as.phylo(dend), type = 'fan', label.offset = 1, cex=0.7, tip.color=grp.col, main='')
-
+  plot(phyl, type = 'fan', label.offset = 1, cex=tip.cex, tip.color=grp.col, main='', no.margin=T)
+  plot.new()
+  plot.window(xlim=c(0,1), ylim=c(0, 1))
+  legend('topright', legend=names(grp.col.legend), col=grp.col.legend, pch=tip.pch, pt.cex = 3, 
+         ncol=ifelse( length(grp.col.legend) > 10, 2, 1), 
+         bty='n', 
+         cex=2
+         )
+  par(mfrow=c(1,1))
 }
 
 

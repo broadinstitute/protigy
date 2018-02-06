@@ -1,9 +1,9 @@
 ###################################################################################################################
 ## Filename: modT.r
-## Created: June 16, 2015
+## Created: June 16, 2016
 ## Authors: Karsten Krug, DR Mani
 ##
-## Purpose: Make functions written by Mani D R accessible via Shiny.
+## Purpose: Make functions written by D. R. Mani accessible via Shiny.
 ##
 ## The file contains function to perform moderated T and F-test statistics, 2-component normlization
 ## ratio data and reproducibility filtering (Blandt-Altlman and and a generalized version). All functions
@@ -16,7 +16,7 @@
 ##
 ##                        two sample moderated t-test
 ##
-## - code written by mani dr
+## - code written by dr mani
 ## - code modified by karsten krug
 ##   20151211 'label'
 #####################################################################################

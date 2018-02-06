@@ -23,8 +23,6 @@ shinyUI(
                   ## ##########################################
                   ## header
                   dashboardHeader( title=paste(APPNAME, " (v",VER,")", sep=""),
-                        #title=paste(img(height = "50px", alt="Logo", src="logo_v3.png")," (v",VER,")", sep=""),
-                        #title=tags$img(height = "50px", alt="Logo", src="logo_v3.png"),
                     
                         ## logged user
                         ##dropdownMenuOutput('memfree'), ## causes high latency times
@@ -40,7 +38,7 @@ shinyUI(
                                   )
                                 ),
                         ## logo
-                       tags$li(class = "dropdown",
+                        tags$li(class = "dropdown",
                                 a(href="http://www.broadinstitute.org/proteomics", target="_blank",
                                   img(height = "50px", alt="Proteomics Logo", src="BroadProteomicsLogo.png"),
                                   style = "padding-top:0px; padding-bottom:0px"
@@ -120,12 +118,29 @@ shinyUI(
             ##
             ############################################################################
             dashboardBody(
-            ##column(9,
 
-                ##tags$head(includeCSS('www/custom.css')),
-
+                ## #####################################
+                ## PIWIK
+                tags$head(HTML(
+                  "<!-- Piwik -->
+                  <script type=\"text/javascript\">
+                  var _paq = _paq || [];
+                  /* tracker methods like \"setCustomDimension\" should be called before \"trackPageView\" */
+                  _paq.push(['trackPageView']);
+                  _paq.push(['enableLinkTracking']);
+                  (function() {
+                  var u=\"", PIWIKURL, "\";
+                  _paq.push(['setTrackerUrl', u+'piwik.php']);
+                  _paq.push(['setSiteId', '1']);
+                  var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+                  g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
+                  })();
+                  </script>
+                  <!-- End Piwik Code -->"
+                )),
+                
                 useShinyjs(),
-                inlineCSS(appCSS),
+                inlineCSS(appCSS), # required for loading animation
 
                 ## #######################
                 ## loading animation

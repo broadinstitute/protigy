@@ -9,7 +9,9 @@ printHTMLUI <- function(id) {
 
 #############################
 ## server part
-printHTML <- function(input, output, session, what, global.input=NULL, global.param=NULL){
+printHTML <- function(input, output, session, what, error=NULL, global.input=NULL, global.param=NULL){
+
+  ##cat('test: ',error$msg, '\nend\n')
 
     txt=''
 
@@ -25,6 +27,7 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
         ## render HTML
         output$html <- renderText({
             if(!is.null(global.input$file)) return()
+            if(!is.null(error$msg)) return()
             includeMarkdown('readme.md')
             #HTML(txt)
         })
@@ -33,12 +36,18 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
     ##@###############################
     ## changelog
     if(what == 'cl'){
-        txt=paste('<hr><hr><p><font size=\"5\" color=\"red\">What\'s new:</font></p>',
 '<font size=\"4\">
+<b>v0.8.0.1 </b>
+<ul>
+<li>Misc: Piwik integration.</li>
+<li>Fanplot: colors are synchronized with current group selection.</li>
+<li>Fanplot: added legend and possibility to modify labels.</li>
+</ul>
 <b>v0.8.0 January 25, 2018</b>
 <ul>
+<li>Release version for SSP (dev),</li>
 <li>Session import: improved backwards compatibility.</li>
-<li>Export: data directory is cleaned up now. All RData sesssion files and the latest zip archive remain in the user/session directory.</li>
+<li>Export: data directory is cleaned up now. Only .RData session files and the latest zip archive remain in the user/session data directory.</li>
 </ul>
 <b>v0.7.8.4 January 24, 2018</b>
 <ul>
@@ -278,7 +287,7 @@ printHTML <- function(input, output, session, what, global.input=NULL, global.pa
 <li>First prototype.</li>
 </ul>
 </font>'
-,sep='')
+#,sep='')
 
         ## render HTML
         output$html <- renderText({

@@ -37,10 +37,7 @@ shinyServer(
 
         ## error messages
         error <- reactiveValues()
-        
-        # flags
-        
-        
+
         ## test results
         global.results <-  reactiveValues(
 
@@ -146,7 +143,11 @@ shinyServer(
             ## correlation matrix
             cm.upper='pearson',
             cm.lower='spearman',
-            cm.numb=TRUE
+            cm.numb=TRUE,
+            
+            ## fanplot
+            HC.fan.show.tip.label=T,
+            HC.fan.tip.cex=1
         )
 
         ## coordinates in volcano plot
@@ -186,8 +187,8 @@ shinyServer(
         ##                                instructions / help pages
         ##
         ################################################################################
-        callModule(printHTML, id='getting.started', what='gs', global.input = global.input)
-        callModule(printHTML, id='change.log', what='cl', global.input = global.input)
+        callModule(printHTML, id='getting.started', what='gs', global.input = global.input, error=error)
+        callModule(printHTML, id='change.log', what='cl', global.input = global.input, error=error)
         callModule(printHTML, id='id.column', what='id', global.param=global.param, global.input=global.input)
         callModule(printHTML, id='gct3.file', what='gct3',global.param=global.param, global.input=global.input)
         callModule(printHTML, id='exp.design', what='ed', global.param=global.param, global.input=global.input)
@@ -619,7 +620,12 @@ shinyServer(
             hc.fanplot <-  tabPanel('Fanplot',
                                     box(title='Fanplot', status = 'primary', solidHeader = T, width="100%", height="100%",
                                         fluidRow(
-                                          column(12, align='center', plotOutput("HC.fan" ))
+                                          column(1, checkboxInput('HC.fan.show.tip.label', label = 'Show names', value = global.plotparam$HC.fan.show.tip.label)),
+                                          column(2, numericInput('HC.fan.tip.cex', label = 'Label size', value = global.plotparam$HC.fan.tip.cex, min = 0.1, max=10, step = 0.2, width = '40%')),
+                                          column(9)
+                                        ),
+                                        fluidRow(
+                                          column(12, align='center', plotOutput("HC.fan", height = 600, width=1200 ))
                                         )
                                     )
             )
@@ -1895,7 +1901,11 @@ shinyServer(
             global.plotparam$cm.upper <- input$cm.upper
             global.plotparam$cm.lower <- input$cm.lower
             global.plotparam$cm.numb <- input$cm.numb
-
+            ## fanplot
+            global.plotparam$HC.fan.show.tip.label <- input$HC.fan.show.tip.label
+            global.plotparam$HC.fan.tip.cex <- input$HC.fan.tip.cex
+            
+            
             ## convert to list
             global.plotparam.imp <- reactiveValuesToList(global.plotparam)
 
@@ -2128,8 +2138,15 @@ shinyServer(
             #                     GCT 1.3
             } else if( length( grep( '^\\#1\\.3', readLines(fn,n=1))) > 0){
               
+              
               # parse gct file
-              gct <- parse.gctx(fn)
+              gct <- try( parse.gctx(fn) )
+              #cat('test2\n')
+
+              if(class(gct) == 'try-error'){
+                error$msg <- paste('<p>Error importing GCT 1.3 file:<br>', gct[1],'<p>') 
+                validate(need(class(gct) != 'try-error', 'Error importing GCT 1.3 file.'))
+              }
               
               # expression table
               tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
@@ -4774,6 +4791,13 @@ shinyServer(
         ##                         fanplot 
         ##
         ## ################################################################
+        observeEvent( input$HC.fan.show.tip.label, {
+          if(!input$HC.fan.show.tip.label)
+            updateNumericInput(session = session, inputId = 'HC.fan.tip.cex', value = 4)
+          else
+            updateNumericInput(session = session, inputId = 'HC.fan.tip.cex', value = 1)
+          })
+        ## plot
         output$HC.fan <- renderPlot({
           
           if(!is.null(error$msg)) return()
@@ -4784,7 +4808,7 @@ shinyServer(
           
           ######################################
           ## require at least three significant hits
-          validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
+          validate(need(nrow(res) > 1, 'Need at least 2 features to draw a fanplot!'))
         
           #######################################
           ## extract expression values
@@ -4796,14 +4820,35 @@ shinyServer(
             hm.cdesc <- NULL
             #hm.cdesc <- global.param$grp
           
+          # groups and colors
+          grp <- global.param$grp
+          grp.col <- global.param$grp.colors
+          grp.col.leg <- global.param$grp.colors.legend
+          
+          # update selection
+          grp.col <- grp.col[names(grp)]
+          grp.col.leg <- grp.col.leg[unique(grp)]
+          
+          # check
+          HC.fan.show.tip.label <- input$HC.fan.show.tip.label
+          HC.fan.tip.cex <- input$HC.fan.tip.cex
+          validate(need(!is.na(HC.fan.tip.cex), 'Label size must be specified.'))
+          #if(!HC.fan.show.tip.label){
+            #global.plotparam$HC.fan.tip.cex <- 4
+          #  updateNumericInput(session = session, inputId = 'HC.fan.tip.cex', value = 4)
+          #} else {
+            #global.plotparam$HC.fan.tip.cex <- 1
+           # updateNumericInput(session = session, inputId = 'HC.fan.tip.cex', value = 1)
+          #}
+          
           ######################################
           ## plot
             withProgress({
               setProgress(message = 'Processing...', detail= 'Fanplot')
-              plotFAN(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend)
+              plotFAN(res=res, grp=grp, grp.col=grp.col, grp.col.legend=grp.col.leg, 
+                      show.tip.label=HC.fan.show.tip.label, 
+                      tip.cex=HC.fan.tip.cex)
             })
-
-          
         })
         
         

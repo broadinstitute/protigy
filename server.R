@@ -733,11 +733,11 @@ shinyServer(
             ##  MORPHEUS widget
             ##
             ## ##############################################
-            morph.tab <- tabPanel('Morpheus',
-                                    fluidRow(
-                                      column(12, morpheusOutput("HM.morpheus",height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ), width=dynamicWidthHM(length(global.param$grp))))
-                                    )
-            )
+            #morph.tab <- tabPanel('Morpheus',
+            #                        fluidRow(
+            #                          column(12, morpheusOutput("HM.morpheus",height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ), width=dynamicWidthHM(length(global.param$grp))))
+            #                        )
+            #)
             
             
 

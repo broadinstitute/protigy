@@ -37,7 +37,19 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     ## changelog
     if(what == 'cl'){
 '<font size=\"4\">
-<b>v0.8.0.1 </b>
+<b>v0.8.0.2</b>
+<ul>
+<li>Export: page overhaul</li>
+<li>Export: generation of Rmarkdown-reports</li>
+<li>Export: added options to download rmarkdown, xls, zip, separately.</li>
+<li>Volcanos: color overhaul.</li>
+<li>PPI: fixed a bug in which multiple occurences of selected bait proteins were not shown in zoomed view.</li>
+<li>PPI: fixed the <i>all-turns-green</i> bug.</li>
+<li>PPI: added support for <i>Mmu</i> and <i>Rno</i></li>
+<li>Multiscatter: robust determination of plotting limits.</li>
+<li>Multiscatter: re-drawing only after button was pressed.</li>
+</ul>
+<b>v0.8.0.1 February 06, 2018</b>
 <ul>
 <li>Misc: Piwik integration.</li>
 <li>Fanplot: colors are synchronized with current group selection.</li>

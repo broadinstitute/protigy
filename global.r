@@ -32,13 +32,14 @@ source('src/modT.r')
 source('src/pheatmap.r')
 source('src/helptext.r')
 source('src/gct-io.r')
+source('src/plots.r')
 
 
 #################################################################
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.0.1"
+VER="0.8.0.2"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -48,7 +49,7 @@ SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
 GRPCOLORS <<- c(RColorBrewer::brewer.pal(8, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
 ## number of characters to display in plots/tables for column names
-STRLENGTH <<- 40
+STRLENGTH <<- 20
 ## operating system
 OS <<- Sys.info()['sysname']
 ## temp directory to write the Excel file
@@ -92,6 +93,10 @@ p_load(fastcluster)
 #p_load(impute) ## reguired by WGCNA
 #p_load(WGCNA)
 
+# markdown reports
+p_load(rmarkdown)
+p_load(knitr)
+
 ## moderated tests
 p_load(limma)
 p_load(statmod)
@@ -125,6 +130,8 @@ p_load(ggrepel)
 ## id mapping
 p_load(RSQLite)
 p_load(org.Hs.eg.db)
+p_load(org.Mm.eg.db)
+p_load(org.Rn.eg.db)
 p_load(dplyr)
 ## morpheus
 #p_load_gh('morpheus')
@@ -206,9 +213,12 @@ ppi <- import.ppi.db()
 ## ###############################################
 ##
 ##        map uniprot/refseq to gene names
-##
+## n.try = number of ids taken from 'ids' to try to
+##         determine organism
 ## ###############################################
-mapIDs <- function(ids){
+mapIDs <- function(ids,
+                   n.try=10
+                   ){
     withProgress(message='Mapping gene names...', {
 
             ## ###################################
@@ -222,7 +232,7 @@ mapIDs <- function(ids){
                 keytype='REFSEQ'
 
             ## ###################################
-            ##            try to map gene names
+            ##        extract query strings
             ## ###################################
             if(keytype == 'UNIPROT' ){
               id.query <- sub('(-|;|\\.|_|\\|).*', '', ids) ## first id
@@ -233,29 +243,57 @@ mapIDs <- function(ids){
             }
             names(id.query) <- ids
 
+            ## ###################################
+            ##          determine organism
+            ## ###################################
+            orgtype <- 'UNKNOWN'
+            if(keytype != 'UNKNOWN'){
+              
+              # try human 
+              if(orgtype == 'UNKNOWN'){ 
+                id.map.tmp <- try( mapIds(org.Hs.eg.db, keys=id.query[ sample(1:length(id.query), n.try)] , column=c('SYMBOL'), keytype=keytype, multiVals='first') )
+                if(class(id.map.tmp) != 'try-error'){
+                  orgtype='HSA'
+                }
+              }
+              # try mouse
+              if(orgtype == 'UNKNOWN'){ 
+                id.map.tmp <- try( mapIds(org.Mm.eg.db, keys=id.query[ sample(1:length(id.query), n.try)] , column=c('SYMBOL'), keytype=keytype, multiVals='first') )
+                  if(class(id.map.tmp) != 'try-error'){
+                    orgtype='MMU'
+                  }
+              }
+              # try rat
+              if(orgtype == 'UNKNOWN'){ 
+                id.map.tmp <- try( mapIds(org.Rn.eg.db, keys=id.query[ sample(1:length(id.query), n.try)] , column=c('SYMBOL'), keytype=keytype, multiVals='first') )
+                if(class(id.map.tmp) != 'try-error'){
+                  orgtype='RNO'
+                }
+              }
+            }
+  
+                      
             ## ##################################
             ## map
-            if(keytype != 'UNKNOWN')
+            if(keytype != 'UNKNOWN' & orgtype != 'UNKNOWN'){
+              if(orgtype == 'HSA')
                 id.map.tmp <- try(mapIds(org.Hs.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
-            else
+              if(orgtype == 'MMU')
+                id.map.tmp <- try(mapIds(org.Mm.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
+              if(orgtype == 'RNO')
+                id.map.tmp <- try(mapIds(org.Rn.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
+            } else {
                 id.map.tmp <- c()
+            }
 
-            #cat(class(id.map.tmp), '\n')
-            #cat(is.null( class(id.map.tmp) ))
-            #save(id.map.tmp, id.query, ids, keytype, file='tmp.RData')
             if(class(id.map.tmp) == 'try-error' | is.null( class(id.map.tmp) ) | class(id.map.tmp) == 'NULL' ){
-              #cat('test1')
-              #id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=names(id.query), stringsAsFactors=F)
-              #cat('test1\n')
-              #save(id.query, ids, file='tmp.RData')
+
               id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=names(id.query), id.concat=ids, stringsAsFactors=F)
               #cat('test2\n')
               keytype <- 'UNKNOWN'
               
             } else {
-              #cat('test2')
-              ##id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(names(id.query), id.map.tmp, sep='_'), stringsAsFactors=F)
-              # replace NA by 'NotFound'
+    
               id.map.tmp[which(is.na(id.map.tmp))] <- 'NotFound'
               id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(ids, id.map.tmp, sep='_'), stringsAsFactors=F)
               }
@@ -264,7 +302,8 @@ mapIDs <- function(ids){
             res <- list()
             res[[1]] <- keytype
             res[[2]] <- id.map
-            names(res) <- c('keytype', 'id.map')
+            res[[3]] <- orgtype
+            names(res) <- c('keytype', 'id.map', 'orgtype')
     })
 
     return(res)
@@ -292,487 +331,7 @@ link.db <- function(id, # vetcor of ids
 }
 
 
-#################################################################################
-##     Heatmap of expression values combining all of the results from all tests
-##
-##
-##
-#################################################################################
-plotHM <- function(res,
-                   grp,
-                   grp.col,
-                   grp.col.legend,
-                   hm.clust,
-                   hm.title,
-                   hm.scale,
-                   style,
-                   hc.method='ward.D2',
-                   hc.dist='pearson',
-                   filename=NA, 
-                   cellwidth=NA, 
-                   cellheight=NA, 
-                   max.val=NA, 
-                   fontsize_col, 
-                   fontsize_row, 
-                   height=height, 
-                   width=width,
-                   anno.col,
-                   anno.col.color,
-                   #cdesc=NULL,
-                   #cdesc.grp=NULL,
-                   plotly=F,
-                   ...){
 
-    ## convert to data matrix
-    res <- data.matrix(res)
-    res <- res[, names(grp[order(grp)])]
-    
-    
-    
-    #########################################
-    ## different 'styles' for different tests
-    ## - reorder columns
-    ## - gaps between experiments
-    if(style == 'One-sample mod T'){
-        #res <- res[, names(grp[order(grp)])]
-        gaps_col=cumsum(table(grp[order(grp)]))
-        gapsize_col=20
-    }
-    if(style == 'Two-sample mod T'){
-        #res <- res[, names(grp[order(grp)])]
-        gaps_col=NULL
-        gapsize_col=0
-    }
-    if(style == 'mod F' | style == 'none'){
-        #res <- res[, names(grp[order(grp)])]
-      
-      gaps_col=NULL
-        gapsize_col=0
-    }
-
-    ##########################################
-    ##          cluster
-    ##########################################
-    hc.tmp <- HCluster(res, hm.clust = hm.clust, hc.method=hc.method, hc.dist=hc.dist)
-    Rowv <- hc.tmp$Rowv
-    Colv <- hc.tmp$Colv
-    #rowv.dist <- hc.tmp$rowv.dist
-    #colv.dist <- hc.tmp$colv.dist
-    na.idx.row <- hc.tmp$na.idx.row
-    na.idx.col <- hc.tmp$na.idx.col
-
-    # update result table
-    if(length(na.idx.col) > 0)
-      res <- res[, -na.idx.col]
-    if(length(na.idx.row) > 0)
-      res <- res[-na.idx.row, ]
-    
-    #save(anno.col, anno.col.color, res, Rowv, Colv, file='tmp.RData')
-
-    #########################################
-    ## scaling
-    if(hm.scale == 'row')
-         res <- t(apply(res, 1, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T)))
-    if(hm.scale == 'column')
-         res <- apply(res, 2, function(x)(x-mean(x, na.rm=T))/sd(x, na.rm=T))
-
-
-    #########################################
-    ## capping
-    if(!is.na(max.val)){
-        res[ res < -max.val ] <- -max.val
-        res[ res > max.val ] <- max.val
-    }
-    #########################################
-    ## min/max value
-    max.val = ceiling( max( abs(res), na.rm=T) )
-    min.val = -max.val
-
-    ##########################################
-    ## colors
-    color.breaks = seq( min.val, max.val, length.out=12 )
-    color.hm = rev(brewer.pal (length(color.breaks)-1, "RdBu"))
-
-    if(hm.clust %in% c('row', 'both'))
-      margins <- c(150, 50, 150, 150) # heatmaply
-    else
-      margins <- c(50, 50, 150, 150) # heatmaply
-    
-    ##############################################
-    ## heatmap title
-    if(length(na.idx.row) > 0| length(na.idx.col) > 0)
-        hm.title = paste(hm.title, '\nremoved rows / columns: ', length(na.idx.row), ' / ' , length(na.idx.col), sep='')
-
-    ## indicate scaling in the title
-    hm.title <- paste(hm.title, '\nscaling: ',hm.scale, sep='')
-
-    hm.rownames <- chopString(rownames(res), STRLENGTH)
-
-
-    ############################################
-    ## plot the heatmap
-    if(!plotly){
-      # pheatmap
-      pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
-             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, 
-             annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), 
-             breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, 
-             labels_row=hm.rownames, na_col='black', scale='none', 
-             annotation_names_col = F, height=height, width=width)
-    } else {
-      # heatmaply
-      names(anno.col.color) <- NULL
-      anno.col.color <- unlist(anno.col.color)
-     # save(anno.col.color, anno.col, res, file='tmp.RData')
-      heatmaply(res, labCol = NA, margins = margins,
-                labRow = NA, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
-                limits=c(min.val, max.val), col_side_colors = anno.col, col_side_palette = anno.col.color,
-                colorbar_xanchor = 'right', colorbar_yanchor = 'bottom', row_dend_left = TRUE,
-                plot_method = "ggplot", seriate = 'mean', key=FALSE, hide_colorbar = T) 
-                
-    }
-}
-
-## #####################################################################
-##
-##   - create column annotation object for the heatmap
-##   - create color palettes for each data track
-##
-## ######################################################################
-cdesc.colors <- function(cdesc, cdesc.grp, grp.col.legend){
-  
-  # reorder
-  #save(cdesc.grp, cdesc, grp.col.legend, file='tmp.RData')    
-  anno.col <- cdesc[, c( colnames(cdesc)[-which(colnames(cdesc) == cdesc.grp)] , colnames(cdesc)[which(colnames(cdesc) == cdesc.grp)])]
-  
-  # COLORS for class vector used for marker selection
-  anno.col.color=list(grp.col.legend)
-  names(anno.col.color) <- cdesc.grp
-  
-  # COLORS for annotation tracks
-  # all brewer.pals
-  all.brews <- brewer.pal.info
-  
-  # annotation track names, without the one used for marker selection
-  anno.track.names <- setdiff(colnames(anno.col), cdesc.grp) 
-  for(i in  1:length(anno.track.names)){
-    # track name
-    anno.track.tmp <- anno.track.names[i]
-    
-    # brewer palette
-    brew.tmp <- all.brews[min(i, nrow(all.brews)), ]
-    brew.tmp.name <- rownames(all.brews)[min(i, nrow(all.brews)) ]
-    
-    # number of category levels
-    n.cat <- length(unique(anno.col[, anno.track.tmp]))
-    
-    if(n.cat > brew.tmp[['maxcolors']]){
-      brew.tmp <-  colorRampPalette(c('grey90', 'grey10'))(n.cat)
-    } else {
-      # list of color palettes
-      brew.tmp <- brewer.pal(n.cat, brew.tmp.name)
-      brew.tmp <- brew.tmp[1:n.cat]
-    }
-    names(brew.tmp) <- unique(anno.col[, anno.track.tmp])
-    
-    anno.col.color <- append(anno.col.color, list( brew.tmp))
-    names(anno.col.color)[ length(anno.col.color) ] <- anno.track.tmp
-    
-  }   
-  return(list(anno.col.color=anno.col.color, anno.col=anno.col))
-}
-  
-  
-
-
-## #########################################################
-## - function to perform hierarchical clustering
-## - robustified against missing values
-## - used by function plotHM and PlotFAN
-##
-##  res       - (filtered) data tables
-##  hm.clust  - 'row', 'column', 'both'
-##  hc.method - method, passed to 'hclust'
-##  hc.dist   - distance metric, passed to 'dist'
-HCluster <- function(res, hm.clust, hc.method='ward.D2', hc.dist=c('euclidean', 'pearson')){
- # res.org <- res
-  na.idx.row <- na.idx.col <- NULL
-  
-  hc.dist <- match.arg(hc.dist)
-  cor.dist <- ifelse(hc.dist == 'pearson', T, F)
-  
-  #########################
-  ## column clustering
-  if(hm.clust == 'column'){
-    Rowv=FALSE
-    rowv.dist = NULL
-    #colv.dist = dist(t(res), method=hc.dist, diag=T, upper=T)
-    
-    if(cor.dist)
-      colv.dist <- as.matrix(as.dist(1- cor(res, use='pairwise.complete')))
-    else
-      colv.dist = dist(t(res), method=hc.dist)
-    na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
-    
-    if(length(na.idx.col)> 0){
-      colv.dist <- colv.dist[-na.idx.col, ]
-      colv.dist <- colv.dist[, -na.idx.col]
-    }
-    #Colv=hclust(as.dist(colv.dist), method=hc.method)
-    Colv = fastcluster::hclust(as.dist(colv.dist), method=hc.method)
-    
-    ## #################################
-    ## row clustering
-  } else if( hm.clust == 'row'){
-    #rowv.dist <- as.matrix(dist(res, method=hc.dist, diag=T, upper=T))
-    if(cor.dist)
-      rowv.dist <- as.matrix(as.dist(1- cor(t(res), use='pairwise.complete')))
-    else
-      rowv.dist <- as.matrix(dist(res, method=hc.dist))
-    
-    na.idx.row <- which(apply(as.matrix(rowv.dist), 1, function(x) sum(is.na(x))) > 0)
-    if(length(na.idx.row)> 0){
-      rowv.dist <- rowv.dist[-na.idx.row, ]
-      rowv.dist <- rowv.dist[, -na.idx.row]
-    }
-    #Rowv=hclust(as.dist(rowv.dist), method=hc.method)
-    Rowv= fastcluster::hclust(as.dist(rowv.dist), method=hc.method)
-    Colv=FALSE
-    colv.dist = NULL
-    
-    ## row and column clustering
-  } else if(hm.clust == 'both'){
-    
-    ## row clustering
-    #rowv.dist <- as.matrix(dist(res, method=hc.dist, diag=T, upper=T))
-    if(cor.dist)
-      rowv.dist <- as.matrix(as.dist(1- cor(t(res), use='pairwise.complete')))
-    else
-      rowv.dist <- as.matrix(dist(res, method=hc.dist))
-    
-    na.idx.row <- which(apply(as.matrix(rowv.dist), 1, function(x) sum(is.na(x))) > 0)
-    if(length(na.idx.row)> 0){
-      rowv.dist <- rowv.dist[-na.idx.row, ]
-      rowv.dist <- rowv.dist[, -na.idx.row]
-    }
-    Rowv=fastcluster::hclust(as.dist(rowv.dist), method=hc.method)
-    
-    ## column clustering
-    #colv.dist = dist(t(res), method=hc.dist, diag=T, upper=T)
-    if(cor.dist)
-      colv.dist <- as.matrix(as.dist(1- cor(res, use='pairwise.complete')))
-    else
-      colv.dist = dist(t(res), method=hc.dist)
-    
-    na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
-    if(length(na.idx.col)> 0){
-      colv.dist <- colv.dist[-na.idx.col, ]
-      colv.dist <- colv.dist[, -na.idx.col]
-    }
-    Colv=fastcluster::hclust(as.dist(colv.dist), method=hc.method)
-  } else {
-    Rowv=Colv=FALSE
-    rowv.dist <- colv.dist <- NULL
-  }
-  
-  #save(res, Rowv, Colv, colv.dist, rowv.dist, na.idx.col, na.idx.row, file='cluster.RData')
-  return(list(Rowv=Rowv, rowv.dist=rowv.dist, colv.dist=colv.dist, Colv=Colv, na.idx.col=na.idx.col, na.idx.row=na.idx.row))
-}
-
-## ##############################################################################################
-##
-##                                 FANPLOT
-##  - circular visualization of dendrograms
-##  - based on hierarchical clustering of samples
-## ##############################################################################################
-plotFAN <-function(res, grp, grp.col, grp.col.legend, show.tip.label=T, tip.cex=0.7, tip.pch = '*') {
-  
-  ## convert to data matrix
-  res <- data.matrix(res)
-  res <- res[, names(grp[order(grp)])]
-  
-  
-  ## cluster 
-  hc.tmp <- HCluster(res, hm.clust = 'column')
-  
-  #dist <- hc.tmp$colv.dist
-  hc <- hc.tmp$Colv
-  dend <- as.dendrogram(hc)
-  phyl <- as.phylo(dend)
-  if(show.tip.label)
-    phyl$tip.label <- grp
-  else
-    phyl$tip.label <- rep(tip.pch, length(phyl$tip.label))
-  
-  # ##########################  
-  # plot
-  par(mfrow=c(1,2))
-  plot(phyl, type = 'fan', label.offset = 1, cex=tip.cex, tip.color=grp.col, main='', no.margin=T)
-  plot.new()
-  plot.window(xlim=c(0,1), ylim=c(0, 1))
-  legend('topright', legend=names(grp.col.legend), col=grp.col.legend, pch=tip.pch, pt.cex = 3, 
-         ncol=ifelse( length(grp.col.legend) > 10, 2, 1), 
-         bty='n', 
-         cex=2
-         )
-  par(mfrow=c(1,1))
-}
-
-
-#################################################################################################
-##                     multiscatterplot using hexagonal binning
-## - mat    numerical matrix of expression values, rows are features, columns are samples
-##
-## changelog: 2015116 implementation
-#################################################################################################
-my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman', 'kendall'), repro.filt=NULL, grp, grp.col.legend, define.max=F, max.val=3, min.val=-3){
-
-    ## cor method
-    corm = match.arg(cor)
-    ## correlation
-    cm = cor(mat, use='pairwise.complete', method=corm)
-
-    ## number of samples to compare
-    N = ncol(mat)
-
-    ## define limits
-    if(define.max){
-        lim=c(min.val, max.val)
-
-    } else{
-        lim=max( abs( mat ), na.rm=T )
-        lim=c(-lim, lim)
-    }
-
-    ###########################################################################
-    ## help function to set up the viewports
-    ## original code from:  http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
-    multiplot <- function(plots, cols=1) {
-        ## Make a list from the ... arguments and plotlist
-        ##plots <- c(list(...))
-        ## number of plots
-        numPlots = length(plots)
-        ## layout matrix
-        layout <- matrix(seq(1, cols * ceiling(numPlots/cols)), ncol = cols, nrow = ceiling(numPlots/cols))
-        ## Set up the page
-        grid.newpage()
-        ## grid layout
-        la <-  grid.layout(nrow(layout), ncol(layout))
-        pushViewport(viewport(layout = la))
-        ## Make each plot, in the correct location
-        for (i in numPlots:1) {
-            ## Get the i,j matrix positions of the regions that contain this subplot
-            matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-            vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col)
-
-            ## textplot: correlation coefficient
-            if(matchidx$row < matchidx$col){
-                numb = plots[[i]]
-                col='black'
-                ## dynamic font size for correlations
-                ##size = min(max(abs(90*as.numeric(numb)), 25), 50)
-                size = min(max(abs(90*as.numeric(numb)), 25), 40)
-                grid.rect(width=unit(.85, 'npc'), height=unit(.85, 'npc'), vp=vp, gp=gpar(fill='grey95', col='transparent'))
-                grid.text(numb, vp=vp, gp=gpar(fontsize=size, col=col))
-            } else {
-                print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                                layout.pos.col = matchidx$col))
-            }
-        }
-    } ## end function 'multiplot'
-    #########################################################################
-    ##
-    ##                     do the actual plotting
-    ##
-    #########################################################################
-
-    ## list to store the plots
-    plotList=vector('list', N*N)
-    count=1
-    for(i in 1:N)
-        for(j in 1:N){
-
-            ## extract pairwise data
-            dat <- data.frame(x=mat[,i], y=mat[,j])
-            rownames(dat) <- rownames(mat)
-
-            ## filter according to xlim/ylim
-            dat$x[ which(dat$x < lim[1] | dat$x > lim[2]) ] <- NA
-            dat$y[ which(dat$y < lim[1] | dat$y > lim[2]) ] <- NA
-
-            ## extract groups
-            current.group <- unique(grp[names(grp)[c(i,j)]])
-
-            ##cat(current.group, '\n')
-            ##str(add.points)
-
-            ###########################
-            ## lower triangle
-            if(i < j){
-
-                ## hexbin
-                ##hex <- hexbin(dat$x, dat$y, hexbin, xbnds=range(dat$x, na.rm=T), ybnds=range(dat$y, na.rm=T) )
-                hex <- hexbin(dat$x, dat$y, hexbin, xbnds=lim, ybnds=lim )
-                gghex <- data.frame(hcell2xy(hex), c = cut2(hex@count, g = hexcut))
-                p <- ggplot(gghex) + geom_hex(aes(x = x, y = y, fill = c) ,stat = "identity") + guides(fill=FALSE) + theme( plot.margin=unit(rep(0, 4), 'cm')) + xlab('') + ylab('') + xlim(lim[1], lim[2]) + ylim(lim[1], lim[2])
-
-                ##if(length(current.group) == 1)
-                ##    p <- p + scale_fill_manual( values=paste(rep( grp.col.legend[current.group], hexcut) ))
-                ##else
-
-                p <- p + scale_fill_manual( values=paste('grey', ceiling(seq(70, 20, length.out=hexcut)), sep=''))
-
-                ## add filtered values
-                if(!is.null(repro.filt) & length(current.group) == 1){
-                    not.valid.idx <- repro.filt[[current.group]]
-                    dat.repro <- dat[not.valid.idx, ]
-                    ##cat(not.valid.idx)
-                    ##cat(dim(dat.repro))
-                    p = p + geom_point( aes(x=x, y=y ), data=dat.repro, colour=my.col2rgb('blue', 50), size=1)
-                }
-            }
-            ###########################
-            ## diagonal
-            if(i == j){
-                p = ggplot(dat, aes(x=x)) + geom_histogram(fill=grp.col.legend[current.group], colour=grp.col.legend[current.group], binwidth=sum(abs(range(dat$x, na.rm=T)))/50) + ggtitle(colnames(mat)[i]) + theme(plot.title=element_text(size=9)) + theme( panel.background = element_blank(), plot.margin=unit(rep(0, 4), 'cm')) + xlab(paste('N',sum(!is.na(dat$x)), sep='=')) + ylab('') + xlim(lim[1], lim[2]) ##+ annotate('text', label=sum(!is.na(dat$x)), x=unit(0, 'npc'), y=unit(0, 'npc'))
-
-
-            }
-            ###########################
-            ## upper triangle
-            if(i > j){
-                cortmp = cm[i,j]
-
-                p=paste(round(cortmp, 3))
-
-            }
-
-            plotList[[count]] <- p
-            count=count+1
-        }
-
-    multiplot( plotList, cols=N)
-}
-
-
-##########################################################################################################
-##                     translate a color name into rgb space
-##
-## changelog:  20100929 implementation
-##########################################################################################################
-my.col2rgb <- function(color, alpha=80, maxColorValue=255){
-
-    out <- vector( "character", length(color) )
-
-    for(col in 1:length(color)){
-
-        col.rgb <- col2rgb(color[col])
-
-        out[col] <- rgb(col.rgb[1], col.rgb[2], col.rgb[3], alpha=alpha, maxColorValue=maxColorValue)
-
-    }
-    return(out)
-}
 
 
 #############################################################################################
@@ -945,27 +504,6 @@ my.prcomp2 <- function(res, grp){
 
   return(pca)
 }
-#####################################################
-## visualize variances explained by PCA
-##
-## pca - pca object calculated by function PCA
-##
-#####################################################
-plotPCAvar <- function(pca, pch=22, cex=2, lwd=2){
-
-    col1='darkblue'
-    col2='red'
-
-    ## extract the variances
-    pca.var.perc = pca$var/pca$totalvar*100
-    pca.var.cum = cumsum(pca$var)/pca$totalvar*100
-
-    ## plot
-    plot( pca.var.perc, type='b', pch=pch, col=col1, cex=cex, ylab='Percent variance', ylim=c(0,100),xlab='Principle Components', xaxt='n')
-    axis(1, at=1:ncol(pca$scores))
-    lines(pca.var.cum, lwd=lwd, pch=pch+1, cex=cex, col=col2, type='b')
-    legend('right', legend=c('Indiv. Var.', 'Cumulative Var,'), pch=c(pch, pch+1), lwd=lwd, col=c(col1, col2), bty='n', cex=1.3 )
-}
 
 #####################################################
 ##
@@ -1074,24 +612,6 @@ scatterPlotPCAloadings <- function(pca, topn, pca.x, pca.y, pca.z){
 }
 
 
-#####################################################
-## color ramp
-##
-## ToDo: opacity!
-####################################################
-myColorRamp <- function(colors, values, opac=1, range=NULL) {
-
-    if(is.null(range))
-        v <- (values - min(values))/diff(range(values))
-    else
-        v <- (values - min(values, na.rm=T))/diff( range )
-
-    x <- colorRamp(colors)(v)
-    ## rgb(x[,1], x[,2], x[,3], maxColorValue = round(255*opac))
-    rgb(x[,1], x[,2], x[,3], alpha=opac*255, maxColorValue = 255)
-    ##unlist(apply(x, 1, function(xx) rgb(xx[1], xx[2], xx[3], alpha= maxColorValue=255) ))
-}
-
 #################################################
 ##   Given a string and a number of characters
 ##   the function chops the string to the
@@ -1121,7 +641,7 @@ chopString <- function(string, nChar=10, add.dots=T)
 ## ######################################################################
 ## 20170223
 ##
-##                  Standart deviation filter
+##                  Standard deviation filter
 ##
 ## ######################################################################
 sd.filter <- function(tab, grp.vec, id.col, sd.perc){
@@ -1313,44 +833,6 @@ dynamicWidthHM <- function(n, style=c('none', 'One-sample mod T', 'Two-sample mo
 
 ###################################################################
 ##
-##       generate the boxplots under the 'QC' tab
-##
-###################################################################
-makeBoxplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.lab=1.5, mar=c(4,12,2,4)){
-
-	 cat('\n-- makeBoxplot --\n')
-
-    ## table
-    tab <- tab[, setdiff(colnames(tab), id.col)]
-
-	##	cat(id.col)
-
-    ##########################################
-    ## order after groups
-    ord.idx <- order(grp)
-    grp <- grp[ord.idx]
-    tab <- tab[, ord.idx]
-    grp.col <- grp.col[ ord.idx]
-
-
-    at.vec=1:ncol(tab)
-    ##########################################
-    ## plot
-    par(mar=mar)
-    boxplot(tab, pch=20, col='white', outline=T, horizontal=T, las=2, xlab=expression(log[2](ratio)), border=grp.col, at=at.vec, axes=F, main='', cex=2, xlim=c(0, ifelse(legend, ncol(tab)+2, ncol(tab)) ))
-    ##legend('top', legend=names(grp.col.leg), ncol=2, bty='n', border = names(grp.col.leg), fill='white', cex=1.5)
-    if(legend)
-        legend('top', legend=names(grp.col.leg), ncol=length(grp.col.leg), bty='n', border = grp.col.leg, fill=grp.col.leg, cex=cex.lab)
-    ##legend('top', legend=c(input$label.g1, input$label.g2), ncol=2, bty='n', border = c('grey10', 'darkblue'), fill='white', cex=1.5, lwd=3)
-    mtext( paste('N=',unlist(apply(tab,2, function(x)sum(!is.na(x)))), sep=''), at=at.vec, side=4, las=2, adj=0, cex.lab=cex.lab)
-    axis(1)
-    axis(2, at=at.vec, labels=chopString(colnames(tab), STRLENGTH), las=2, cex=cex.lab)
-
-    cat('\n-- makeBoxplot exit --\n')
-}
-
-###################################################################
-##
 ##       generate the profile plots under the 'QC' tab
 ##
 ###################################################################
@@ -1454,17 +936,41 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 ## ppi.db      - list of ppi databases, defined in 'global.r'
 ## ppi.db.col  - colors for different ppi databases, defined in 'global.r'
 get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), ppi.db, ppi.db.col){
-
-    # extract gene symbol
-    #IDs <- toupper(sub('.*_', '', IDs) )
-    #ppi.bait <-  toupper(sub('.*_', '', ppi.bait))
+    
+    # ######################################
+    # extract gene symbols
+    # last string after underscore
     IDs <- toupper(sub('.*_(.*)$', '\\1', IDs) )
+    names(IDs) <- IDs
+    
+    # gene symbol of bait protein
     ppi.bait <-  toupper(sub('.*_(.*)$', '\\1', ppi.bait))
+    
+    ## ###################################################
+    ## index of bait protein
+    ppi.bait.idx <- which( toupper(IDs) == toupper(ppi.bait) ) ## bait in data set
+    
   
-
-    ## #########################################################
-    ##
-    ##bg.int <- iw.int <- react.int <- c()
+    ## ##############################################
+    ## return if no database has been selected
+    if(length(db) == 0){
+        ppi.int.idx <- NULL
+        ppi.col <- rep('', length(IDs))
+        leg=''
+        ppi.col.leg.sig.tmp='white'
+        ppi.db.col.tmp='white'
+    
+        ## ##########################
+        ## assemble output
+        out <- list(
+          ppi.int.idx=ppi.int.idx,
+          ppi.bait.idx=ppi.bait.idx,
+          leg=leg,
+          leg.col=ppi.db.col.tmp,
+          ppi.col=ppi.col
+        )
+        return(out)
+    }
 
     ## #########################################################
     ## list to store ALL interactors of 'ppi.bait' found in the
@@ -1489,13 +995,12 @@ get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), p
 
         ## ##################################
         ## try gene names
-        ##ppi.bait.gn <- toupper(sub('.*_', '', ppi.bait))
         ppi.bait.gn <- ppi.bait
 
         i1.gn <- iw$V5
         i2.gn <- iw$V6
-
-        iw.int <- i2.gn[which(i1.gn == ppi.bait.gn)]
+        
+        iw.int <- i2.gn[ which(i1.gn == ppi.bait.gn) ]
         iw.int <- c(iw.int, i1.gn[which(i2.gn == ppi.bait.gn)])
 
         iw.int <- setdiff( unique(iw.int), ppi.bait )
@@ -1575,8 +1080,7 @@ get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), p
 
     ## #################################################
     ##
-    ## - determine in which database an interactors
-    ##   has been found
+    ## - Interactions found in multiple ppi databases
     ## #################################################
     if(length(db) > 1){
         ## all interactors
@@ -1605,10 +1109,9 @@ get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), p
     ##            combine
     ## ##################################################
     ## all interactions
-
-    ppi.int <- unlist(ppi.int.all.l)
-
-
+    ppi.int <- unique(unlist(ppi.int.all.l))
+    #ppi.int <- unlist(ppi.int.all.l)
+    
     ppi.int.idx <- NULL
     leg <- NULL
     leg.col <- NULL
@@ -1619,7 +1122,6 @@ get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), p
 
         ## ###############################
         ## index of interactors in dataset
-        ##ppi.int.idx <- which( IDs %in% ppi.int )
         ppi.int.idx <- which( IDs %in% unlist(ppi.int.detect.l) )
 
         ## ######################################################################
@@ -1629,11 +1131,15 @@ get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), p
         ##   number of interactions in InWeb one has to sum #InWeb + #Overlap
         ##
         ppi.col <- rep('', length(IDs))
-        names(ppi.col) <- IDs
-
-        ##View(ppi.col)
+        #names(ppi.col) <- IDs
+        names(ppi.col) <- names(IDs)
+        
         for( d in 1:length(ppi.int.detect.l))
-            ppi.col[ ppi.int.detect.l[[d]] ] <- ppi.db.col[ names(ppi.int.detect.l)[d]  ]
+          ppi.col[ which( IDs %in% ppi.int.detect.l[[d]] )] <- ppi.db.col[ names(ppi.int.detect.l)[d]  ]
+        
+          #ppi.col[ which(names(ppi.col) %in% ppi.int.detect.l[[d]] )] <- ppi.db.col[ names(ppi.int.detect.l)[d]  ]
+        
+          #ppi.col[ ppi.int.detect.l[[d]] ] <- ppi.db.col[ names(ppi.int.detect.l)[d]  ]
 
 
         ## #########################################
@@ -1650,35 +1156,67 @@ get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), p
         leg.signif <- sapply(ppi.int.signif.l, length)
 
         leg <- paste(names(ppi.int.all.l), ' ',leg.signif, '/' ,leg.detect, '/' ,leg.all, sep='')
-
+        #leg <- c(paste('bait:',ppi.bait), leg)
         ##leg <- paste(names(ppi.col.leg), ' (',ppi.col.leg.sig,'/' ,ppi.col.leg,')', sep='')
         ##legend('topleft', legend=leg, col=ppi.db.col.tmp, pch=16, bty='n', cex=1.5, title=paste('Known interactors (sig/tot)'))
 
-
     } else {  ## end if there are interactors
-        ppi.col <- NULL
+        ppi.col <- rep('', length(IDs))
         leg=''
         ppi.col.leg.sig.tmp='white'
         ppi.db.col.tmp='white'
     }
 
-     ## ###################################################
-     ## index of bait protein
-     ##
-     ppi.bait.idx <- which( toupper(IDs) == toupper(ppi.bait) ) ## bait in data set
-
-
-
-    ## ##########################
-    ## assemble output
-    out <- list(
+    ## ##############################################
+    ## return if no database has been selected
+    if(length(db) == 0 | (length(ppi.int.idx) == 0 &  length(ppi.bait.idx) == 0)){
+      ppi.int.idx <- NULL
+      ppi.col <- rep('', length(IDs))
+      leg=''
+      ppi.col.leg.sig.tmp='white'
+      ppi.db.col.tmp='white'
+      
+      ## assemble output
+      out <- list(
         ppi.int.idx=ppi.int.idx,
         ppi.bait.idx=ppi.bait.idx,
         leg=leg,
         leg.col=ppi.db.col.tmp,
         ppi.col=ppi.col
-    )
-
+      )
+    } else if(length(ppi.int.idx) == 0 & length(ppi.bait.idx) == 0){
+      
+      ## ##########################
+      ## if neither bait nor interactors were found ...
+      ppi.int.idx <- NULL
+      ppi.bait.idx <- NULL
+      ppi.col <- rep('', length(IDs))
+      leg=''
+      ppi.col.leg.sig.tmp='white'
+      ppi.db.col.tmp='white'
+      
+      ## assemble output
+      out <- list(
+        ppi.int.idx=ppi.int.idx,
+        ppi.bait.idx=ppi.bait.idx,
+        leg=leg,
+        leg.col=ppi.db.col.tmp,
+        ppi.col=ppi.col
+      )
+    } else { 
+      
+      ## ##########################
+      ## all normal
+      out <- list(
+        ppi.int.idx=ppi.int.idx,
+        ppi.bait.idx=ppi.bait.idx,
+        leg=leg,
+        leg.col=ppi.db.col.tmp,
+        ppi.col=ppi.col
+      )
+      
+    }
+    
     return(out)
 
 }

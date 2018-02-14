@@ -39,7 +39,7 @@ source('src/plots.r')
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.0.2"
+VER="0.8.0.3"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data

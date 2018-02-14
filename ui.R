@@ -26,7 +26,7 @@ shinyUI(
                     
                         ## logged user
                         ##dropdownMenuOutput('memfree'), ## causes high latency times
-                        dropdownMenuOutput('session.name'),
+                        dropdownMenuOutput('session.label'),
                         dropdownMenuOutput('logged.user'),
                         dropdownMenuOutput('logout'),
 

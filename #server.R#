@@ -246,27 +246,18 @@ shinyServer(
         ## })
 
         ## ########################################################
-        ## session name
-        output$session.label <-renderMenu({
-          
-          #if(is.null(session$user)) return()
-          if(!global.param$session.saved) return()
-          label <- paste("Session:",global.param$label)
-          
-          notificationItem(label, status='success', shiny::icon("folder", "fa-1x", lib='glyphicon')) 
-           
-          
-        })
-        
-        
-        ## ########################################################
         ## logged user
         output$logged.user <-renderMenu({
 
             if(is.null(session$user)) return()
+
             user <- session$user
-          
+            ##user='test'
+
             notificationItem(user, shiny::icon("user", "fa-1x", lib='glyphicon'), status='success') ##, ic='users', status='info', text='test'),
+          ##  notificationItem(user, shiny::icon("users"), status='info') ##, icon='users', status='info', text='test'),
+
+
         })
 
         ## #########################################################
@@ -1627,12 +1618,12 @@ shinyServer(
         })
         
         ## #####################################################
-        ##              savePlotparams
+        ##              updatePlotparams
         ## - save input parameters to reactive values
         ## 
-        savePlotparams <- function(){
+        updatePlotparams <- function(){
           ## heatmap
-          global.plotparam$hm.clust <- input$hm.clust
+          global.plotparam$hm.clust <- input$hm.clustr
           global.plotparam$hm.scale <- input$hm.scale
           global.plotparam$cexRow <- input$cexRow
           global.plotparam$cexCol <- input$cexCol
@@ -1646,7 +1637,6 @@ shinyServer(
           global.plotparam$ms.max <- input$ms.max
           global.plotparam$ms.min <- input$ms.min
           global.plotparam$ms.max <- input$ms.max
-          global.plotparam$ms.robustify <- input$ms.robustify
           ## correlation matrix
           global.plotparam$cm.upper <- input$cm.upper
           global.plotparam$cm.lower <- input$cm.lower
@@ -1654,35 +1644,6 @@ shinyServer(
           ## fanplot
           global.plotparam$HC.fan.show.tip.label <- input$HC.fan.show.tip.label
           global.plotparam$HC.fan.tip.cex <- input$HC.fan.tip.cex
-        }
-        ## ##############################################################
-        ##                 update plotting parameters
-        ## ##############################################################
-        updatePlotparams <- function(){
-          ## heatmap
-          updateSelectInput(session, inputId='hm.clust', selected=global.plotparam$hm.clust)
-          updateSelectInput(session, inputId='hm.scale', selected=global.plotparam$hm.scale)
-          updateNumericInput(session, inputId='cexCol', value=global.plotparam$hm.cexCol)
-          updateNumericInput(session, inputId='cexRow', value=global.plotparam$hm.cexRow)
-          updateNumericInput(session, inputId='hm.max.val', value=global.plotparam$hm.max.val)
-          updateCheckboxInput(session, inputId='hm.max', value=global.plotparam$hm.max)
-          ## PCA
-          updateSelectInput(session, inputId='pca.x', selected=global.plotparam$pca.x)
-          updateSelectInput(session, inputId='pca.y', selected=global.plotparam$pca.y)
-          updateSelectInput(session, inputId='pca.z', selected=global.plotparam$pca.z)
-          ## multiscatter
-          updateCheckboxInput(session, inputId='ms.max', value=global.plotparam$ms.max)
-          updateNumericInput(session, inputId='ms.max.val', value=global.plotparam$ms.max.val)
-          updateNumericInput(session, inputId='ms.min.val', value=global.plotparam$ms.min.val)
-          updateCheckboxInput(session, inputId='ms.robustify', value=global.plotparam$ms.robustify)
-          ## correlation matrix
-          updateCheckboxInput(session, inputId='cm.numb', value=global.plotparam$cm.numb)
-          updateSelectInput(session, inputId='cm.upper', selected=global.plotparam$cm.upper)
-          updateSelectInput(session, inputId='cm.lower', selected=global.plotparam$cm.lower)
-          
-          ## fanplot
-          updateCheckboxInput(session, inputId='HC.fan.show.tip.label', value= global.plotparam$HC.fan.show.tip.label)
-          updateNumericInput(session, inputId='HC.fan.tip.cex', value=global.plotparam$HC.fan.tip.cex)
         }
         
         ## ######################################################################
@@ -1727,7 +1688,7 @@ shinyServer(
           
           ## ################################################
           ##        update plotting parameters 
-          savePlotparams()
+          updatePlotparams()
           
 
           ## ##########################################################
@@ -2131,14 +2092,21 @@ shinyServer(
           updateTabsetPanel(session, 'mainPage', selected='Export')
         })
         
-        ####################################################
-        ##         function to save current state
-        ## #################################################
-        saveSession <- function(){
+        ## #############################################################
+        ## observer
+        ##            save current state as session on the server 
+        ##
+        ## 
+        observeEvent(input$export.save.session, {
+          
+          ## #####################################
+          ## update label
+          global.param$label <- gsub('_| |,|;|\\:|\\+|\\*', '-', input$label)
           
           #########################################################
           ## save current plotting parameters
-          savePlotparams()
+          updatePlotparams()
+          
           global.param$session.saved <- TRUE
           
           #########################################################
@@ -2153,57 +2121,23 @@ shinyServer(
           ## save as R-object
           ## no label present
           if(is.null(global.param$label)){
+            
             fn.tmp <- paste(global.param$session.dir, paste('session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep='/')
+            
             save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
+            #fn.zip <- paste( gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
+            
           }
           ## label present
           if(!is.null(global.param$label) | nchar(global.param$label) == 0){
+            
             fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
+            
             save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
+            #fn.zip <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
+            
           }
-        }
-        ## #############################################################
-        ## observer
-        ##            save current state as session on the server 
-        ##
-        ## 
-        observeEvent(input$export.save.session, {
-          
-          ## #####################################
-          ## update label
-          global.param$label <- gsub('_| |,|;|\\:|\\+|\\*', '-', input$label)
-          
-          ## #####################################
-          ## check wether a session with the same name exists
-          double.check <- T
-          check.session <- dir( global.param$session.dir, pattern=paste('^', global.param$label, '_session_[0-9]{4}-[0-9]{2}-[0-9]{2}-.*\\.RData$', sep=''), full.names = T)
-          if(length(check.session) > 0){
-            double.check <- F
-            showModal(modalDialog(
-              size='s',
-              title = "Overwrite existing session?",
-              ##fluidPage(
-            ##    fluidRow(column(12, 'Overwrite session?'))
-            ##  ),
-            footer = NULL,
-            fluidRow(    
-              column(6, actionButton(inputId = 'session.overwrite' , label='Yes')),
-                column(6, modalButton(label='Cancel'))
-              )
-            ))
-            ## observe "yes"-button
-            observeEvent(input$session.overwrite,{
-              double.check <- T
-              if(file.exists(check.session))
-                file.remove(check.session)
-              saveSession()
-              removeModal()
-            })
-          }
-          if(double.check)
-            saveSession()
           updateTabsetPanel(session, 'mainPage', selected='Export')
-          
         })
         
         ## ##########################################################################
@@ -2254,7 +2188,7 @@ shinyServer(
           ## #####################################
           ##         save session
           # if(input$export.save.session){
-          #   savePlotparams()
+          #   updatePlotparams()
           #   
           #   ## convert to list
           #   global.plotparam.imp <- reactiveValuesToList(global.plotparam)
@@ -2289,7 +2223,7 @@ shinyServer(
 
             ## #####################################
             ## update plot params
-            savePlotparams()
+            updatePlotparams()
 
             ###############################
             ## apply filter
@@ -3044,10 +2978,38 @@ shinyServer(
                 updateNumericInput(session, inputId='filter.value.adj.p', value=global.param$filter.value)
             }
 
-            ## ###############################################################
-            ## update plotting paramaters
-            updatePlotparams()
-            
+            ## ##############################################################
+            ##                 update plotting parameters
+            ## ##############################################################
+
+            ## heatmap
+            updateSelectInput(session, inputId='hm.clust', selected=global.plotparam$hm.clust)
+            updateSelectInput(session, inputId='hm.scale', selected=global.plotparam$hm.scale)
+            updateNumericInput(session, inputId='cexCol', value=global.plotparam$hm.cexCol)
+            updateNumericInput(session, inputId='cexRow', value=global.plotparam$hm.cexRow)
+            updateNumericInput(session, inputId='hm.max.val', value=global.plotparam$hm.max.val)
+            updateCheckboxInput(session, inputId='hm.max', value=global.plotparam$hm.max)
+          
+
+            ## PCA
+            updateSelectInput(session, inputId='pca.x', selected=global.plotparam$pca.x)
+            updateSelectInput(session, inputId='pca.y', selected=global.plotparam$pca.y)
+            updateSelectInput(session, inputId='pca.z', selected=global.plotparam$pca.z)
+
+            ## multiscatter
+            updateCheckboxInput(session, inputId='ms.max', value=global.plotparam$ms.max)
+            updateNumericInput(session, inputId='ms.max.val', value=global.plotparam$ms.max.val)
+            updateNumericInput(session, inputId='ms.min.val', value=global.plotparam$ms.min.val)
+
+            ## correlation matrix
+            updateCheckboxInput(session, inputId='cm.numb', value=global.plotparam$cm.numb)
+            updateSelectInput(session, inputId='cm.upper', selected=global.plotparam$cm.upper)
+            updateSelectInput(session, inputId='cm.lower', selected=global.plotparam$cm.lower)
+
+            ## fanplot
+            updateCheckboxInput(session, inputId='HC.fan.show.tip.label', value= global.plotparam$HC.fan.show.tip.label)
+            updateNumericInput(session, inputId='HC.fan.tip.cex', value=global.plotparam$HC.fan.tip.cex)
+
             ##################################
             ## set flags
             global.param$file.done=T

@@ -127,17 +127,21 @@ p_load(DT)
 ## label placements without overlap
 p_load(maptools)
 p_load(ggrepel)
+p_load(dplyr)
+
 ## id mapping
 p_load(RSQLite)
 p_load(org.Hs.eg.db)
 p_load(org.Mm.eg.db)
 p_load(org.Rn.eg.db)
-p_load(dplyr)
+p_load(org.Dr.eg.db)
+
+
 ## morpheus
 #p_load_gh('morpheus')
-if(!require(morpheus))
-  devtools::install_github('cmap/morpheus.R')
-p_load(morpheus)
+#if(!require(morpheus))
+#  devtools::install_github('cmap/morpheus.R')
+#p_load(morpheus)
 
 # Required for cmpaR gctx file format. Fails to install on shiny-proteomics, but not reuqired as of now.
 #p_load (rhdf5) 
@@ -270,9 +274,15 @@ mapIDs <- function(ids,
                   orgtype='RNO'
                 }
               }
+              # try zebrafish
+              if(orgtype == 'UNKNOWN'){ 
+                id.map.tmp <- try( mapIds(org.Dr.eg.db, keys=id.query[ sample(1:length(id.query), n.try)] , column=c('SYMBOL'), keytype=keytype, multiVals='first') )
+                if(class(id.map.tmp) != 'try-error'){
+                  orgtype='DRE'
+                }
+              }
             }
   
-                      
             ## ##################################
             ## map
             if(keytype != 'UNKNOWN' & orgtype != 'UNKNOWN'){
@@ -282,6 +292,8 @@ mapIDs <- function(ids,
                 id.map.tmp <- try(mapIds(org.Mm.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
               if(orgtype == 'RNO')
                 id.map.tmp <- try(mapIds(org.Rn.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
+              if(orgtype == 'DRE')
+                id.map.tmp <- try(mapIds(org.Dr.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
             } else {
                 id.map.tmp <- c()
             }

@@ -430,7 +430,7 @@ plotFAN <-function(res, grp, grp.col, grp.col.legend, show.tip.label=T, tip.cex=
 ##       generate the boxplots under the 'QC' tab
 ##
 ###################################################################
-makeBoxplotly <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.lab=1.5, mar=c(4,12,2,4)){
+makeBoxplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.lab=1.5, mar=c(4,12,2,4)){
   
   cat('\n-- makeBoxplot --\n')
   

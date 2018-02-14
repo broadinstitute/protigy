@@ -317,16 +317,17 @@ shinyServer(
                                               box(title="Session name",
                                                   fluidPage(
                                                     fluidRow(
-                                                      HTML('Please specify a name for the current session which will be used in filnames and to identify the session on the server.')
+                                                      HTML('Specify a name for the current session.')
                                                       ),
                                                     fluidRow(
-                                                      textInput( 'label', '', value=global.param$label, width=200)
+                                                      textInput( 'label', '', value=global.param$label, width=300)
                                                     ),
                                                     fluidRow(
-                                                      HTML('Click checkbox below to save the current state of your session on the server (SSPro-feature).')
+                                                      HTML('Save the current state of your session (SSPro).')
                                                     ),
                                                     fluidRow(
-                                                      checkboxInput('export.save.session', 'Save as session', value=F)
+                                                      #checkboxInput('export.save.session', 'Save as session', value=F)
+                                                      actionButton('export.save.session', 'Save session')
                                                     )
                                                   ),
                                                   status = "primary",
@@ -337,23 +338,26 @@ shinyServer(
                                               ## action and download button for rmd, xls and zip
                                               box(title="Export results", 
                                                   fluidPage(
-                                                    column(4, 
+                                                    fluidRow(column(4, HTML('<a href="https://rmarkdown.rstudio.com/" target="_blank_">Markdown</a> report')), 
+                                                             column(4, HTML('Spreadsheet')), 
+                                                             column(4, HTML('Gimme all!'))),
+                                                    fluidRow(column(4, 
                                                            if(!global.results$export.rmd)
-                                                            actionButton('export.rmd', 'Rmarkdown', icon = icon("code", lib="font-awesome"))
+                                                            actionButton('export.rmd', 'html', icon = icon("code", lib="font-awesome"))
                                                            else
-                                                            downloadButton('download.rmd', 'Rmarkdown') 
+                                                            downloadButton('download.rmd', 'html') 
                                                            ),
                                                     column(4,
                                                            if(!global.results$export.xls)
-                                                            actionButton('export.xls', 'Excel', icon = icon("table", lib="font-awesome"))
+                                                            actionButton('export.xls', 'xslx', icon = icon("table", lib="font-awesome"))
                                                            else
-                                                            downloadButton('download.xls', 'Excel')
+                                                            downloadButton('download.xls', 'xslx')
                                                            ),
                                                     column(4, if(!global.results$export.results)
-                                                      actionButton('export.results', 'Zip', icon = icon("archive", lib="font-awesome"))
+                                                      actionButton('export.results', 'zip', icon = icon("archive", lib="font-awesome"))
                                                       else
-                                                        downloadButton('download.results', 'Zip'))
-                                                  ),
+                                                        downloadButton('download.results', 'zip'))
+                                                  )),
                                                   status = "primary",
                                                   solidHeader = T,
                                                   width=NULL)#,
@@ -507,7 +511,7 @@ shinyServer(
                                           plotlyOutput('summary.nonmissing.data'))
                                     ),
                                     fluidRow(
-                                        box(title="Quantified features (cumulative)", solidHeader = T, status = "primary",width = 12,
+                                        box(title="Missing values", solidHeader = T, status = "primary",width = 12,
                                             plotlyOutput('summary.missing.data.row'))
                                     )
                           ) ## end tab panel
@@ -1709,7 +1713,7 @@ shinyServer(
                       \n',ifelse(export.pca, '\n* [Principle Components Analysis](#pca)','' ),'
                       \n* [QC-metrics](#qc)
                       ',ifelse(export.cm, '\n     - [Correlation matrix](#corrmat)','' ),'
-
+                      ',ifelse(export.box, '\n    - [Box-and-whisker plots](#boxplot)','' ),'
                        ', sep='')
           ## ##########################################################
           ##                   data set
@@ -1965,7 +1969,8 @@ shinyServer(
 
             rmd <- paste(rmd, 
                  '\n***
-              \n#### Correlation matrix <a name="corrmat"></a>
+              \n<a name="corrmat">
+              \n#### Correlation matrix</a>
               \n<br>
               \n```{r corrmat, echo=F, warning=F, message=F, fig.width=8, fig.height=8}
               \nwithProgress(message="Exporting", detail="correlation matrix",{
@@ -2004,7 +2009,9 @@ shinyServer(
             
             rmd <- paste(rmd, 
                          '\n***
-              \n#### Box-whisker plots <a name="corrmat"></a>
+              \n<a name="boxplot"></a>
+              \n#### Box-and-whisker plots <a name="corrmat"></a>
+              \nThe box plots depict the distribution of data points per sample column. 
               \n<br>
               \n```{r boxplot, echo=F, warning=F, message=F, fig.width=10}
               \nwithProgress(message="Exporting", detail="boxplots",{
@@ -2067,21 +2074,89 @@ shinyServer(
           
           ## #####################################
           ##         save session
-          if(input$export.save.session){
-          
-            ## convert to list
-            global.plotparam.imp <- reactiveValuesToList(global.plotparam)
-            global.input.imp <- reactiveValuesToList(global.input)
-            global.param.imp <- reactiveValuesToList(global.param)
-            global.results.imp <- reactiveValuesToList(global.results)
-            volc.imp <-  reactiveValuesToList(volc)
+          #if(input$export.save.session){
+          #
+          #  ## convert to list
+          #  global.plotparam.imp <- reactiveValuesToList(global.plotparam)
+          #  global.input.imp <- reactiveValuesToList(global.input)
+          #  global.param.imp <- reactiveValuesToList(global.param)
+          #  global.results.imp <- reactiveValuesToList(global.results)
+          #  volc.imp <-  reactiveValuesToList(volc)
             
-            fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
-            save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
-            
-            }
+          #  fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
+          #  save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
+          #  
+          #  }
           
           global.results$export.rmd <- TRUE
+          updateTabsetPanel(session, 'mainPage', selected='Export')
+        })
+        
+        ## #############################################################
+        ## observer
+        ##            save current state as session on the server 
+        ##
+        ## 
+        observeEvent(input$export.save.session, {
+           
+          #########################################################
+          ## save current plotting parameters
+          #########################################################
+          
+          ## heatmap
+          global.plotparam$hm.scale <- input$hm.scale
+          global.plotparam$hm.clust <- input$hm.clust
+          global.plotparam$hm.cexCol <- input$hm.cexCol
+          global.plotparam$hm.cexRow <- input$hm.cexRow
+          global.plotparam$hm.max <- input$hm.max
+          global.plotparam$hm.max.val <- input$hm.max.val
+          ## pca
+          global.plotparam$pca.x <- input$pca.x
+          global.plotparam$pca.y <- input$pca.y
+          global.plotparam$pca.z <- input$pca.z
+          ## multiscatter
+          global.plotparam$ms.max <- input$ms.max
+          global.plotparam$ms.min <- input$ms.min
+          global.plotparam$ms.max <- input$ms.max
+          ## correlation matrix
+          global.plotparam$cm.upper <- input$cm.upper
+          global.plotparam$cm.lower <- input$cm.lower
+          global.plotparam$cm.numb <- input$cm.numb
+          ## fanplot
+          global.plotparam$HC.fan.show.tip.label <- input$HC.fan.show.tip.label
+          global.plotparam$HC.fan.tip.cex <- input$HC.fan.tip.cex
+          
+          
+          #########################################################
+          ##          save session parameters
+          #########################################################
+          global.input.imp <- reactiveValuesToList(global.input)
+          global.param.imp <- reactiveValuesToList(global.param)
+          global.results.imp <- reactiveValuesToList(global.results)
+          global.plotparam.imp <- reactiveValuesToList(global.plotparam)
+          volc.imp <-  reactiveValuesToList(volc)
+          
+          #################################
+          ## save as R-object
+          ## no label present
+          if(is.null(global.param$label)){
+            
+            fn.tmp <- paste(global.param$session.dir, paste('session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep='/')
+            
+            save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
+            #fn.zip <- paste( gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
+            
+          }
+          ## label present
+          if(!is.null(global.param$label) | nchar(global.param$label) == 0){
+            
+            fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
+            
+            save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
+            #fn.zip <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
+            
+          }
+          
           updateTabsetPanel(session, 'mainPage', selected='Export')
         })
         
@@ -2115,7 +2190,7 @@ shinyServer(
               ## generate_filename
               fn.tmp <- sub(' ','_',
                             paste(
-                                'results_',
+                                global.param$label, '_',
                                 sub(' ', '_',global.param$which.test), '_',
                                 ifelse(global.param$log.transform != 'none', paste( global.param$log.transform, '_', sep=''), '_'),
                                 #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
@@ -2131,21 +2206,21 @@ shinyServer(
           
           ## #####################################
           ##         save session
-          if(input$export.save.session){
-            updatePlotparams()
-            
-            ## convert to list
-            global.plotparam.imp <- reactiveValuesToList(global.plotparam)
-            global.input.imp <- reactiveValuesToList(global.input)
-            global.param.imp <- reactiveValuesToList(global.param)
-            global.results.imp <- reactiveValuesToList(global.results)
-            volc.imp <-  reactiveValuesToList(volc)
-            
-            fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
-            save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
-            
-          }
-          
+          # if(input$export.save.session){
+          #   updatePlotparams()
+          #   
+          #   ## convert to list
+          #   global.plotparam.imp <- reactiveValuesToList(global.plotparam)
+          #   global.input.imp <- reactiveValuesToList(global.input)
+          #   global.param.imp <- reactiveValuesToList(global.param)
+          #   global.results.imp <- reactiveValuesToList(global.results)
+          #   volc.imp <-  reactiveValuesToList(volc)
+          #   
+          #   fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
+          #   save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
+          #   
+          # }
+          # 
           global.results$export.xls <- TRUE
           updateTabsetPanel(session, 'mainPage', selected='Export')
           
@@ -2496,66 +2571,60 @@ shinyServer(
                 })
             }
 
-            #########################################################
-            ##          save session parameters
-            #########################################################
-            global.input.imp <- reactiveValuesToList(global.input)
-            global.param.imp <- reactiveValuesToList(global.param)
-            global.results.imp <- reactiveValuesToList(global.results)
-
-            #########################################################
-            ## save current plotting parameters
-            #########################################################
-
-            ## heatmap
-            global.plotparam$hm.scale <- input$hm.scale
-            global.plotparam$hm.clust <- input$hm.clust
-            global.plotparam$hm.cexCol <- input$hm.cexCol
-            global.plotparam$hm.cexRow <- input$hm.cexRow
-            global.plotparam$hm.max <- input$hm.max
-            global.plotparam$hm.max.val <- input$hm.max.val
-            ## pca
-            global.plotparam$pca.x <- input$pca.x
-            global.plotparam$pca.y <- input$pca.y
-            global.plotparam$pca.z <- input$pca.z
-            ## multiscatter
-            global.plotparam$ms.max <- input$ms.max
-            global.plotparam$ms.min <- input$ms.min
-            global.plotparam$ms.max <- input$ms.max
-            ## correlation matrix
-            global.plotparam$cm.upper <- input$cm.upper
-            global.plotparam$cm.lower <- input$cm.lower
-            global.plotparam$cm.numb <- input$cm.numb
-            ## fanplot
-            global.plotparam$HC.fan.show.tip.label <- input$HC.fan.show.tip.label
-            global.plotparam$HC.fan.tip.cex <- input$HC.fan.tip.cex
-            
-            
-            ## convert to list
-            global.plotparam.imp <- reactiveValuesToList(global.plotparam)
-
-            ## volcano coordinates
-            volc.imp <-  reactiveValuesToList(volc)
-
+            # #########################################################
+            # ##          save session parameters
+            # #########################################################
+            # global.input.imp <- reactiveValuesToList(global.input)
+            # global.param.imp <- reactiveValuesToList(global.param)
+            # global.results.imp <- reactiveValuesToList(global.results)
+            # 
+            # #########################################################
+            # ## save current plotting parameters
+            # #########################################################
+            # 
+            # ## heatmap
+            # global.plotparam$hm.scale <- input$hm.scale
+            # global.plotparam$hm.clust <- input$hm.clust
+            # global.plotparam$hm.cexCol <- input$hm.cexCol
+            # global.plotparam$hm.cexRow <- input$hm.cexRow
+            # global.plotparam$hm.max <- input$hm.max
+            # global.plotparam$hm.max.val <- input$hm.max.val
+            # ## pca
+            # global.plotparam$pca.x <- input$pca.x
+            # global.plotparam$pca.y <- input$pca.y
+            # global.plotparam$pca.z <- input$pca.z
+            # ## multiscatter
+            # global.plotparam$ms.max <- input$ms.max
+            # global.plotparam$ms.min <- input$ms.min
+            # global.plotparam$ms.max <- input$ms.max
+            # ## correlation matrix
+            # global.plotparam$cm.upper <- input$cm.upper
+            # global.plotparam$cm.lower <- input$cm.lower
+            # global.plotparam$cm.numb <- input$cm.numb
+            # ## fanplot
+            # global.plotparam$HC.fan.show.tip.label <- input$HC.fan.show.tip.label
+            # global.plotparam$HC.fan.tip.cex <- input$HC.fan.tip.cex
+            # 
+            # 
+            # ## convert to list
+            # global.plotparam.imp <- reactiveValuesToList(global.plotparam)
+            # 
+            # ## volcano coordinates
+            # volc.imp <-  reactiveValuesToList(volc)
+            # 
             #################################
-            ## save as R-object
+            ##       name of zip archive
             ## no label present
             if(is.null(global.param$label)){
-
-                fn.tmp <- paste(global.param$session.dir, paste('session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep='/')
-
-                save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
+                #fn.tmp <- paste(global.param$session.dir, paste('session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep='/')
+                #save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
                 fn.zip <- paste( gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
-
             }
             ## label present
             if(!is.null(global.param$label) | nchar(global.param$label) == 0){
-
-                fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
-
-                save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
+                #fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
+                #save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
                 fn.zip <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
-
             }
 
             #########################################################
@@ -2625,8 +2694,8 @@ shinyServer(
             #
 
             # remove Rdata file, if session won't be saved            
-            if(!input$export.save.session)
-                file.remove(fn.tmp)
+            #if(!input$export.save.session)
+            #    file.remove(fn.tmp)
 
              ###############################################################
              ## flag export

@@ -55,7 +55,7 @@ The app can run locally on your Desktop computer (Windows/Linux/MAC) or can depl
 * User authentification as provided by SSP.
 * Save and retrieve app-sessions on the server.
 
-#### Changelog
+
 
 This app is being developed and maintained at the [Proteomics Platform](https://www.broadinstitute.org/proteomics) of the [Broad Institute of MIT and Harvard](https://www.broadinstitute.org/).
 

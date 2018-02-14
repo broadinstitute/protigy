@@ -5313,29 +5313,29 @@ shinyServer(
         ##                               Morpheus
         ##
         ## #################################################################################
-        output$HM.morpheus <- renderMorpheus({
-          
-          if(!is.null(error$msg)) return()
-          
-          ## extract results
-          res = global.results$filtered
-          
-        
-          ## require at least three significant hits
-          validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
-          
-          
-          ## extract expression values
-          res <- res[, names(global.param$grp)]
-          res <- data.matrix(res)
-          
-          ## morpheus
-          withProgress({
-            setProgress(message = 'Creating morpheus widget...', detail= 'hold on')
-            morpheus(res, Rowv = F, Colv = F)
-          })
-          
-        })
+        # output$HM.morpheus <- renderMorpheus({
+        #   
+        #   if(!is.null(error$msg)) return()
+        #   
+        #   ## extract results
+        #   res = global.results$filtered
+        #   
+        # 
+        #   ## require at least three significant hits
+        #   validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
+        #   
+        #   
+        #   ## extract expression values
+        #   res <- res[, names(global.param$grp)]
+        #   res <- data.matrix(res)
+        #   
+        #   ## morpheus
+        #   withProgress({
+        #     setProgress(message = 'Creating morpheus widget...', detail= 'hold on')
+        #     morpheus(res, Rowv = F, Colv = F)
+        #   })
+        #   
+        # })
 
         ####################################################################################
         ##

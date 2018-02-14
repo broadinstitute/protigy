@@ -1691,15 +1691,7 @@ shinyServer(
         ##
         observeEvent(input$export.rmd,{
           
-          ## ####################################
-          ##         what to export
-          export.volc <- input$export.volc & !(global.param$which.test %in% c('mod F', 'none'))
-          export.cm <- input$export.cm
-          export.hm <- input$export.hm
-          export.pca <- input$export.pca
-          export.box <- input$export.box
-          
-            
+             
           ## label
           global.param$label <- gsub('_| |,|;|\\:|\\+|\\*', '-', input$label)
           #global.param$label <- input$label
@@ -1714,13 +1706,23 @@ shinyServer(
           ## groups to compare
           grp.comp <- unique( global.param$grp.comp )
           
+          ## ####################################
+          ##         what to export
+          export.volc <- input$export.volc & !(global.param$which.test %in% c('mod F', 'none'))
+          export.cm <- input$export.cm
+          export.hm <- input$export.hm
+          export.pca <- input$export.pca
+          export.box <- input$export.box
+          
+          
+          
           #######################################
           ##    extract expression values
           res = res[, names(grp)]
           
           ## ####################################
           ##        perform pca
-          if(export.pca){
+          if(export.pca & nrow(res) > 2){
             pca=my.prcomp2( res, grp )
             global.results$pca <- pca
           }

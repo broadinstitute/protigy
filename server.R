@@ -1714,6 +1714,7 @@ shinyServer(
           export.pca <- input$export.pca
           export.box <- input$export.box
           
+          #n.chunks <- sum( )
           
           
           #######################################
@@ -1735,6 +1736,8 @@ shinyServer(
           ## ##########################################################
           ##                       header
           ## ##########################################################
+          withProgress(message='Rmarkdown report', value=0, min = 0, max = 1, detail='hold on...',{
+            
           rmd <- paste('<a name="top"></a>
             \n#`r global.param$label` - analysis report
             \n***
@@ -1756,6 +1759,7 @@ shinyServer(
                       ',ifelse(export.cm, '\n     - [Correlation matrix](#corrmat)','' ),'
                       ',ifelse(export.box, '\n    - [Box-and-whisker plots](#boxplot)','' ),'
                        ', sep='')
+          #setProgress(value=0.1)
           ## ##########################################################
           ##                   data set
           ## ##########################################################
@@ -1818,7 +1822,7 @@ shinyServer(
           ## #######################################################
           ##                  results
           ## #######################################################
-          
+          #setProgress(0.2)
           ## ##########################################################
           ## Quantified features
           rmd <- paste(rmd, "
@@ -1870,7 +1874,7 @@ shinyServer(
                       \n[Back to top](#top)
                        \n", sep='\n')
           
-     
+          #setProgress(0.3)
           ## ##########################################################
           ##                 Heatmap
           ## ##########################################################
@@ -1918,7 +1922,7 @@ shinyServer(
               }
         
           }
-          
+          setProgress(0.5)
           ## ##########################################################
           ##                       volcano
           ## ##########################################################
@@ -1942,6 +1946,7 @@ shinyServer(
               \n", sep='\n')
             
           }
+          #setProgress(0.6)
           ## ############################################################
           ##                       PCA
           ## ############################################################
@@ -1995,7 +2000,7 @@ shinyServer(
             
             }
           } # end if export.pca
-          
+          #setProgress(0.7)
           ###############################################################
           ##            QC
           rmd <- paste(rmd, '
@@ -2042,7 +2047,7 @@ shinyServer(
                            , sep='\n')
            
           } # end if export.cm
-          
+          #setProgress(0.8)
           ## ##########################################################
           ##                Boxplots
           ## ##########################################################
@@ -2088,7 +2093,7 @@ shinyServer(
           } # end if export.cm
           
           
-          
+          #setProgress(0.9)
           ## ##########################################################
           ##                    session info
           ## ##########################################################
@@ -2107,28 +2112,11 @@ shinyServer(
           cat('## Rendering Rmarkdown file\n')
           writeLines(rmd, con=paste(global.param$session.dir, paste(fn.rmd, 'rmd', sep='.'), sep='/'))
           rmarkdown::render(paste(global.param$session.dir, paste(fn.rmd, 'rmd', sep='.'), sep='/'))
-
+          }) # end withProgress
           
           #fn.rmd <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
           global.param$rmd.name=paste(fn.rmd, 'html', sep='.')
 
-          
-          ## #####################################
-          ##         save session
-          #if(input$export.save.session){
-          #
-          #  ## convert to list
-          #  global.plotparam.imp <- reactiveValuesToList(global.plotparam)
-          #  global.input.imp <- reactiveValuesToList(global.input)
-          #  global.param.imp <- reactiveValuesToList(global.param)
-          #  global.results.imp <- reactiveValuesToList(global.results)
-          #  volc.imp <-  reactiveValuesToList(volc)
-            
-          #  fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
-          #  save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
-          #  
-          #  }
-          
           global.results$export.rmd <- TRUE
           updateTabsetPanel(session, 'mainPage', selected='Export')
         })
@@ -2918,7 +2906,7 @@ shinyServer(
               global.input$rdesc <- gct@rdesc
               
               global.input$cdesc <- gct@cdesc
-              rownames(global.input$cdesc) <- make.names(rownames(global.input$cdesc)) # convert to proper names
+              rownames(global.input$cdesc) <- make.names(make.unique( rownames(global.input$cdesc))) # convert to proper names
               
               global.param$cdesc.all <- global.param$cdesc.selection <- colnames(global.input$cdesc)
               

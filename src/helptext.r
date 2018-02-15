@@ -33,6 +33,10 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.0.4 February 15, 2018</b>
+<ul>
+<li>Misc: Robustified import of gct 1.3 files (row and column names are made unique).</li>
+</ul>
 <b>v0.8.0.3 February 14, 2018</b>
 <ul>
 <li>Misc: new session import/export features</li>

@@ -33,6 +33,7 @@ The app can run locally on your Desktop computer (Windows/Linux/MAC) or can depl
 * Heatmaps and cluster analysis
 * Volcano plots
 * Scatterplots
+* Principle component analysis
 * QC-plots
     + Pairs-plots
     + Correlation matrix
@@ -40,7 +41,7 @@ The app can run locally on your Desktop computer (Windows/Linux/MAC) or can depl
     + Missing values
 
 #### Proteomics-specific features
-* Automatic converison of protein accession numbers (UniProt) to gene symbols
+* Automatic converison of protein accession numbers (UniProt, RefSeq) to gene symbols
 * Integration of protein-protein interaction databases (human only)
     + InWeb 
     + BioGRID

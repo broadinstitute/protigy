@@ -33,6 +33,19 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.0.7 February 22, 2018</b>
+<ul>
+<li>Misc: PPI queries now work after export of results.</li>
+</ul>
+<b>v0.8.0.6 February 21, 2018</b>
+<ul>
+<li>UI: updated help text</li>
+<li>UI: Only first 20 characters of column names are shown when prompted to select ID column.</li>
+</ul>
+<b>v0.8.0.5 February 20, 2018</b>
+<ul>
+<li>Export: fixed a bug preventing the export of results as zip-archive.</li>
+</ul>
 <b>v0.8.0.4 February 15, 2018</b>
 <ul>
 <li>Misc: Robustified import of gct 1.3 files (row and column names are made unique).</li>
@@ -318,9 +331,17 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'id'){
 
         txt <- paste('<br><br><p><font size=\"4\"><b>Group assigment</b></br>
-Here you can download a template of an experimental design file. You can open this file in Excel and define the groups you want to compare. Replicate measurements have to be grouped under a single name in the \'Experiment\'-column. <mark>Please don\'t use special characters,like blanks or any punctuation, when defining these names!</mark></font></p>
-<br><p><font size=\"4\"><b>Pick id column</b></br>
-Choose a column from the list on the left that contains <b>unique</b> identifiers for the features in the data table. If the enntries are not unique, uniqueness will enforces by appending \"_1\". If the entries start with an UniProt accession, volcano plots and result table will contain direct links to the UniProt website.
+Here you can download a template of an experimental design file. You can open this file in Excel and define the groups you want to compare. Replicate measurements have to be grouped under a single name in the \'Experiment\'-column. <mark>Please don\'t use special characters, like blanks or any punctuation, when defining these names!</mark></font></p>
+<br><p><font size=\"4\"><b>Select ID column</b></br>
+Choose a column from the list on the left that contains <b>unique</b> identifiers for the features in the data table. If the enntries are not unique, uniqueness will enforces by appending \"_1\". Preferably, IDs should be unique protein accession numbers (e.g. <font face=\"Courier\">NP_073737</font>) or a combination of protein accession and residue number in case of PTM analysis (e.g. <font face=\"Courier\">NP_073737_S544s _1_1_544_544</font>).</p>  
+<br><p><font size=\"4\"><b>Automatic retrieval of gene symbols</b></br>
+If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\">UniProt</a> or <a href=\"https://www.ncbi.nlm.nih.gov/refseq/\" target=\"_blank_\">RefSeq</a> accession numbers, the software will try to map those ids to gene symbols. Currently, mapping of following organisms is supported:
+<ul>
+<li>human (<i>Homo sapiens</i>)</li>
+<li>mouse (<i>Mus musculus</i>)</li>
+<li>rat (<i>Rattus norvegicus</i>)</li>
+<li>zebrafish (<i>Danio rerio</i>)</li>
+</ul>
 </font></p>')
 
         ## render HTML
@@ -349,9 +370,8 @@ Choose a column from the list on the left that contains <b>unique</b> identifier
             if(global.param$analysis.run) return()
             if(!global.param$file.done) return()
 
-            ##if( !is.null(error$msg) ) return()
-
-            #if(is.null(global.input$id.col)) return()
+            if( is.null(global.param$id.col.value) ) return()
+          
             #if(global.input$id.col ==0) return()
             if(global.param$file.gct3) return()
             #if(global.param$id.done) return()  

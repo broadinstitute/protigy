@@ -352,20 +352,22 @@ shinyServer(
                                                              column(4, HTML('Gimme all!'))),
                                                     fluidRow(column(4, 
                                                            if(!global.results$export.rmd)
-                                                            actionButton('export.rmd', 'html', icon = icon("code", lib="font-awesome"))
+                                                             actionButton('export.rmd', 'html', icon = icon("code", lib="font-awesome"))
+                                                            #actionButton('export.rmd', 'html', icon = icon("code", lib="font-awesome"), style="color: #000000; background-color: #ffa09b; border-color: #c7c9c7")
                                                            else
-                                                            downloadButton('download.rmd', 'html') 
+                                                             downloadButton('download.rmd', 'html', style="color: #00a805") 
+                                                            #downloadButton('download.rmd', 'html', style="color: #000000; background-color: #b7ff9b; border-color: #c7c9c7") 
                                                            ),
                                                     column(4,
                                                            if(!global.results$export.xls)
                                                             actionButton('export.xls', 'xslx', icon = icon("table", lib="font-awesome"))
                                                            else
-                                                            downloadButton('download.xls', 'xslx')
+                                                            downloadButton('download.xls', 'xslx', style="color: #00a805")
                                                            ),
                                                     column(4, if(!global.results$export.results)
                                                       actionButton('export.results', 'zip', icon = icon("archive", lib="font-awesome"))
                                                       else
-                                                        downloadButton('download.results', 'zip'))
+                                                        downloadButton('download.results', 'zip', style="color: #00a805"))
                                                   )),
                                                   status = "primary",
                                                   solidHeader = T,
@@ -1352,15 +1354,20 @@ shinyServer(
             if(length(id.idx) > 0){
                 tab.colnames <- c(tab.colnames[id.idx], tab.colnames[-id.idx])
             }
-
+            tab.colnames.names <- names(tab.colnames)
+            names(tab.colnames) <- NULL
+           # cat(tab.colnames[1:4], '\n')
             ## radio button to pick id column
             list(
                 ## experimental design
-                HTML('<font size=\"3\"><b>Export experimental design file:</b></font><br>'),
-                downloadButton("exportTemplate", 'Export'),
+                HTML('<font size=\"3\"><b>Export experimental design file:</b></font>\n<br>'),
+                HTML('<br>'),
+                downloadButton("exportTemplate", 'Export',  style="color: #000000", width='100'),
                 HTML('<br><hr size=\"5\">'),
-                radioButtons( "id.col.value", "Choose ID column", tab.colnames),
-                actionButton("id.col", 'OK')
+                actionButton("id.col", 'Next', width='100'),
+                HTML('<hr size=\"5\">'),
+                radioButtons( inputId = "id.col.value", label = "Choose ID column", choiceValues = tab.colnames.names, choiceNames = tab.colnames )
+                
             )
 
         })
@@ -1380,7 +1387,7 @@ shinyServer(
             list(
                 ## upload template
                 fileInput("exp.file", "Upload experimental design file", accept=c('text/plain','.txt')),
-                actionButton( 'update.grp', 'Next')
+                actionButton( 'update.grp', 'Next', width='100')
             )
         })
 
@@ -1448,17 +1455,6 @@ shinyServer(
                     
                   ),
                   
-                  # if(length(unique(global.param$grp.comp.all)) > 10 | length( unique(global.param$cdesc.all))  > 10){
-                  #   fluidRow(
-                  #     if(length(unique(global.param$grp.comp.all)) > 10){
-                  #       column(6, actionButton('modal.toggle.groups', 'toggle all'))
-                  #     } else {column(6)},
-                  #     if(length( unique(global.param$cdesc.all))){
-                  #       column(6, actionButton('modal.toggle.anno', 'toggle all'))
-                  #     } else {column(6)}
-                  #   )
-                  # },
-                  # 
                   fluidRow(
                     #if(length(unique(global.param$grp.comp.all)) > 10){
                     column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection))),
@@ -1502,14 +1498,6 @@ shinyServer(
             global.param$anno.col.color <- anno.col.color[ c(cdesc.selection, global.param$grp.gct3 ) ]
           }
           
-          #save(cdesc.selection, file='tmp.RData')
-          ## update class vector
-          #cdesc.selection <- global.param$cdesc.all
-          #grp.unique <- unique( unlist( strsplit( sub('\\.vs\\.', ' ', input$select.groups), ' ')))
-          #grp.selection <- grp.selection[ grep(paste('^', paste(grp.unique, collapse='|'), '$', sep=''), grp.selection) ]
-          #global.param$cdesc.selection <- cdesc.selection
-          
-    
         })
         
         # ##################################################
@@ -1932,7 +1920,7 @@ shinyServer(
               rmd <- paste(rmd, "
               \n***
               \n### Volcano Plot <a name=\"volcanos\"></a>
-              \n```{r volcano, echo=F, fig.width=6, fig.height=6}
+              \n```{r volcano, echo=F, fig.width=7, fig.height=7}
               \nwithProgress(message='Exporting', detail='volcano plot',{
               \nfor(j in 1:length(grp.comp)){
               \n  local({
@@ -2118,6 +2106,11 @@ shinyServer(
           global.param$rmd.name=paste(fn.rmd, 'html', sep='.')
 
           global.results$export.rmd <- TRUE
+          
+          ## trigger selectize update
+          global.param$update.ppi.select <- TRUE
+          global.param$update.ppi.select.scat <- TRUE
+          
           updateTabsetPanel(session, 'mainPage', selected='Export')
         })
         
@@ -2192,6 +2185,12 @@ shinyServer(
           }
           if(double.check)
             saveSession()
+          
+          ## trigger selectize update
+          global.param$update.ppi.select <- TRUE
+          global.param$update.ppi.select.scat <- TRUE
+          
+          
           updateTabsetPanel(session, 'mainPage', selected='Export')
           
         })
@@ -2241,23 +2240,10 @@ shinyServer(
               
             })
           
-          ## #####################################
-          ##         save session
-          # if(input$export.save.session){
-          #   savePlotparams()
-          #   
-          #   ## convert to list
-          #   global.plotparam.imp <- reactiveValuesToList(global.plotparam)
-          #   global.input.imp <- reactiveValuesToList(global.input)
-          #   global.param.imp <- reactiveValuesToList(global.param)
-          #   global.results.imp <- reactiveValuesToList(global.results)
-          #   volc.imp <-  reactiveValuesToList(volc)
-          #   
-          #   fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
-          #   save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
-          #   
-          # }
-          # 
+          ## trigger selectize update
+          global.param$update.ppi.select <- TRUE
+          global.param$update.ppi.select.scat <- TRUE
+          
           global.results$export.xls <- TRUE
           updateTabsetPanel(session, 'mainPage', selected='Export')
           
@@ -2612,47 +2598,6 @@ shinyServer(
                 })
             }
 
-            # #########################################################
-            # ##          save session parameters
-            # #########################################################
-            # global.input.imp <- reactiveValuesToList(global.input)
-            # global.param.imp <- reactiveValuesToList(global.param)
-            # global.results.imp <- reactiveValuesToList(global.results)
-            # 
-            # #########################################################
-            # ## save current plotting parameters
-            # #########################################################
-            # 
-            # ## heatmap
-            # global.plotparam$hm.scale <- input$hm.scale
-            # global.plotparam$hm.clust <- input$hm.clust
-            # global.plotparam$hm.cexCol <- input$hm.cexCol
-            # global.plotparam$hm.cexRow <- input$hm.cexRow
-            # global.plotparam$hm.max <- input$hm.max
-            # global.plotparam$hm.max.val <- input$hm.max.val
-            # ## pca
-            # global.plotparam$pca.x <- input$pca.x
-            # global.plotparam$pca.y <- input$pca.y
-            # global.plotparam$pca.z <- input$pca.z
-            # ## multiscatter
-            # global.plotparam$ms.max <- input$ms.max
-            # global.plotparam$ms.min <- input$ms.min
-            # global.plotparam$ms.max <- input$ms.max
-            # ## correlation matrix
-            # global.plotparam$cm.upper <- input$cm.upper
-            # global.plotparam$cm.lower <- input$cm.lower
-            # global.plotparam$cm.numb <- input$cm.numb
-            # ## fanplot
-            # global.plotparam$HC.fan.show.tip.label <- input$HC.fan.show.tip.label
-            # global.plotparam$HC.fan.tip.cex <- input$HC.fan.tip.cex
-            # 
-            # 
-            # ## convert to list
-            # global.plotparam.imp <- reactiveValuesToList(global.plotparam)
-            # 
-            # ## volcano coordinates
-            # volc.imp <-  reactiveValuesToList(volc)
-            # 
             #################################
             ##       name of zip archive
             ## no label present
@@ -2671,8 +2616,10 @@ shinyServer(
             #########################################################
             ##   export parameters as small text file
             #########################################################
+            global.param.imp <- reactiveValuesToList(global.param)
             params <- global.param.imp[c('log.transform', 'norm.data', 'filt.data',  'repro.filt.val', 'sd.filt.val', 'which.test', 'filter.type', 'filter.value')]
-
+            #params <- global.param[[c('log.transform', 'norm.data', 'filt.data',  'repro.filt.val', 'sd.filt.val', 'which.test', 'filter.type', 'filter.value')]]
+            
             params.txt <- unlist(lapply(params, paste, collapse=';'))
             params.txt <-  paste(names(params.txt),params.txt, sep='\t')
 
@@ -2732,12 +2679,13 @@ shinyServer(
               all.zip <- all.zip[ -which.max(file.info(all.zip)$ctime) ]
               file.remove(all.zip)
             }
-            #
-
-            # remove Rdata file, if session won't be saved            
-            #if(!input$export.save.session)
-            #    file.remove(fn.tmp)
-
+            # 
+  
+            ## trigger selectize update
+            global.param$update.ppi.select <- TRUE
+            global.param$update.ppi.select.scat <- TRUE
+            
+            
              ###############################################################
              ## flag export
              global.results$export.results=TRUE
@@ -2773,7 +2721,7 @@ shinyServer(
 
             ## store name of id column
             global.param$id.col.value <- input$id.col.value
-
+cat('id: ', global.param$id.col.value, '\n')
             ## update 'input$id.col'
             global.input$id.col <- input$id.col
 
@@ -4227,8 +4175,9 @@ shinyServer(
         ## - server side  rendering of selectizeInput
         ## ##################################################################
         observe({
+            #cat('now:', global.param$update.ppi.select, '\n')
             if( !global.param$update.ppi.select ) return()
-            ##cat('now:', global.param$update.ppi.select, '\n')
+            #cat('now:', global.param$update.ppi.select, '\n')
 
             grp.comp <- unique( global.param$grp.comp )
 
@@ -4660,6 +4609,7 @@ shinyServer(
             ## unfiltered data set
             res = as.data.frame( global.results$data$output )
 
+            
             ## #############################
             ## p-values
             if(global.param$which.test != 'mod F'){

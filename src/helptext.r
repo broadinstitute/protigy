@@ -33,6 +33,12 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.0.9 February 24, 2018</b>
+<ul>
+<li>GCT 1.3: robuistified import of GCT 1.3 files. Row and column ids are made unique.</li>
+<li>Volcano: Labeled points can be removed individually from the table.</li>
+<li>Table: page overhaul</li>
+</ul>
 <b>v0.8.0.7 February 22, 2018</b>
 <ul>
 <li>Misc: PPI queries now work after export of results.</li>

@@ -398,106 +398,7 @@ shinyServer(
 
             ) # end tabPanel
             
-            # export.tab <- tabPanel('Export',
-            #                        ##
-            #                        if(!(global.results$export.results)){
-            #                           fluidRow(
-            #                              column(width=6,
-            #                                     box(title="Session name",
-            #                                         fluidPage(
-            #                                           fluidRow(HTML('Please specify a name for the current session which will be used in filnames and to identify the session on the server. If checkbox <i>Save as session</i> is enabled, the current state of the session is saved on the server.')),
-            #                                           fluidRow(
-            #                                             textInput( 'label', '', value=global.param$label, width=200)
-            #                                           ),
-            #                                           fluidRow(
-            #                                             checkboxInput('export.save.session', 'Save as session', value=F)
-            #                                           )
-            #                                         ),
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL),
-            # 
-            #                                     box(title="Export results", actionButton('export.results', 'Export/Save session'),
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL)
-            #                                     ),
-            #                              column(width=6,
-            #                                     box(title="Specify what to export:",
-            #                                         checkboxInput('export.toggle.all', 'Toggle all', value=F),
-            #                                         tags$hr(),
-            #                                         checkboxInput('export.hm', 'Heatmap',value=T),
-            #                                         checkboxInput('export.box', 'Boxplots',value=T),
-            #                                         checkboxInput('export.volc', 'Volcano plot',value=T),
-            #                                         checkboxInput('export.phist', 'P-value histogram',value=T),
-            #                                         checkboxInput('export.pca', 'PCA',value=T),
-            #                                         checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
-            #                                         checkboxInput('export.ms', 'Multiscatter',value=T),
-            #                                         checkboxInput('export.excel', 'Excel sheet',value=T),
-            #                                         checkboxInput('export.cm', 'Correlation matrix',value=T),
-            #                                         checkboxInput('export.profile', 'Profile plot',value=T),
-            # 
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL
-            # 
-            #                                         )
-            #                                     )
-            #                            )
-            # 
-            #                        } else {
-            #                            fluidRow(
-            #                              column(width=6,
-            #                                     box(title="Session name",
-            #                                         fluidPage(
-            #                                           fluidRow('Please specify a name for the current session which will be used as filname. If checkbox <i>Save as session</i> is enabled, the current state of the session is saved on the server. '),
-            #                                           fluidRow(
-            #                                             textInput( 'label', '', value=global.param$label, width=200)
-            #                                             ),
-            #                                           fluidRow(
-            #                                             checkboxInput('export.save.session', 'Save as session', value=F)
-            #                                             )
-            #                                         ),
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL
-            #                                         ),
-            # 
-            #                                     box(title="Export results", actionButton('export.results', 'Export (.zip)'),
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL),
-            # 
-            #                                     box(title='Download results', downloadButton('download.results', 'Download (.zip)'),
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL)
-            #                                     ),
-            #                              column(width=6,
-            #                                     box(title="Specify what to export",
-            #                                         checkboxInput('export.toggle.all', 'Toggle all', value=F),
-            #                                         tags$hr(),
-            #                                         checkboxInput('export.hm', 'Heatmap',value=T),
-            #                                         checkboxInput('export.box', 'Boxplots',value=T),
-            #                                         checkboxInput('export.volc', 'Volcano plot',value=T),
-            #                                         checkboxInput('export.phist', 'P-value histogram',value=T),
-            #                                         checkboxInput('export.pca', 'PCA',value=T),
-            #                                         checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
-            #                                         checkboxInput('export.ms', 'Multiscatter',value=T),
-            #                                         checkboxInput('export.excel', 'Excel sheet',value=T),
-            #                                         checkboxInput('export.cm', 'Correlation matrix',value=T),
-            #                                         checkboxInput('export.profile', 'Profile plot',value=T),
-            # 
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL
-            # 
-            #                                         )
-            #                                     )
-            #                            )
-            #                        } ## end else
-            #                        )
-
+         
             ## ##########################################
             ## SUMMARY
             ##    some general numbers on the
@@ -666,10 +567,13 @@ shinyServer(
                                                                  )),
                                                       ## table
                                                       column(width=4,
-                                                             box(width=NULL,  title='Selected points', status = 'primary', solidHeader = T,
-                                                                 actionButton(inputId=paste('volc.tab.reset', groups.comp[i], sep='.'), label='Reset'),
+                                                             box(width=NULL,  title='Selection', status = 'primary', solidHeader = T,
+                                                                 fluidRow(
+                                                                 column(6, actionButton(inputId=paste('volc.tab.reset', groups.comp[i], sep='.'), label='Remove all')),
+                                                                 column(6, actionButton(inputId=paste('volc.tab.reset.select', groups.comp[i], sep='.'), label='Remove selected'))
+                                                                 ),
                                                                  tags$hr(),
-                                                                 tableOutput(paste('volc.tab.selected', groups.comp[i], sep='.'))
+                                                                 dataTableOutput(paste('volc.tab.selected', groups.comp[i], sep='.'))
                                                                  )))
                                               ) ## end fluidPage
     
@@ -757,7 +661,8 @@ shinyServer(
             ##               PCA
             ##
             #############################################
-            pca.tab2 <- vector('list', 3)
+            pca.tab2 <- list()
+            
             ## ##################################################
             ## Run PCA
             ## ##################################################
@@ -807,22 +712,22 @@ shinyServer(
             ## ####################################################################
             ## Loadings plot
             ## ####################################################################
-            pca.tab2[[3]] <- tabPanel('Loadings',
-                                      fluidPage(
-                                        fluidRow(
-                                            column(width=12,
-                                            box(title='Loadings by Ozan Aygun', solidHeader=T, status='primary', width=1000,## height=min( nrow(global.results$filtered), global.plotparam$pca.load.topn )*20+50,
-                                                sliderInput("pca.load.topn", "Choose number of loadings", 1, 100, 20),
-                      ##                          plotOutput("pca.loadings")##, width=1000, height=min(nrow(global.results$filtered), global.plotparam$pca.load.topn )*20 )
-                      ##                        ),
-                      ##                      box(title = "PCA loadings scatterplots",solidHeader = T, status = 'primary',width = 1000,
-                                                background = "navy",
-                                                plotOutput("scatter.pca.loadings")
-                                            ))
-
-                                        )
-                                      )
-            )
+            #pca.tab2[[3]] <- tabPanel('Loadings',
+            #                          fluidPage(
+            #                            fluidRow(
+            #                                column(width=12,
+            #                                box(title='Loadings by Ozan Aygun', solidHeader=T, status='primary', width=1000,## height=min( nrow(global.results$filtered), global.plotparam$pca.load.topn )*20+50,
+            #                                    sliderInput("pca.load.topn", "Choose number of loadings", 1, 100, 20),
+            #          ##                          plotOutput("pca.loadings")##, width=1000, height=min(nrow(global.results$filtered), global.plotparam$pca.load.topn )*20 )
+            #          ##                        ),
+            #          ##                      box(title = "PCA loadings scatterplots",solidHeader = T, status = 'primary',width = 1000,
+            #                                    background = "navy",
+            #                                    plotOutput("scatter.pca.loadings")
+            #                                ))
+            #
+            #                            )
+            #                          )
+            #)
 
 
             ## ###########################################
@@ -831,7 +736,7 @@ shinyServer(
             ## ###########################################
             table.tab <- tabPanel('Table',
                      fluidPage(
-                         fluidRow(column(12, tags$h3('Result table (filtered):'))),
+                         fluidRow(column(12, tags$h3(paste('Result table')))),
                          fluidRow(column(12, tags$br())),
                          fluidRow(column(12, dataTableOutput("tableprev")))
                      )
@@ -988,8 +893,9 @@ shinyServer(
                        #######################################
                        ##              insert PCA
                        #######################################
-                       navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
-
+                       #navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
+                       #navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
+                      navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]]),
                        #######################################
                        ##           insert table preview
                        #######################################
@@ -1030,7 +936,7 @@ shinyServer(
                       #######################################
                       ##              insert PCA
                       #######################################
-                      navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
+                      navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]]),
                       
                       #######################################
                       ##           insert table preview
@@ -2839,12 +2745,40 @@ cat('id: ', global.param$id.col.value, '\n')
                 validate(need(class(gct) != 'try-error', 'Error importing GCT 1.3 file.'))
               }
               
+              ## #################################################
+              ## robustify ids
+              gct@rid <- make.unique(make.names(gct@rid))
+              rownames(gct@rdesc) <- rownames(gct@mat) <- gct@rid
+              gct@cid <- make.unique(make.names(gct@cid))
+              rownames(gct@cdesc) <- colnames(gct@mat) <- gct@cid
+              
               # expression table
               tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
+              rownames(tab) <-tab$id
               
+              ## sample names
               colnames.tmp <- chopString(colnames(tab), STRLENGTH)
               names(colnames.tmp) <- colnames(tab)
               
+               
+              # id column 
+              global.param$id.col.value='id'
+              global.param$id.done=T
+              
+              # robustify ids
+              #ids <- make.unique( as.character(tab[, global.param$id.col.value] ), sep='_')
+              
+              ## replace values in id column
+              #tab[, global.param$id.col.value] <- ids
+              ## use id as rownames
+              #rownames(tab) <- ids
+              
+              ## #################
+              ## map to gene names
+              map.res <- mapIDs(tab$id)
+              global.results$keytype <- map.res$keytype
+              global.results$id.map <- map.res$id.map
+             
               ## store values
               global.input$table <- global.input$table.org <- tab
               global.input$file <- input$file
@@ -2852,29 +2786,12 @@ cat('id: ', global.param$id.col.value, '\n')
               
               # meta data
               global.input$rdesc <- gct@rdesc
-              
               global.input$cdesc <- gct@cdesc
-              rownames(global.input$cdesc) <- make.names(make.unique( rownames(global.input$cdesc))) # convert to proper names
+              #rownames(global.input$cdesc) <- make.names(make.unique( rownames(global.input$cdesc))) # convert to proper names
               
               global.param$cdesc.all <- global.param$cdesc.selection <- colnames(global.input$cdesc)
               
-              # id column 
-              global.param$id.col.value='id'
-              global.param$id.done=T
-              
-              # robustify ids
-              ids <- make.unique( as.character(tab[, global.param$id.col.value] ), sep='_')
-              ## replace values in id column
-              tab[, global.param$id.col.value] <- ids
-              ## use id as rownames
-              rownames(tab) <- ids
-              
-              ## #################
-              ## map to gene names
-              map.res <- mapIDs(ids)
-              global.results$keytype <- map.res$keytype
-              global.results$id.map <- map.res$id.map
-              
+               
               # flag
               global.param$file.gct3 <- T
               
@@ -3136,8 +3053,20 @@ cat('id: ', global.param$id.col.value, '\n')
             names(grp)=grp.exprs$Column.Name
 
             ## update input table, keep id and expression columns
-            global.input$table <- global.input$table[ , c(global.param$id.col.value, names(grp))]
-
+            tab <- global.input$table[ , c(global.param$id.col.value, names(grp))]
+            
+            ## #################################
+            ## remove NA rows
+            na.row.idx <- apply(tab[, names(grp)], 1, function(x) sum(is.na(x))/length(x) )
+            na.row.idx <- which(na.row.idx == 1)
+            if(length(na.row.idx) > 0){
+              tab <- tab[-na.row.idx, ]
+              global.input$NA.rows <- length(na.row.idx)
+            }
+            
+            #global.input$table <- global.input$table[ , c(global.param$id.col.value, names(grp))]
+            global.input$table <- tab
+            
             ################################
             ## update number of groups
             global.param$N.grp <- length(unique( na.omit(grp)) )
@@ -3888,8 +3817,13 @@ cat('id: ', global.param$id.col.value, '\n')
                 N.columns=length(grp),
                 N.groups=N.grp
             ))
+            
+            if(!is.null(global.input$NA.row)){
+              sum.tab[1,1] <- paste(sum.tab[1,1], '(no quant: ',global.input$NA.row,')')
+            }
+            
             ##View(sum.tab)
-            sum.tab <- data.frame(id=c('Rows', 'Expression columns', 'Groups'), sum.tab)
+            sum.tab <- data.frame(id=c('No. features', 'No. expression columns', 'No. groups'), sum.tab)
             colnames(sum.tab) <- c('', 'Number')
             ##rownames(sum.tab) <- c('Rows', 'Expression columns', 'Groups')
 
@@ -4061,14 +3995,10 @@ cat('id: ', global.param$id.col.value, '\n')
             n.miss[names(na.row.idx)] <- na.row.idx
             n.miss <- cumsum(n.miss)
             
-            p <- plot_ly( x=as.numeric(names(n.miss)), y=n.miss, type='scatter', mode='lines+markers', marker=list(color = 'black'), line=list(color='black') )
-            p <- layout(p, title=paste('Fully quantified features:', n.miss[1]), xaxis=list(title=paste('# missing values')), yaxis=list(title=paste('# quantified features')))
+            p <- plot_ly( x=as.numeric(names(n.miss))/ncol(dat)*100, y=n.miss, type='scatter', mode='lines+markers', marker=list(color = 'black'), line=list(color='black') )
+            p <- layout(p, title=paste('Fully quantified features:', n.miss[1]), xaxis=list(title=paste('Percent missing'), showspikes=T, spikecolor='grey60'), yaxis=list(title=paste('# quantified features'), showspikes=T, spikecolor='grey60'))
             
-           # save(na.row.idx, dat, n.miss, file='tmp.RData')
-            
-            #p <- plot_ly( x=names(na.row.idx)[2:length(na.row.idx)], y=na.row.idx[2:length(na.row.idx)], type='bar' )
-            #p <- layout(p, title=paste('Fully quantified features:', na.row.idx[1]), xaxis=list(title=paste('# missing values')), yaxis=list(title=paste('# data rows')))
-            p
+           p
         })
         ## #############################################################################
         ##
@@ -4136,8 +4066,7 @@ cat('id: ', global.param$id.col.value, '\n')
   
             tab <- global.results$filtered
             colnames(tab) <- sub('^X','',colnames(tab))
-            ##rownames(tab) <- tab[, input$id.col.value]
-
+           
             ## append annotation columns
             table.anno <- global.input$table.anno
 
@@ -4146,22 +4075,27 @@ cat('id: ', global.param$id.col.value, '\n')
             if(!is.null(table.anno)){
                 if(is.null(dim(table.anno)))
                     table.anno <- data.frame(table.anno)
-               ## View(tab)
-               ## View(table.anno)
-                ##tab <- cbind(tab, table.anno[ rownames(tab), ])
+
                 tab <- left_join(tab, table.anno, 'id')
             }
 
             if(nrow(tab) > 0){
-                ## add links to GeneCard
+              
+                ## add links to GeneCard/UniProt
                 up.id <- tab$id
                 up.link <- link.db(up.id, global.results$keytype)
                 tab[, 'id'] <- up.link
             }
-            tab
+            datatable(tab, style = 'bootstrap', 
+                      width = 1000, escape = F,  filter='top', 
+                      rownames=F, options = list( pageLength = 10, scrollX = T, selection='none',
+                                                  fnRowCallback = JS("function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {ind = 2; $('td:eq('+ind+')', nRow).html( (aData[ind]).toFixed(2) );}")
+                                                  )
+                      )
+            #tab
 
-        }, options = list( pageLength = 20, scrollX = T), escape=F, filter='top', rownames=F)
-
+        #}, options = list( pageLength = 10, scrollX = T), escape=F, filter='top', rownames=F, server = T)
+        }, server=T)
 
         ## ################################################################################
         ##
@@ -4380,13 +4314,37 @@ cat('id: ', global.param$id.col.value, '\n')
                       volc[[paste('x', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('y', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('xy', grp.comp[my_i], sep='.')]] <- NULL
+                      volc[[paste('text', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('P.Value', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- NULL
                   })
-
+                    
+                  
+                  ## ######################################################
+                  ##       remove selected rows from table and volcano labels  
+                  observeEvent(input[[paste('volc.tab.reset.select', grp.comp[my_i], sep='.')]],{
+                      ## if so remove from the list
+                      #ids <- volc[[paste('text', grp.comp[my_i], sep='.')]]
+                      
+                      #idx <- c()
+                      #for(l in 1:length(ids))
+                      #  idx[l] = input[[ paste('rm', ids[l], grp.comp[my_i], sep='.') ]] 
+                      
+                      idx=input[[ paste( paste('volc.tab.selected', grp.comp[my_i], sep='.'), 'rows_selected', sep='_' )]]
+                      #cat('test', idx, '---\n')
+                      volc[[paste('x', grp.comp[my_i], sep='.')]] <- volc[[paste('x', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('y', grp.comp[my_i], sep='.')]] <- volc[[paste('y', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('text', grp.comp[my_i], sep='.')]] <- volc[[paste('text', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('xy', grp.comp[my_i], sep='.')]] <- volc[[paste('xy', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('P.Value', grp.comp[my_i], sep='.')]] <- volc[[paste('P.Value', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]][-idx]
+                      
+                      })
+                    
+                    
                   ## ####################################################
                   ## table of selected features
-                  output[[paste('volc.tab.selected', grp.comp[my_i], sep='.')]] <- renderTable({
+                  output[[paste('volc.tab.selected', grp.comp[my_i], sep='.')]] <- DT::renderDataTable({
 
                       if(is.null(volc[[paste('x', grp.comp[my_i], sep='.')]])) return()
                       if(length(volc[[paste('x', grp.comp[my_i], sep='.')]]) == 0) return()
@@ -4395,14 +4353,36 @@ cat('id: ', global.param$id.col.value, '\n')
 
                       id.tmp <- volc[[paste('text', grp.comp[my_i], sep='.')]]
 
-                      dat.select = data.frame(id=unlist(volc[[paste('text', grp.comp[my_i], sep='.')]]), logFC=unlist(volc[[paste('x', grp.comp[my_i], sep='.')]]), P.Value=unlist(volc[[paste('P.Value', grp.comp[my_i], sep='.')]]), adj.P.Value=unlist(volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]]) )
+                      dat.select = data.frame(id=unlist(volc[[paste('text', grp.comp[my_i], sep='.')]]), logFC=round( unlist(volc[[paste('x', grp.comp[my_i], sep='.')]]), 2), P.Value=round( unlist(volc[[paste('P.Value', grp.comp[my_i], sep='.')]]),3), adj.P.Value=round( unlist(volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]]), 3) )
                       up.id <- dat.select[, 'id']
-                      #up.link <- paste("<a href='http://www.uniprot.org/uniprot/", sub('(_|,|;|\\.).*', '', up.id),"' target='_blank'>", up.id, "</a>", sep='')
-                      up.link <- link.db(up.id, global.results$keytype) 
+                      up.link <- link.db(up.id, global.results$keytype)
                       dat.select[, 'id'] <- up.link
 
-                      dat.select
-                  }, sanitize.text.function = function(x) x)
+                      #rm.button <- c()
+                      #for(l in 1:length(up.id)){
+                      #  rm.button[l] <- sprintf(
+                      #  "<input type=\"checkbox\" name=\"%s\" value=''/>",
+                      #  paste('rm', up.id[l], grp.comp[my_i], sep='.')
+                      #)
+                      #}
+                      #dat.select <- data.frame(Remove=rm.button, dat.select)
+                      #colnames(dat.select)[1] <- ""
+                      datatable(dat.select, escape=F, rownames = F, filter = 'none',autoHideNavigation = T,
+                                options = list( 
+                                  searching=F, paging=F, selection='multiple'#, dom='t', server=FALSE
+                                  #,callback = JS("table.rows().every(function(i, tab, row) {
+                                  #                var $this = $(this.node());
+                                  #              $this.attr('id', this.data()[0]);
+                                  #              $this.addClass('shiny-input-radiogroup');
+                                  #            });
+                                  #            Shiny.unbindAll(table.table().node());
+                                  #            Shiny.bindAll(table.table().node());")
+                                
+                                #                fnRowCallback = I("function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {ind = 2; $('td:eq('+ind+')', nRow).html( (aData[ind]).toFixed(2) );}")
+                                  )
+                                )
+                      #dat.select
+                  } )#, sanitize.text.function = function(x) x)
 
               }) ## end local
 
@@ -5357,6 +5337,14 @@ cat('id: ', global.param$id.col.value, '\n')
             } else {
                  withProgress({
                     setProgress(message = 'Processing...', detail= 'Generating Heatmap')
+                   #grp=global.param$grp
+                   #grp.col=global.param$grp.colors
+                   #grp.col.legend=global.param$grp.colors.legend
+                   #hm.clust=input$hm.clust
+                   #hm.title=hm.title
+                   #hm.scale=input$hm.scale
+                   #save(res, grp, grp.col, grp.col.legend,  hm.clust, hm.title, hm.scale, anno.col, anno.col.color, file='hm.RData')
+                   
                     #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
                    plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color)
                    })

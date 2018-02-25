@@ -49,7 +49,7 @@ The app can run locally on your Desktop computer (Windows/Linux/MAC) or can depl
 
 #### Export of analysis results
 * Results comprise high-quality figures (pdf), Excel-sheets and the R-workspace itself.
-* All results can be downloaded as single zip-file. 
+* All results can be downloaded as single zip-file.
 
 
 #### Shiny Server Pro specific features

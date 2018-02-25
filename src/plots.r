@@ -140,6 +140,8 @@ plotHM <- function(res,
     # heatmaply
     names(anno.col.color) <- NULL
     anno.col.color <- unlist(anno.col.color)
+    #cat(anno.col.color)
+    anno.col.color <- anno.col.color[grp]
     # save(anno.col.color, anno.col, res, file='tmp.RData')
     heatmaply(res, labCol = NA, margins = margins,
               labRow = NA, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
@@ -215,6 +217,10 @@ HCluster <- function(res, hm.clust, hc.method='ward.D2', hc.dist=c('euclidean', 
   hc.dist <- match.arg(hc.dist)
   cor.dist <- ifelse(hc.dist == 'pearson', T, F)
   
+  ## remove features not quantified at all
+  #valid.idx.row <- apply(res, 1, function(x) ifelse(sum(is.na(x)/length(x)) < 1, T, F) )
+  #res <- res[valid.idx.row, ]  
+
   #########################
   ## column clustering
   if(hm.clust == 'column'){
@@ -226,6 +232,7 @@ HCluster <- function(res, hm.clust, hc.method='ward.D2', hc.dist=c('euclidean', 
       colv.dist <- as.matrix(as.dist(1- cor(res, use='pairwise.complete')))
     else
       colv.dist = dist(t(res), method=hc.dist)
+    
     na.idx.col <- which(apply(as.matrix(colv.dist), 1, function(x) sum(is.na(x))) > 0)
     
     if(length(na.idx.col)> 0){
@@ -238,6 +245,7 @@ HCluster <- function(res, hm.clust, hc.method='ward.D2', hc.dist=c('euclidean', 
     ## #################################
     ## row clustering
   } else if( hm.clust == 'row'){
+    
     #rowv.dist <- as.matrix(dist(res, method=hc.dist, diag=T, upper=T))
     if(cor.dist)
       rowv.dist <- as.matrix(as.dist(1- cor(t(res), use='pairwise.complete')))
@@ -249,6 +257,7 @@ HCluster <- function(res, hm.clust, hc.method='ward.D2', hc.dist=c('euclidean', 
       rowv.dist <- rowv.dist[-na.idx.row, ]
       rowv.dist <- rowv.dist[, -na.idx.row]
     }
+    save(rowv.dist, res, file='tmp.RData')
     #Rowv=hclust(as.dist(rowv.dist), method=hc.method)
     Rowv= fastcluster::hclust(as.dist(rowv.dist), method=hc.method)
     Colv=FALSE

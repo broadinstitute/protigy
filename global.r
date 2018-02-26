@@ -23,23 +23,15 @@
 ################################################################################################################
 
 ## R package managing tool
-## - the only package that is required to install manually
 if (!require("pacman")) install.packages ("pacman")
 require('pacman')
-
-
-source('src/modT.r')
-source('src/pheatmap.r')
-source('src/helptext.r')
-source('src/gct-io.r')
-source('src/plots.r')
-
+p_load (RColorBrewer)
 
 #################################################################
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.0.9"
+VER="0.8.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -73,9 +65,11 @@ PIWIKURL <<- '//shiny-proteomics.broadinstitute.org/piwik/'
 #################################################################
 ## load required packages
 #################################################################
+
 p_load(shiny)
 p_load(shinydashboard)
 p_load(shinyjs)
+## colors
 
 ## heatmap
 ##p_load(pheatmap)
@@ -100,8 +94,7 @@ p_load(knitr)
 ## moderated tests
 p_load(limma)
 p_load(statmod)
-## colors
-p_load (RColorBrewer)
+
 ## multiscatter
 p_load(hexbin)
 p_load(Hmisc)
@@ -145,6 +138,15 @@ p_load(org.Dr.eg.db)
 
 # Required for cmpaR gctx file format. Fails to install on shiny-proteomics, but not reuqired as of now.
 #p_load (rhdf5) 
+
+
+
+source('src/modT.r')
+source('src/pheatmap.r')
+source('src/helptext.r')
+source('src/gct-io.r')
+source('src/plots.r')
+
 
 ## #####################################
 ## CSS for loading animantion
@@ -744,7 +746,7 @@ my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
             if(length(not.repro.idx) > 0)
                 tab[not.repro.idx, gg.idx] <- NA
 
-            values.filt[[gg]] <- not.repro.idx
+            values.filt[[gg]] <- rownames(tab)[ not.repro.idx ]#not.repro.idx
         }
         ########################################
         ## if there are two replicates use

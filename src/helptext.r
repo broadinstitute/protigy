@@ -33,9 +33,17 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.1 February 26, 2018</b>
+<ul>
+<li>Misc: simplified installation under Windows OS.</li>
+<li>Misc: if Perl and/or Pandoc are not availbale the app will show a corresponding messsage.</li>
+<li>PCA: "Run me first"-tab became obsolete.</li>
+<li>Scatterplots: added trace of filtered values for reprodicibility filter.</li>
+<li>Scatterplots: separated data tracks and added legend.</li>
+</ul>
 <b>v0.8.0.9 February 24, 2018</b>
 <ul>
-<li>GCT 1.3: robuistified import of GCT 1.3 files. Row and column ids are made unique.</li>
+<li>GCT 1.3: robustified import of GCT 1.3 files. If not unique, row and column identifiers are made unique.</li>
 <li>Volcano: Labeled points can be removed individually from the table.</li>
 <li>Table: page overhaul</li>
 </ul>

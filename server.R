@@ -108,7 +108,9 @@ shinyServer(
 
             update.ppi.select= FALSE,     ## trigger selectize, volcano
             update.ppi.select.scat=FALSE, ## trigger selectize, scatterplot
-            collapse.ppi=TRUE             ## should PPI query panel be collapsed?
+            collapse.ppi=TRUE,             ## should PPI query panel be collapsed?
+            
+            update.pca=FALSE
 
         )
 
@@ -275,16 +277,6 @@ shinyServer(
             if(is.null(session$user)) return()
             notificationItem('Logout', icon=shiny::icon("sign-out", "fa-1x"), status='success', href="__logout__")
         })
-
-        ## #########################################################
-       ## session name
-       ## output$session.name <- renderMenu({
-       ##     if(is.null( global.param$label)) return()
-       ##     ##session <- global.param$session
-       ##
-       ##     notificationItem(global.param$label, shiny::icon("star", "fa-1x", lib='glyphicon'), status='success')
-       ## })
-
 
 
         ################################################################################
@@ -666,7 +658,7 @@ shinyServer(
             ## ##################################################
             ## Run PCA
             ## ##################################################
-            pca.tab2[[1]] <- tabPanel('Run me first',
+            pca.tab2[[1]] <- tabPanel('Explained variance',
              fluidRow(
 
                       box(title='Summary', status='primary', solidHeader = T, htmlOutput('run.pca')),
@@ -2005,13 +1997,28 @@ shinyServer(
           ##                  render document
           cat('## Rendering Rmarkdown file\n')
           writeLines(rmd, con=paste(global.param$session.dir, paste(fn.rmd, 'rmd', sep='.'), sep='/'))
-          rmarkdown::render(paste(global.param$session.dir, paste(fn.rmd, 'rmd', sep='.'), sep='/'))
+          
+          render.rmd <- try(
+            rmarkdown::render(paste(global.param$session.dir, paste(fn.rmd, 'rmd', sep='.'), sep='/'))
+          )
+            
           }) # end withProgress
           
-          #fn.rmd <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
-          global.param$rmd.name=paste(fn.rmd, 'html', sep='.')
-
-          global.results$export.rmd <- TRUE
+          if(class(render.rmd) == 'try-error'){
+            #save(render.rmd, file='rmd.RData')
+            
+            showModal(modalDialog(
+              size='m',
+              title = "Problem generating R Markdown report",
+              render.rmd[[1]],
+              HTML('<br><br>Please install pandoc for your OS from <a href="https://github.com/jgm/pandoc/releases/tag/2.1.1
+" target="_blank_">https://github.com/jgm/pandoc/releases/tag/2.1.1/</a><br>Please restart R after installing pandoc.')
+            ))
+            
+          } else {
+            global.param$rmd.name=paste(fn.rmd, 'html', sep='.')
+            global.results$export.rmd <- TRUE
+          }
           
           ## trigger selectize update
           global.param$update.ppi.select <- TRUE
@@ -2142,15 +2149,27 @@ shinyServer(
               global.param$xls.name <- fn.tmp
               
               ## Excel
-              WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
-              
+              render.xlsx <- try(
+                WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
+              )
+              #save(render.xlsx, file='xlsx.RData')
             })
+          
+          if(class(render.xlsx) == 'try-error' | !render.xlsx){
+            showModal(modalDialog(
+              size='m',
+              title = "Problem generating Excel sheet",
+              #render.xlsx[[1]],
+              HTML('Perl required to generate xlsx files. For Windows OS please install Strawberry Perl (<a href="http://strawberryperl.com/" target="_blank_">http://strawberryperl.com/</a><br>R needs to be restarted after installing Perl.)')
+            ))
+          } else {
+            global.results$export.xls <- TRUE
+          }
           
           ## trigger selectize update
           global.param$update.ppi.select <- TRUE
           global.param$update.ppi.select.scat <- TRUE
           
-          global.results$export.xls <- TRUE
           updateTabsetPanel(session, 'mainPage', selected='Export')
           
         })
@@ -2564,11 +2583,12 @@ shinyServer(
 
             ###################################################
             ## run command
-	          if(OS == 'Windows')
-                system( paste('zip -0 ', paste(global.param$session.dir, fn.zip, sep='/'), ' ', paste(fn.all.abs, collapse=' '),sep='') )
-            else
+	          if(OS == 'Windows') {
+                #system( paste('zip -0 ', paste(global.param$session.dir, fn.zip, sep='/'), ' ', paste(fn.all.abs, collapse=' '),sep='') )
+	              system( paste('bin/zip.exe -0 ', paste(global.param$session.dir, fn.zip, sep='/'), ' ', paste(fn.all.abs, collapse=' '),sep='') )
+            } else {
                 system( paste('cd ', global.param$session.dir,' && zip -0 ', fn.zip, ' ', paste(fn.all, collapse=' '), sep='') )
-
+            }
             ## store file.name
 	          global.param$zip.name=fn.zip
             ## cat('test16\n')
@@ -2878,11 +2898,14 @@ cat('id: ', global.param$id.col.value, '\n')
                 volc[[i]] <- volc.imp[[i]]
             }
             
+            ## #####################################################
             ## backwards compatibility II
             if(is.null(names(global.param$grp.colors)))
               names(global.param$grp.colors) <- names(global.param$grp.colors)
             if(is.null(global.param$session.saved))
               global.param$session.saved <- T
+            if(is.null( global.param$update.pca) )
+              global.param$update.pca <- TRUE
             
           
 
@@ -3549,6 +3572,10 @@ cat('id: ', global.param$id.col.value, '\n')
             ## #################################################################
             ## increment counter: will invoke the filter
             global.param$run.test <- global.param$run.test + 1
+            
+            ## #################################
+            ## flag to update PCA
+            global.param$update.pca <- TRUE
         })
 
 
@@ -3735,6 +3762,9 @@ cat('id: ', global.param$id.col.value, '\n')
             ## trigger selectize update
             global.param$update.ppi.select <- TRUE
             global.param$update.ppi.select.scat <- TRUE
+            
+            ## flag to update PCA
+            global.param$update.pca <- TRUE
 
         })
 
@@ -4413,7 +4443,7 @@ cat('id: ', global.param$id.col.value, '\n')
             ## unfiltered data set
             res = as.data.frame( global.results$data$output )
 
-            ## #############################
+                  ## #############################
             ## p-values one-sample T
             if(global.param$which.test == 'One-sample mod T'){
 
@@ -4452,7 +4482,8 @@ cat('id: ', global.param$id.col.value, '\n')
             ##cat(paste0('scat.y.', group), '\n')
             x.ax <- res[ , input[[ paste0('scat.x.', group) ]] ]
             y.ax <- res[ , input[[ paste0('scat.y.', group) ]] ]
-
+     
+            
             ## ##############################
             ## ids
             #IDs <- global.results$id.map$id.concat
@@ -4489,19 +4520,18 @@ cat('id: ', global.param$id.col.value, '\n')
             if( nchar(ppi.bait) > 0 & toupper(ppi.bait) %in% toupper(IDs))
                 PPI <- TRUE
 
-            ## ##############################
-            ##        set up the  plot
-            ## ##############################
-            if(PPI)
-                p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs, opacity=.2, showlegend=F, name='non-interactors' )
-                ##p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col, showlegend=FALSE), text=IDs, alpha=.1 )
-            else
-                p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs, showlegend=F )
+            ## #################################
+            ## labels
+            non.sig.txt <- 'not sig.'
+            sig.txt <- 'sig'
+            
+            
+            
             ## ########################################################
             ##                  add PPI stuff
             ## ##########################################################
             ppi.idx <- c()
-            ##if(toupper(ppi.bait) %in% toupper(IDs)) {
+
             if(PPI){
                 ## ##############################################
                 ##
@@ -4525,22 +4555,98 @@ cat('id: ', global.param$id.col.value, '\n')
                 ppi.col <- ppi.map$ppi.col
 
                 ## ###############################
-                ## add interactors
-                if(length(ppi.int.idx) > 0){
+                ## if NO interactors have been found
+                if(length(ppi.int.idx) == 0){
+                  
+                  non.int.idx <- 1:nrow(dat.plot)
+                  if(length(sig.idx) > 0)
+                    non.int.idx <- non.int.idx[ -c(sig.idx) ]  
+                  
+                  ## set up plot  
+                  p <- plot_ly(x=dat.plot$x.ax[ non.int.idx ], y=dat.plot$y.ax[ non.int.idx], type='scatter', mode='markers', marker=list(size=10, color=col[non.int.idx]), text=IDs[non.int.idx], opacity=.2, showlegend=T, name=non.sig.txt )
+                  
+                  ## add significant proteins
+                  if(length(sig.idx) > 0){
+                    p <- p %>% add_trace(x=dat.plot$x.ax[ sig.idx ], y=dat.plot$y.ax[ sig.idx], type='scatter', mode='markers', marker=list(size=10, color=col[sig.idx]), text=IDs[sig.idx], opacity=.2, showlegend=T, name=sig.txt  )
+                  }
+                  ## #######################################
+                  ## if interactors have been found
+                } else {
                     col[ppi.int.idx] <- ppi.col[ nchar(ppi.col) > 0 ]
                     ppi.idx <- ppi.int.idx
 
+                    ## ###################################################
+                    ## plot non-interactors
+                    non.int.idx <- 1:nrow(dat.plot)[ -c(ppi.int.idx) ]
+                    
+                    if(length(sig.idx) > 0)
+                      non.int.idx <- non.int.idx[ -c(sig.idx) ]  
+                    
+                    p <- plot_ly(x=dat.plot$x.ax[ non.int.idx ], y=dat.plot$y.ax[ non.int.idx], type='scatter', mode='markers', marker=list(size=10, color=col[non.int.idx]), text=IDs[non.int.idx], opacity=.2, showlegend=T, name=non.sig.txt )
+                
+                    ## add significant proteins
+                    if(length(sig.idx) > 0){
+                      p <- p %>% add_trace(x=dat.plot$x.ax[ sig.idx ], y=dat.plot$y.ax[ sig.idx], type='scatter', mode='markers', marker=list(size=10, color=col[sig.idx]), text=IDs[sig.idx], opacity=.2, showlegend=T, name=sig.txt  )
+                    }
+                    
+                    ## plot interactors    
                     p <- p %>% add_trace(x=dat.plot$x.ax[ppi.int.idx], y=dat.plot$y.ax[ppi.int.idx], type='scatter', mode = 'markers', marker=list( size=10, color=col[ppi.int.idx]), text=IDs[ppi.int.idx], name='Interactors', opacity=1 )
+                
                 }
                 ## ################################
                 ## add bait
                 if(length(ppi.bait.idx) > 0){
-                    col[ppi.bait.idx] <- 'green'
-                    ppi.idx <- c(ppi.idx, ppi.int.idx)
-
-                    p <- p %>% add_trace(x=dat.plot$x.ax[ppi.bait.idx], y=dat.plot$y.ax[ppi.bait.idx], type='scatter', mode = 'markers', marker=list( size=15, color=col[ppi.bait.idx]), text=IDs[ppi.bait.idx], name=paste('Bait protein:', ppi.bait), opacity=1 )
+                  
+                  col[ppi.bait.idx] <- 'green'
+                  
+                  p <- p %>% add_trace(x=dat.plot$x.ax[ppi.bait.idx], y=dat.plot$y.ax[ppi.bait.idx], type='scatter', mode = 'markers', marker=list( size=10, color=col[ppi.bait.idx]),  text=IDs[ppi.bait.idx], name=paste('Bait protein:', toupper(sub('.*_(.*)$', '\\1', ppi.bait) )), opacity=1 )
                 }
+                
+            }  else { 
+              ## ################################################################
+              ## no PPI
+              ## different traces for significnat and not-significant features
+             non.sig.idx <- 1:nrow(dat.plot)
+              if(length(sig.idx) > 0)
+                non.sig.idx <- non.sig.idx[ -c(sig.idx) ]  
+              
+              p <- plot_ly(x=dat.plot$x.ax[non.sig.idx], y=dat.plot$y.ax[non.sig.idx], type='scatter', mode='markers', marker=list(size=10, color=col[non.sig.idx]), text=IDs[non.sig.idx], showlegend=T, name=non.sig.txt )
+            
+              if(length(sig.idx) > 0){
+                p <- p %>% add_trace(x=dat.plot$x.ax[ sig.idx ], y=dat.plot$y.ax[ sig.idx], type='scatter', mode='markers', marker=list(size=10, color=col[sig.idx]), text=IDs[sig.idx], opacity=1, showlegend=T, name='signif.'  )
+              }
+              
             }
+            
+             
+            ## ##############################
+            ##  reproducibility filter?
+            values.filtered <- global.results$values.filtered[[group]]  
+            if(length(values.filtered) > 0){
+
+              ## get the entire dataset
+              if(is.null(global.results$table.log))
+                tab <- data.frame(global.input$table)
+              else
+                tab <- data.frame(global.results$table.log)
+              
+              ## extract filtered values
+              filt.x <- tab[values.filtered, input[[ paste0('scat.x.', group) ]]]
+              filt.y <- tab[values.filtered, input[[ paste0('scat.y.', group) ]]]
+              
+              filt.dat <- data.frame(x=filt.x, y=filt.y)
+              
+              ## add
+              filt.txt <-  paste( global.param$filt.data, '\n(alpha=',global.param$repro.filt.val, ')',sep='')
+              p <- p %>% add_trace(
+                x=filt.dat$x,
+                y=filt.dat$y,
+                type='scatter', mode='markers', marker=list(size=10, color=rep('blue', nrow(filt.dat))), opacity=.2, text=values.filtered, name= filt.txt
+              )
+              
+            }
+            
+            
 
             ## some astethics
             p <- layout(p,
@@ -5531,22 +5637,34 @@ cat('id: ', global.param$id.col.value, '\n')
         ##
         ######################################################################################
         output$run.pca <- renderText({
+          
             if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
 
-            res <- global.results$filtered
+            #res <- global.results$filtered
 
-            validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
+            #validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
 
             grp <- global.param$grp
 
-            ## run PCA
-            withProgress(message = 'PCA...',{
-                    pca=my.prcomp2( res, grp )
-                  })
-
-            ## store results
-            global.results$pca <- pca
-
+            
+            if(is.null(global.results$pca) | global.param$update.pca == TRUE){
+              
+              res <- global.results$filtered
+              
+              validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
+              
+              ## run PCA
+              withProgress(message = 'PCA...',{
+                pca=my.prcomp2( res, grp )
+              })
+              ## store results
+              global.results$pca <- pca
+              global.param$update.pca <- FALSE
+              
+            } else {
+              pca <- global.results$pca
+            }
+            
             ## short summary, same as 'PCA' is generating
             txt = paste('<p><font size=\"5\">PCA model of a mean-centered and scaled matrix of ',length(grp), ' by ', nrow(pca$loadings), '.</font></p>')
             txt = paste(txt, '<p><font size=\"5\">Number of PCs to cover 90% of the variance:', min(which((cumsum(pca$var)/pca$totalvar) > .9)), '.</font></p>')
@@ -5572,14 +5690,37 @@ cat('id: ', global.param$id.col.value, '\n')
         ## ###########################################################
         ## PCA plotly 2D scatter
         output$pcaxy.plotly <- renderPlotly({
-          if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+          #if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+          
+          if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
           ##if(!is.null(error$msg)) return()
 
-          pca <- global.results$pca
           grp <- global.param$grp
           grp.unique <- unique(grp)
           grp.colors <- global.param$grp.colors[names(grp)]
-
+          
+          if(is.null(global.results$pca) | global.param$update.pca == TRUE){
+ 
+            res <- global.results$filtered
+          
+            validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
+            
+            ## run PCA
+            withProgress(message = 'PCA...',{
+              pca=my.prcomp2( res, grp )
+            })
+            ## store results
+            global.results$pca <- pca
+            global.param$update.pca <- FALSE
+            
+          } else {
+            pca <- global.results$pca
+          }
+          
+          
+          
+         # pca <- global.results$pca
+          
           # selected PCs
           pca.x <- as.numeric(sub('PC ','', input$pca.x))
           pca.y <- as.numeric(sub('PC ','', input$pca.y))
@@ -5606,17 +5747,32 @@ cat('id: ', global.param$id.col.value, '\n')
         ################################################
         ## PCA plotly 3D scatterplot
         output$pcaxyz.plotly <- renderPlotly({
-            if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
-            ##if(!is.null(error$msg)) return()
-
-            validate(need(length(global.param$grp) >= 3, 'Cannot generate 3D plots from data with dimension < 3.'))
-
-            ##if(length(global.param$grp) < 3) return()
-
-            pca <- global.results$pca
+            
+          if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
+            
             grp <- global.param$grp
             grp.unique <- unique(grp)
             grp.colors <- global.param$grp.colors[names(grp)]
+            
+            
+            
+            if(is.null(global.results$pca) | global.param$update.pca == TRUE){
+              
+              res <- global.results$filtered
+              
+              validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
+              
+              ## run PCA
+              withProgress(message = 'PCA...',{
+                pca=my.prcomp2( res, grp )
+              })
+              ## store results
+              global.results$pca <- pca
+              global.param$update.pca <- FALSE
+              
+            } else {
+              pca <- global.results$pca
+            }
             
             # selected PCs
             pca.x <- as.numeric(sub('PC ','', input$pca.x))
@@ -5641,6 +5797,7 @@ cat('id: ', global.param$id.col.value, '\n')
             p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, 'vs. PC', pca.z, sep=''), scene=list( xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)), zaxis=list(title=paste('PC', pca.z))) )
 
         })
+        
         ####################################################
         ## PCA loadings
         output$pca.loadings <- renderPlot({

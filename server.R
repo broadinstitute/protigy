@@ -131,7 +131,9 @@ shinyServer(
             volc.maxp=100,     ## max. -log10 p-value
             volc.hyper.fc=1,    ## min. FC for hyperbolic curve
             volc.hyper.curv=3,  ## curvation parameter for hyperbol. curve
-
+            
+           # volc.reset=F,    ## flag to trigger reset of annotated points
+            
             ## heatmap
             hm.cexCol=8,
             hm.cexRow=3,
@@ -159,6 +161,18 @@ shinyServer(
         volc <- reactiveValues()
         volc.brush <- reactiveValues()
 
+        
+       # observeEvent( global.plotparam$volc.reset, {
+      #    
+      #    if(global.plotparam$volc.reset){
+      #      rm(volc)
+      #      cat('reset', '\n')
+      #      volc <- reactiveValues()
+      #      global.plotparam$volc.reset <- F
+      #    }
+      ##    
+      #  })
+      
 
         ## ###################################################
         ##
@@ -479,7 +493,7 @@ shinyServer(
                                               ## plot
                                               box( title=grp.unique[i], status = 'primary', solidHeader = T, width=12,
                                                   fluidRow(
-                                                       column(12, align='center', plotlyOutput(  paste0('scatterplot.', grp.unique[i]) , width=600, height=600) )
+                                                       column(12, align='center', plotlyOutput(  paste0('scatterplot.', grp.unique[i]) , width=800, height=600) )
                                                   ) ## end fluiRow
 
                                                   ) ## end box
@@ -681,7 +695,7 @@ shinyServer(
                                           ),
                                           fluidRow(
                                             box( title='2D', status = 'primary', solidHeader = T, width = 1000, height = 700,
-                                                 column(12, align='center', plotlyOutput("pcaxy.plotly", width=600, height=600))
+                                                 column(12, align='center', plotlyOutput("pcaxy.plotly", width=800, height=600))
                                             )
                                           ),
 
@@ -1126,18 +1140,21 @@ shinyServer(
           HTML(paste('<br><p><font size=\"4\"><b>Current selection:</b><b>', input$grp.gct3,'</b></p><br>'))
           
         })
-        
         # preview levels current selection
         output$grp.gct3.prev.tab <- renderTable({
           if(is.null(input$grp.gct3)) return()
           if(global.param$grp.done) return()
           
           tab <- table(global.input$cdesc[, input$grp.gct3]) 
-          tab <- data.frame(Level=names(tab), Freq=unlist(tab))
+          
+          #save(tab, file='tab.RData')
+          
+          tab <- data.frame(Level=names(tab), Freq=as.character(unlist(tab)), stringsAsFactors = F )
           
           list(
             tab
           )
+          
         })
         
         # #####################################
@@ -1356,6 +1373,7 @@ shinyServer(
                   fluidRow(
                     #if(length(unique(global.param$grp.comp.all)) > 10){
                     column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection))),
+                    #column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.all), selected = unique(global.param$grp.selection))),
                     #} else{ column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection)))},
                     column( 6, checkboxGroupInput('select.anno', label=' ', choices = unique(global.param$cdesc.all), selected = unique(global.param$cdesc.selection)))
                   )
@@ -1372,6 +1390,7 @@ shinyServer(
           
           # super important! to memorize previous selections in the modal window
           global.param$grp.comp.selection <- input$select.groups
+          #global.param$grp.selection <- input$select.groups
           grp.selection <- global.param$grp.all
           
           ## extract groups selected in the modal window
@@ -1398,20 +1417,7 @@ shinyServer(
           
         })
         
-        # ##################################################
-        # update ANNOTATION TRACKS based on selection
-        #observeEvent(input$select.anno, {
-        #  global.param$cdesc.selection <- input$select.anno
-        #  
-        #  ## update class vector
-        #  cdesc.selection <- global.param$cdesc.all
-        #  #grp.unique <- unique( unlist( strsplit( sub('\\.vs\\.', ' ', input$select.groups), ' ')))
-        #  #grp.selection <- grp.selection[ grep(paste('^', paste(grp.unique, collapse='|'), '$', sep=''), grp.selection) ]
-        #  global.param$cdesc.selection <- cdesc.selection
-          
-        #})
-        
-        
+       
         ## #####################################################################
         ## UI: set up analysis
         ##
@@ -1438,7 +1444,7 @@ shinyServer(
                      actionButton('run.test', 'Run analysis!'),
                      br(),
                      hr(),
-                     actionButton('select.groups.button', 'Select Groups')
+                     actionButton('select.groups.button', 'Modify selected groups')
                      #fluidRow(
                     #  column(6, actionButton('select.groups.button', 'Select Groups')),
                     #  column(6, actionButton('select.anno.button', 'Select Annotation Tracks'))
@@ -1465,7 +1471,7 @@ shinyServer(
                     #   column(6, actionButton('select.groups.button', 'Select Groups')),
                     #   column(6, actionButton('select.anno.button', 'Select Annotation Tracks'))
                      #)
-                     actionButton('select.groups.button', 'Select Groups')
+                     actionButton('select.groups.button', 'Modify selected groups')
                 )
             }
 
@@ -1486,7 +1492,7 @@ shinyServer(
                      actionButton('run.test', 'Run analysis!'),
                      br(),
                      hr(),
-                     actionButton('select.groups.button', 'Select Groups')
+                     actionButton('select.groups.button', 'Modify selected groups')
                 )
             }
 
@@ -1506,7 +1512,7 @@ shinyServer(
                     actionButton('run.test', 'Run analysis!'),
                     br(),
                     hr(),
-                    actionButton('select.groups.button', 'Select Groups')
+                    actionButton('select.groups.button', 'Modify selected groups')
                 )
             }
 
@@ -2878,7 +2884,6 @@ cat('id: ', global.param$id.col.value, '\n')
               global.plotparam.imp <- plotparams.imp 
             }
          
-          
             ## ###############################
             ## assign the imported values to the global reactive variables
             for(i in names(global.input.imp)){
@@ -3123,20 +3128,26 @@ cat('id: ', global.param$id.col.value, '\n')
         #     determine groups to test
         # 
         observeEvent(input$which.test, {
+        #observeEvent(global.param$grp.done, {
           
           test <- input$which.test
           
           ## #############################################
           ## specify which comparisons should be performed
           if(test %in% c('One-sample mod T', 'mod F', 'none')){
+            
             ## each group separetely
             groups.comp <- global.param$grp.all
             
-            #if( global.param$run.test == 0  ){
+            
             global.param$grp.comp.all <- groups.comp
-            #}
-            global.param$grp.comp.selection <- groups.comp
-            global.param$grp.selection <- groups.comp
+            
+            #if(global.param$run.test == 0) {
+            if( is.null( global.param$grp.comp.selection ) | sum( global.param$grp.comp.selection %in% global.param$grp.comp.all) == 0 )
+               global.param$grp.comp.selection <- groups.comp
+            if( is.null( global.param$grp.selection)  | sum( global.param$grp.selection %in% global.param$grp.comp.all) == 0 )   
+              global.param$grp.selection <- groups.comp
+            
           }
           ## #############################################
           ## pairwise combinations for 2-sample test
@@ -3144,6 +3155,7 @@ cat('id: ', global.param$id.col.value, '\n')
             
             ## all pairwise combinations
             groups.unique <- unique(global.param$grp.all)
+            #groups.unique <- unique(global.param$grp.selection)
             
             groups.comp <- c()
             count=1
@@ -3155,12 +3167,15 @@ cat('id: ', global.param$id.col.value, '\n')
                 groups.comp[count] <- paste(groups.tmp[1], groups.tmp[2], sep='.vs.')
                 count <- count+1
               }
+          }
             #if( global.param$run.test == 0  ){
-              global.param$grp.comp.all <- groups.comp
+          global.param$grp.comp.all <- groups.comp
             #}
+          #if( global.param$run.test == 0  )  
+          if(is.null(global.param$grp.comp.selection) | sum( global.param$grp.comp.selection %in% global.param$grp.comp.all) == 0 )
             global.param$grp.comp.selection <- groups.comp
             #global.param$grp.selection <- 
-          }
+          #}
           
           
         })
@@ -3560,6 +3575,10 @@ cat('id: ', global.param$id.col.value, '\n')
             ##            insert the panels for the volcanos
             ## #################################################################
             if(!(global.param$which.test %in% c('mod F', 'none'))){
+                
+                #reset.volc()
+                #resetVolcAnno()
+                #global.plotparam$volc.reset <- T
                 ins.volc()
             }
 
@@ -4233,8 +4252,9 @@ cat('id: ', global.param$id.col.value, '\n')
                 setProgress( message='Preparing volcanos...')
 
             ## volcanos for each group comparison
-            grp.comp <- unique( global.param$grp.comp )
-
+            #grp.comp <- unique( global.param$grp.comp )
+            grp.comp <- unique( global.param$grp.comp.selection )
+              
             ## #########################################
             ## loop over group comparsions
             for(i in 1:length(grp.comp)){
@@ -4287,7 +4307,10 @@ cat('id: ', global.param$id.col.value, '\n')
 
                       ## identify the points clicked
                       text.tmp <- nearPoints(res, input[[paste('plot_click', grp.comp[my_i], sep='.')]], threshold=10, maxpoints =  1, xvar=paste('logFC', grp.comp[my_i], sep='.'), yvar=paste('Log.P.Value', grp.comp[my_i], sep='.'))
-
+                      #save(text.tmp, file='volc.RData')
+                      
+                      #cat('yes --- ', text.tmp[[1]], '\n')
+                      
                       ## if there are any
                       if(nrow(text.tmp) == 1){
 
@@ -4353,6 +4376,9 @@ cat('id: ', global.param$id.col.value, '\n')
                   ## ######################################################
                   ##       remove selected rows from table and volcano labels  
                   observeEvent(input[[paste('volc.tab.reset.select', grp.comp[my_i], sep='.')]],{
+                    
+                    if(is.null(input[[ paste( paste('volc.tab.selected', grp.comp[my_i], sep='.'), 'rows_selected', sep='_' )]])) return()
+                    
                       ## if so remove from the list
                       #ids <- volc[[paste('text', grp.comp[my_i], sep='.')]]
                       
@@ -4522,10 +4548,8 @@ cat('id: ', global.param$id.col.value, '\n')
 
             ## #################################
             ## labels
-            non.sig.txt <- 'not sig.'
-            sig.txt <- 'sig'
-            
-            
+            non.sig.txt <- 'not signif.'
+            sig.txt <- 'signif.'
             
             ## ########################################################
             ##                  add PPI stuff
@@ -4569,15 +4593,21 @@ cat('id: ', global.param$id.col.value, '\n')
                   if(length(sig.idx) > 0){
                     p <- p %>% add_trace(x=dat.plot$x.ax[ sig.idx ], y=dat.plot$y.ax[ sig.idx], type='scatter', mode='markers', marker=list(size=10, color=col[sig.idx]), text=IDs[sig.idx], opacity=.2, showlegend=T, name=sig.txt  )
                   }
+                  
                   ## #######################################
                   ## if interactors have been found
                 } else {
                     col[ppi.int.idx] <- ppi.col[ nchar(ppi.col) > 0 ]
-                    ppi.idx <- ppi.int.idx
-
+                    #ppi.idx <- ppi.int.idx
+  
+                    
+                    #cat(ppi.int.idx, '\n')
                     ## ###################################################
                     ## plot non-interactors
-                    non.int.idx <- 1:nrow(dat.plot)[ -c(ppi.int.idx) ]
+                    #non.int.idx <- 1:nrow(dat.plot)[ -c(ppi.int.idx) ]
+                    non.int.idx <- setdiff( 1:nrow(dat.plot), ppi.int.idx)
+                    
+                   # cat(non.int.idx, '\n')
                     
                     if(length(sig.idx) > 0)
                       non.int.idx <- non.int.idx[ -c(sig.idx) ]  

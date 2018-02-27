@@ -33,6 +33,12 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.2 February 27, 2018</b>
+<ul>
+<li>Misc: Installable on Mac OS.</li>
+<li>Misc: group selection now correctly updated in saved sessions.</li>
+<li> </li>
+</ul>
 <b>v0.8.1 February 26, 2018</b>
 <ul>
 <li>Misc: simplified installation under Windows OS.</li>
@@ -432,8 +438,12 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 <li><b>Quantile</b>: Transform the data such that the quantiles of all sample distributions are the equal.</li>
 <li><b>none</b>: The data will be taken as is. Should be used if the data has been already normalized.</li>
 </ul>
-<br><p><h3>Reproducibility filter</h3>This option is only considered in a <b>one-sample test</b> and will be ignored otherwise. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab. Data points removed prior to testing will be depicted in red.</p>
-
+<br>
+<p><h3>Filter data</h3>
+<b>Reproducibility:</b><br>
+Remove features that were not reproducibly quantifified across replicate measurements. Only available for <b>one-sample tests</b> and will be ignored otherwise. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue.</p>
+<b>StdDev:</b><br>
+Remove features with low standard deviation across all samples. Only useful if applied to sample cohorts that were quantified against a common reference.
 <br><h3>Select test</h3>You can choose between a one-sample, two-sample moderate T-tests, moderated F-test or no testing.
 <ul>
 <li><b>One-sample mod T</b>: For each test whether the group mean is significantly different from zero. Only meaningful to <b>ratio data</b>!</li>

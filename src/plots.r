@@ -35,6 +35,8 @@ plotHM <- function(res,
                    width=width,
                    anno.col,
                    anno.col.color,
+                   show.rownames=T,
+                   show.colnames=T,
                    #cdesc=NULL,
                    #cdesc.grp=NULL,
                    plotly=F,
@@ -135,20 +137,30 @@ plotHM <- function(res,
              annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), 
              breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, 
              labels_row=hm.rownames, na_col='black', scale='none', 
-             annotation_names_col = F, height=height, width=width)
+             annotation_names_col = F, height=height, width=width,
+             show_rownames = show.rownames, show_colnames = show.colnames)
   } else {
+    
+    #save(anno.col.color, anno.col, res, grp, file='tmp.RData')
+    
     # heatmaply
-    names(anno.col.color) <- NULL
-    anno.col.color <- unlist(anno.col.color)
+    #names(anno.col.color) <- NULL
+    #anno.col.color <- unlist(anno.col.color)
     #cat(anno.col.color)
-    anno.col.color <- anno.col.color[grp]
-    # save(anno.col.color, anno.col, res, file='tmp.RData')
-    heatmaply(res, labCol = NA, margins = margins,
-              labRow = NA, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
+    #anno.col.color <- anno.col.color[grp]
+    
+    anno.col.color <-unlist(lapply(colnames(anno.col), function(x) unlist(anno.col.color[[x]])))
+    show.rownames=F
+    if(show.rownames)
+      heatmaply(res, labCol = NA, margins = margins, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
               limits=c(min.val, max.val), col_side_colors = anno.col, col_side_palette = anno.col.color,
               colorbar_xanchor = 'right', colorbar_yanchor = 'bottom', row_dend_left = TRUE,
               plot_method = "ggplot", seriate = 'mean', key=FALSE, hide_colorbar = T) 
-    
+    if(!show.rownames)
+      heatmaply(res, labCol = NA, labRow = NA, margins = margins, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
+                limits=c(min.val, max.val), col_side_colors = anno.col, col_side_palette = anno.col.color,
+                colorbar_xanchor = 'right', colorbar_yanchor = 'bottom', row_dend_left = TRUE,
+                plot_method = "ggplot", seriate = 'mean', key=FALSE, hide_colorbar = T) 
   }
 }
 
@@ -303,12 +315,176 @@ HCluster <- function(res, hm.clust, hc.method='ward.D2', hc.dist=c('euclidean', 
 }
 
 
+#######################################################
+##
+##
+## changelog: 20140722 implementation
+##            20141104 fixed names for x-axis
+##            20150209 parameter 'grid'
+##            20151027 parameter 'grid.at'
+##            20160308 replaced axes by xaxis and yaxis
+##            20170303 'vio.wex'
+#######################################################
+fancyBoxplot <- function(x, 
+                         ylim=NULL, 
+                         xlim=NULL, 
+                         at=NULL, 
+                         col="grey80", 
+                         vio.alpha=100, 
+                         box.border="black", 
+                         box.pch=20, 
+                         drawRect=F, 
+                         xlab="", 
+                         ylab="", 
+                         xaxis=T, 
+                         yaxis=T, 
+                         main="boxplot", 
+                         names=NULL, 
+                         las=1,
+                         cex.names=1, 
+                         grid=T, 
+                         grid.at=NULL, 
+                         vio.wex=1.2, 
+                         show.numb=c('none', 'median', 'mean', 'median.top', 'median.bottom'), 
+                         numb.cex=.6, 
+                         numb.col='black', 
+                         numb.pos=3, 
+                         ...){
+  
+  p_load(vioplot)
+  
+  show.numb <- match.arg(show.numb)
+  
+  ####################################
+  ## names for x-axis
+  if(is.null(names) & is.null(names(x)))
+    names.x=1:length(x)
+  else if(!is.null(names(x)))
+    names.x=names(x)
+  else
+    names.x=names
+  
+  
+  ##################################
+  # remove NAN/Inf
+  x <- lapply(x, function(x) {x=na.omit(x);x=x[is.finite(x)]})
+  
+  # ylim
+  if(is.null(ylim))
+    ylim=range(unlist(x))
+  
+  ##################################
+  if(length(x) == 1){
+    x = unlist(x)
+    plot(NA, axes=F, xlab=xlab, ylab=ylab, ylim=ylim, type="n", main=main, ...)
+    
+    vioplot( x, add=T, at=1, col=col, drawRect=drawRect, wex=vio.wex, ...)
+    boxplot( x, add=T, at=1, border=box.border, pch=box.pch, ...)
+  }
+  
+  #################################
+  if(length(x) > 1){
+    
+    ## xlim
+    if(is.null(xlim))
+      xlim=c(0.5, length(x)+0.5)
+    
+    ## at
+    if(is.null(at))
+      at=1:length(x)
+    if( !is.null(at) ){
+      xlim=c(0, max(at)+1)
+    }
+    
+    ## colour
+    if(length(col) == 1)
+      col=rep(col, length(x) )
+    
+    ## initialize plot
+    plot(NA, axes=F, ylim=ylim, xlim=xlim, type="n", xlab=xlab, ylab=ylab, main=main, ...)
+    
+    ## axes
+    if(xaxis){
+      axis(1, at=at, labels=names.x, las=las, cex.axis=cex.names)
+    }
+    if(yaxis){
+      axis(2, las=2)
+    }
+    ## grid
+    if(grid){
+      if(is.null(grid.at))
+        abline( h=floor(ylim[1]):ceiling(ylim[2]), col='grey', lty='dotted' )
+      else
+        abline( h=grid.at, col='grey', lty='dotted' )
+      
+    }
+    
+    ## plot each box/violin
+    for(i in 1:length(x)){
+      
+      if(length(x[[i]]) > 0){
+        
+        vioplot( x[[i]], add=T, at=at[i], col=my.col2rgb(col[i], vio.alpha), drawRect=drawRect, border=F, wex=vio.wex,...)
+        boxplot( x[[i]], add=T, at=at[i], border=box.border, pch=box.pch, col=col[i], axes=F,...)
+        
+        if(show.numb=='median')
+          text(at[i], median(x[[i]]), round(median(x[[i]]),2), pos=numb.pos, cex=numb.cex, offset=0.1, col=numb.col )
+        if(show.numb=='mean')
+          text(at[i], mean(x[[i]]), round(median(x[[i]]),2), pos=numb.pos, cex=numb.cex, offset=0.1, col=numb.col )
+        if(show.numb=='median.top')
+          text(at[i], ylim[2], round(median(x[[i]]),2), pos=1, cex=numb.cex, offset=0.1, col=numb.col )
+        if(show.numb=='median.bottom')
+          text(at[i], ylim[1], round(median(x[[i]]),2), pos=3, cex=numb.cex, offset=0.1, col=numb.col )
+        
+        ##text(at[i], mean(x[[i]]), "*", adj=c(0,0) )
+      }
+      
+    }
+    
+  }
+  
+}
+
 
 ###################################################
 ## correlation matrix
 ###################################################
-plotCorrMat <- function(tab,
-                        id.col,
+calculateCorrMat <- function(tab,
+                            # id.col,
+                             grp,
+                             lower=c('pearson', 'spearman', 'kendall', 'pcor'), 
+                             upper=c('pearson', 'spearman', 'kendall', 'pcor'),
+                             verbose=T){
+  if(verbose)
+    cat('\n-- calculateCorrMat --\n')
+ 
+  
+  ## table
+  #tab <- tab[, setdiff(colnames(tab), id.col)]
+  tab <- tab[, names(grp)]
+  
+  ###########################
+  ## calculate correlations
+  ## withProgress({
+  ##     setProgress(message = 'Processing...', detail= 'Calculation correlations')
+  cm.upper <- cor(tab, use='pairwise', method=match.arg(upper))
+  cm.lower <- cor(tab, use='pairwise', method=match.arg(lower))
+  ##})
+  
+  ###########################
+  ## initialize correlation matrix
+  cm <- matrix(NA, ncol=ncol(cm.upper),nrow=nrow(cm.upper), dimnames=dimnames(cm.upper))
+  cm[ lower.tri(cm, diag=T) ] <- cm.lower[lower.tri(cm.lower, diag=T)]
+  cm[ upper.tri(cm, diag=F) ] <- cm.upper[upper.tri(cm.upper, diag=F)]
+ 
+  
+  return(cm)
+  
+}
+
+plotCorrMat <- function(#tab,
+                        #id.col,
+                        cm,
                         grp,
                         grp.col.legend,
                         filename=NA, 
@@ -324,25 +500,27 @@ plotCorrMat <- function(tab,
     cat('\n-- plotCorrMat --\n')
   
   ## table
-  tab <- tab[, setdiff(colnames(tab), id.col)]
-  tab <- tab[, names(grp)]
+  #tab <- tab[, setdiff(colnames(tab), id.col)]
+  #tab <- tab[, names(grp)]
   
   ## transpose
-  if(trans)
-    tab=t(tab)
+  #if(trans)
+  #  tab=t(tab)
   
   ###########################
   ## calculate correlations
   ## withProgress({
   ##     setProgress(message = 'Processing...', detail= 'Calculation correlations')
-  cm.upper <- cor(tab, use='pairwise', method=match.arg(upper))
-  cm.lower <- cor(tab, use='pairwise', method=match.arg(lower))
+  #cm.upper <- cor(tab, use='pairwise', method=match.arg(upper))
+  #cm.lower <- cor(tab, use='pairwise', method=match.arg(lower))
   ##})
   ###########################
   ## initialize correlation matrix
-  cm <- matrix(NA, ncol=ncol(cm.upper),nrow=nrow(cm.upper), dimnames=dimnames(cm.upper))
-  cm[ lower.tri(cm, diag=T) ] <- cm.lower[lower.tri(cm.lower, diag=T)]
-  cm[ upper.tri(cm, diag=F) ] <- cm.upper[upper.tri(cm.upper, diag=F)]
+  #cm <- matrix(NA, ncol=ncol(cm.upper),nrow=nrow(cm.upper), dimnames=dimnames(cm.upper))
+  #cm[ lower.tri(cm, diag=T) ] <- cm.lower[lower.tri(cm.lower, diag=T)]
+  #cm[ upper.tri(cm, diag=F) ] <- cm.upper[upper.tri(cm.upper, diag=F)]
+  
+  
   
   ## colors
   color.breaks = seq(-1, 1, length.out=20)
@@ -507,7 +685,8 @@ makeBoxplotly <- function(tab, id.col, grp, grp.col, verbose=T, title='boxplot')
 ## - mat    numerical matrix of expression values, rows are features, columns are samples
 ##
 #################################################################################################
-my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman', 'kendall'), 
+my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5, 
+                            #cor=c('pearson', 'spearman', 'kendall'), 
                             repro.filt=NULL, 
                             grp, 
                             grp.col.legend, 
@@ -521,13 +700,14 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
   trigger <- update
   #cat(update,'\n')
   ## cor method
-  corm = match.arg(cor)
+  #corm = match.arg(cor)
   
   ## correlation
-  cm = cor(mat, use='pairwise.complete', method=corm)
+  #cm = cor(mat, use='pairwise.complete', method=corm)
   
   ## number of samples to compare
-  N = ncol(mat)
+  #N = ncol(mat)
+  N= ncol(cm)
   
   ## define limits
   if(robustify){
@@ -592,7 +772,8 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
     for(j in 1:N){
       
       ## extract pairwise data
-      dat <- data.frame(x=mat[,i], y=mat[,j])
+      dat <- data.frame(x=mat[,colnames(mat)[i]], y=mat[,colnames(mat)[j]])
+      #dat <- data.frame(x=mat[,i], y=mat[,j])
       rownames(dat) <- rownames(mat)
       
       ## filter according to xlim/ylim
@@ -618,6 +799,7 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
         
         p <- p + scale_fill_manual( values=paste('grey', ceiling(seq(70, 20, length.out=hexcut)), sep=''))
         
+        
         ## add filtered values
         if(!is.null(repro.filt) & length(current.group) == 1){
           not.valid.idx <- repro.filt[[current.group]]
@@ -637,7 +819,10 @@ my.multiscatter <- function(mat, hexbin=30, hexcut=5, cor=c('pearson', 'spearman
       ###########################
       ## upper triangle
       if(i > j){
-        cortmp = cm[i,j]
+        #cortmp = cm[i, j]
+        cortmp = cm[j, i] # had to swap this since I am calcualting the correlation matrix separately
+                          # otherwise the numbers in the multiscatters would be a mix of pearson/spearman
+                          # coefficients (but no sample mix-up) 
         
         p=paste(round(cortmp, 3))
         

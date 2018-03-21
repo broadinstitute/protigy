@@ -3,7 +3,7 @@
 ## Created: October 09, 2015
 ## Author(s): Karsten Krug, Ozan Aygun
 ##
-## Purpose: Shiny-app to perform differential expression analysis, primarily on proteomics data, to perform
+## Purpose: Shiny-app to perform differential expression analysis, primarily on proteomics data, to performpl
 ##          simple data QC, to interactively browse through the results and to download high-quality result
 ##          figures.
 ##
@@ -108,7 +108,9 @@ shinyServer(
 
             update.ppi.select= FALSE,     ## trigger selectize, volcano
             update.ppi.select.scat=FALSE, ## trigger selectize, scatterplot
-            collapse.ppi=TRUE             ## should PPI query panel be collapsed?
+            collapse.ppi=TRUE,             ## should PPI query panel be collapsed?
+            
+            update.pca=FALSE
 
         )
 
@@ -246,18 +248,27 @@ shinyServer(
         ## })
 
         ## ########################################################
+        ## session name
+        output$session.label <-renderMenu({
+          
+          #if(is.null(session$user)) return()
+          if(!global.param$session.saved) return()
+          label <- paste("Session:",global.param$label)
+          
+          notificationItem(label, status='success', shiny::icon("folder", "fa-1x", lib='glyphicon')) 
+           
+          
+        })
+        
+        
+        ## ########################################################
         ## logged user
         output$logged.user <-renderMenu({
 
             if(is.null(session$user)) return()
-
             user <- session$user
-            ##user='test'
-
+          
             notificationItem(user, shiny::icon("user", "fa-1x", lib='glyphicon'), status='success') ##, ic='users', status='info', text='test'),
-          ##  notificationItem(user, shiny::icon("users"), status='info') ##, icon='users', status='info', text='test'),
-
-
         })
 
         ## #########################################################
@@ -266,16 +277,6 @@ shinyServer(
             if(is.null(session$user)) return()
             notificationItem('Logout', icon=shiny::icon("sign-out", "fa-1x"), status='success', href="__logout__")
         })
-
-        ## #########################################################
-       ## session name
-       ## output$session.name <- renderMenu({
-       ##     if(is.null( global.param$label)) return()
-       ##     ##session <- global.param$session
-       ##
-       ##     notificationItem(global.param$label, shiny::icon("star", "fa-1x", lib='glyphicon'), status='success')
-       ## })
-
 
 
         ################################################################################
@@ -343,20 +344,22 @@ shinyServer(
                                                              column(4, HTML('Gimme all!'))),
                                                     fluidRow(column(4, 
                                                            if(!global.results$export.rmd)
-                                                            actionButton('export.rmd', 'html', icon = icon("code", lib="font-awesome"))
+                                                             actionButton('export.rmd', 'html', icon = icon("code", lib="font-awesome"))
+                                                            #actionButton('export.rmd', 'html', icon = icon("code", lib="font-awesome"), style="color: #000000; background-color: #ffa09b; border-color: #c7c9c7")
                                                            else
-                                                            downloadButton('download.rmd', 'html') 
+                                                             downloadButton('download.rmd', 'html', style="color: #00a805") 
+                                                            #downloadButton('download.rmd', 'html', style="color: #000000; background-color: #b7ff9b; border-color: #c7c9c7") 
                                                            ),
                                                     column(4,
                                                            if(!global.results$export.xls)
                                                             actionButton('export.xls', 'xslx', icon = icon("table", lib="font-awesome"))
                                                            else
-                                                            downloadButton('download.xls', 'xslx')
+                                                            downloadButton('download.xls', 'xslx', style="color: #00a805")
                                                            ),
                                                     column(4, if(!global.results$export.results)
                                                       actionButton('export.results', 'zip', icon = icon("archive", lib="font-awesome"))
                                                       else
-                                                        downloadButton('download.results', 'zip'))
+                                                        downloadButton('download.results', 'zip', style="color: #00a805"))
                                                   )),
                                                   status = "primary",
                                                   solidHeader = T,
@@ -387,106 +390,7 @@ shinyServer(
 
             ) # end tabPanel
             
-            # export.tab <- tabPanel('Export',
-            #                        ##
-            #                        if(!(global.results$export.results)){
-            #                           fluidRow(
-            #                              column(width=6,
-            #                                     box(title="Session name",
-            #                                         fluidPage(
-            #                                           fluidRow(HTML('Please specify a name for the current session which will be used in filnames and to identify the session on the server. If checkbox <i>Save as session</i> is enabled, the current state of the session is saved on the server.')),
-            #                                           fluidRow(
-            #                                             textInput( 'label', '', value=global.param$label, width=200)
-            #                                           ),
-            #                                           fluidRow(
-            #                                             checkboxInput('export.save.session', 'Save as session', value=F)
-            #                                           )
-            #                                         ),
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL),
-            # 
-            #                                     box(title="Export results", actionButton('export.results', 'Export/Save session'),
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL)
-            #                                     ),
-            #                              column(width=6,
-            #                                     box(title="Specify what to export:",
-            #                                         checkboxInput('export.toggle.all', 'Toggle all', value=F),
-            #                                         tags$hr(),
-            #                                         checkboxInput('export.hm', 'Heatmap',value=T),
-            #                                         checkboxInput('export.box', 'Boxplots',value=T),
-            #                                         checkboxInput('export.volc', 'Volcano plot',value=T),
-            #                                         checkboxInput('export.phist', 'P-value histogram',value=T),
-            #                                         checkboxInput('export.pca', 'PCA',value=T),
-            #                                         checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
-            #                                         checkboxInput('export.ms', 'Multiscatter',value=T),
-            #                                         checkboxInput('export.excel', 'Excel sheet',value=T),
-            #                                         checkboxInput('export.cm', 'Correlation matrix',value=T),
-            #                                         checkboxInput('export.profile', 'Profile plot',value=T),
-            # 
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL
-            # 
-            #                                         )
-            #                                     )
-            #                            )
-            # 
-            #                        } else {
-            #                            fluidRow(
-            #                              column(width=6,
-            #                                     box(title="Session name",
-            #                                         fluidPage(
-            #                                           fluidRow('Please specify a name for the current session which will be used as filname. If checkbox <i>Save as session</i> is enabled, the current state of the session is saved on the server. '),
-            #                                           fluidRow(
-            #                                             textInput( 'label', '', value=global.param$label, width=200)
-            #                                             ),
-            #                                           fluidRow(
-            #                                             checkboxInput('export.save.session', 'Save as session', value=F)
-            #                                             )
-            #                                         ),
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL
-            #                                         ),
-            # 
-            #                                     box(title="Export results", actionButton('export.results', 'Export (.zip)'),
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL),
-            # 
-            #                                     box(title='Download results', downloadButton('download.results', 'Download (.zip)'),
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL)
-            #                                     ),
-            #                              column(width=6,
-            #                                     box(title="Specify what to export",
-            #                                         checkboxInput('export.toggle.all', 'Toggle all', value=F),
-            #                                         tags$hr(),
-            #                                         checkboxInput('export.hm', 'Heatmap',value=T),
-            #                                         checkboxInput('export.box', 'Boxplots',value=T),
-            #                                         checkboxInput('export.volc', 'Volcano plot',value=T),
-            #                                         checkboxInput('export.phist', 'P-value histogram',value=T),
-            #                                         checkboxInput('export.pca', 'PCA',value=T),
-            #                                         checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
-            #                                         checkboxInput('export.ms', 'Multiscatter',value=T),
-            #                                         checkboxInput('export.excel', 'Excel sheet',value=T),
-            #                                         checkboxInput('export.cm', 'Correlation matrix',value=T),
-            #                                         checkboxInput('export.profile', 'Profile plot',value=T),
-            # 
-            #                                         status = "primary",
-            #                                         solidHeader = T,
-            #                                         width=NULL
-            # 
-            #                                         )
-            #                                     )
-            #                            )
-            #                        } ## end else
-            #                        )
-
+         
             ## ##########################################
             ## SUMMARY
             ##    some general numbers on the
@@ -655,10 +559,13 @@ shinyServer(
                                                                  )),
                                                       ## table
                                                       column(width=4,
-                                                             box(width=NULL,  title='Selected points', status = 'primary', solidHeader = T,
-                                                                 actionButton(inputId=paste('volc.tab.reset', groups.comp[i], sep='.'), label='Reset'),
+                                                             box(width=NULL,  title='Selection', status = 'primary', solidHeader = T,
+                                                                 fluidRow(
+                                                                 column(6, actionButton(inputId=paste('volc.tab.reset', groups.comp[i], sep='.'), label='Remove all')),
+                                                                 column(6, actionButton(inputId=paste('volc.tab.reset.select', groups.comp[i], sep='.'), label='Remove selected'))
+                                                                 ),
                                                                  tags$hr(),
-                                                                 tableOutput(paste('volc.tab.selected', groups.comp[i], sep='.'))
+                                                                 dataTableOutput(paste('volc.tab.selected', groups.comp[i], sep='.'))
                                                                  )))
                                               ) ## end fluidPage
     
@@ -746,11 +653,12 @@ shinyServer(
             ##               PCA
             ##
             #############################################
-            pca.tab2 <- vector('list', 3)
+            pca.tab2 <- list()
+            
             ## ##################################################
             ## Run PCA
             ## ##################################################
-            pca.tab2[[1]] <- tabPanel('Run me first',
+            pca.tab2[[1]] <- tabPanel('Explained variance',
              fluidRow(
 
                       box(title='Summary', status='primary', solidHeader = T, htmlOutput('run.pca')),
@@ -796,22 +704,22 @@ shinyServer(
             ## ####################################################################
             ## Loadings plot
             ## ####################################################################
-            pca.tab2[[3]] <- tabPanel('Loadings',
-                                      fluidPage(
-                                        fluidRow(
-                                            column(width=12,
-                                            box(title='Loadings by Ozan Aygun', solidHeader=T, status='primary', width=1000,## height=min( nrow(global.results$filtered), global.plotparam$pca.load.topn )*20+50,
-                                                sliderInput("pca.load.topn", "Choose number of loadings", 1, 100, 20),
-                      ##                          plotOutput("pca.loadings")##, width=1000, height=min(nrow(global.results$filtered), global.plotparam$pca.load.topn )*20 )
-                      ##                        ),
-                      ##                      box(title = "PCA loadings scatterplots",solidHeader = T, status = 'primary',width = 1000,
-                                                background = "navy",
-                                                plotOutput("scatter.pca.loadings")
-                                            ))
-
-                                        )
-                                      )
-            )
+            #pca.tab2[[3]] <- tabPanel('Loadings',
+            #                          fluidPage(
+            #                            fluidRow(
+            #                                column(width=12,
+            #                                box(title='Loadings by Ozan Aygun', solidHeader=T, status='primary', width=1000,## height=min( nrow(global.results$filtered), global.plotparam$pca.load.topn )*20+50,
+            #                                    sliderInput("pca.load.topn", "Choose number of loadings", 1, 100, 20),
+            #          ##                          plotOutput("pca.loadings")##, width=1000, height=min(nrow(global.results$filtered), global.plotparam$pca.load.topn )*20 )
+            #          ##                        ),
+            #          ##                      box(title = "PCA loadings scatterplots",solidHeader = T, status = 'primary',width = 1000,
+            #                                    background = "navy",
+            #                                    plotOutput("scatter.pca.loadings")
+            #                                ))
+            #
+            #                            )
+            #                          )
+            #)
 
 
             ## ###########################################
@@ -820,7 +728,7 @@ shinyServer(
             ## ###########################################
             table.tab <- tabPanel('Table',
                      fluidPage(
-                         fluidRow(column(12, tags$h3('Result table (filtered):'))),
+                         fluidRow(column(12, tags$h3(paste('Result table')))),
                          fluidRow(column(12, tags$br())),
                          fluidRow(column(12, dataTableOutput("tableprev")))
                      )
@@ -977,8 +885,9 @@ shinyServer(
                        #######################################
                        ##              insert PCA
                        #######################################
-                       navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
-
+                       #navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
+                       #navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
+                      navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]]),
                        #######################################
                        ##           insert table preview
                        #######################################
@@ -1019,7 +928,7 @@ shinyServer(
                       #######################################
                       ##              insert PCA
                       #######################################
-                      navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
+                      navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]]),
                       
                       #######################################
                       ##           insert table preview
@@ -1343,15 +1252,20 @@ shinyServer(
             if(length(id.idx) > 0){
                 tab.colnames <- c(tab.colnames[id.idx], tab.colnames[-id.idx])
             }
-
+            tab.colnames.names <- names(tab.colnames)
+            names(tab.colnames) <- NULL
+           # cat(tab.colnames[1:4], '\n')
             ## radio button to pick id column
             list(
                 ## experimental design
-                HTML('<font size=\"3\"><b>Export experimental design file:</b></font><br>'),
-                downloadButton("exportTemplate", 'Export'),
+                HTML('<font size=\"3\"><b>Export experimental design file:</b></font>\n<br>'),
+                HTML('<br>'),
+                downloadButton("exportTemplate", 'Export',  style="color: #000000", width='100'),
                 HTML('<br><hr size=\"5\">'),
-                radioButtons( "id.col.value", "Choose ID column", tab.colnames),
-                actionButton("id.col", 'OK')
+                actionButton("id.col", 'Next', width='100'),
+                HTML('<hr size=\"5\">'),
+                radioButtons( inputId = "id.col.value", label = "Choose ID column", choiceValues = tab.colnames.names, choiceNames = tab.colnames )
+                
             )
 
         })
@@ -1371,7 +1285,7 @@ shinyServer(
             list(
                 ## upload template
                 fileInput("exp.file", "Upload experimental design file", accept=c('text/plain','.txt')),
-                actionButton( 'update.grp', 'Next')
+                actionButton( 'update.grp', 'Next', width='100')
             )
         })
 
@@ -1439,17 +1353,6 @@ shinyServer(
                     
                   ),
                   
-                  # if(length(unique(global.param$grp.comp.all)) > 10 | length( unique(global.param$cdesc.all))  > 10){
-                  #   fluidRow(
-                  #     if(length(unique(global.param$grp.comp.all)) > 10){
-                  #       column(6, actionButton('modal.toggle.groups', 'toggle all'))
-                  #     } else {column(6)},
-                  #     if(length( unique(global.param$cdesc.all))){
-                  #       column(6, actionButton('modal.toggle.anno', 'toggle all'))
-                  #     } else {column(6)}
-                  #   )
-                  # },
-                  # 
                   fluidRow(
                     #if(length(unique(global.param$grp.comp.all)) > 10){
                     column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection))),
@@ -1493,14 +1396,6 @@ shinyServer(
             global.param$anno.col.color <- anno.col.color[ c(cdesc.selection, global.param$grp.gct3 ) ]
           }
           
-          #save(cdesc.selection, file='tmp.RData')
-          ## update class vector
-          #cdesc.selection <- global.param$cdesc.all
-          #grp.unique <- unique( unlist( strsplit( sub('\\.vs\\.', ' ', input$select.groups), ' ')))
-          #grp.selection <- grp.selection[ grep(paste('^', paste(grp.unique, collapse='|'), '$', sep=''), grp.selection) ]
-          #global.param$cdesc.selection <- cdesc.selection
-          
-    
         })
         
         # ##################################################
@@ -1618,12 +1513,12 @@ shinyServer(
         })
         
         ## #####################################################
-        ##              updatePlotparams
+        ##              savePlotparams
         ## - save input parameters to reactive values
         ## 
-        updatePlotparams <- function(){
+        savePlotparams <- function(){
           ## heatmap
-          global.plotparam$hm.clust <- input$hm.clustr
+          global.plotparam$hm.clust <- input$hm.clust
           global.plotparam$hm.scale <- input$hm.scale
           global.plotparam$cexRow <- input$cexRow
           global.plotparam$cexCol <- input$cexCol
@@ -1637,6 +1532,7 @@ shinyServer(
           global.plotparam$ms.max <- input$ms.max
           global.plotparam$ms.min <- input$ms.min
           global.plotparam$ms.max <- input$ms.max
+          global.plotparam$ms.robustify <- input$ms.robustify
           ## correlation matrix
           global.plotparam$cm.upper <- input$cm.upper
           global.plotparam$cm.lower <- input$cm.lower
@@ -1645,6 +1541,35 @@ shinyServer(
           global.plotparam$HC.fan.show.tip.label <- input$HC.fan.show.tip.label
           global.plotparam$HC.fan.tip.cex <- input$HC.fan.tip.cex
         }
+        ## ##############################################################
+        ##                 update plotting parameters
+        ## ##############################################################
+        updatePlotparams <- function(){
+          ## heatmap
+          updateSelectInput(session, inputId='hm.clust', selected=global.plotparam$hm.clust)
+          updateSelectInput(session, inputId='hm.scale', selected=global.plotparam$hm.scale)
+          updateNumericInput(session, inputId='cexCol', value=global.plotparam$hm.cexCol)
+          updateNumericInput(session, inputId='cexRow', value=global.plotparam$hm.cexRow)
+          updateNumericInput(session, inputId='hm.max.val', value=global.plotparam$hm.max.val)
+          updateCheckboxInput(session, inputId='hm.max', value=global.plotparam$hm.max)
+          ## PCA
+          updateSelectInput(session, inputId='pca.x', selected=global.plotparam$pca.x)
+          updateSelectInput(session, inputId='pca.y', selected=global.plotparam$pca.y)
+          updateSelectInput(session, inputId='pca.z', selected=global.plotparam$pca.z)
+          ## multiscatter
+          updateCheckboxInput(session, inputId='ms.max', value=global.plotparam$ms.max)
+          updateNumericInput(session, inputId='ms.max.val', value=global.plotparam$ms.max.val)
+          updateNumericInput(session, inputId='ms.min.val', value=global.plotparam$ms.min.val)
+          updateCheckboxInput(session, inputId='ms.robustify', value=global.plotparam$ms.robustify)
+          ## correlation matrix
+          updateCheckboxInput(session, inputId='cm.numb', value=global.plotparam$cm.numb)
+          updateSelectInput(session, inputId='cm.upper', selected=global.plotparam$cm.upper)
+          updateSelectInput(session, inputId='cm.lower', selected=global.plotparam$cm.lower)
+          
+          ## fanplot
+          updateCheckboxInput(session, inputId='HC.fan.show.tip.label', value= global.plotparam$HC.fan.show.tip.label)
+          updateNumericInput(session, inputId='HC.fan.tip.cex', value=global.plotparam$HC.fan.tip.cex)
+        }
         
         ## ######################################################################
         ##
@@ -1652,15 +1577,7 @@ shinyServer(
         ##
         observeEvent(input$export.rmd,{
           
-          ## ####################################
-          ##         what to export
-          export.volc <- input$export.volc & !(global.param$which.test %in% c('mod F', 'none'))
-          export.cm <- input$export.cm
-          export.hm <- input$export.hm
-          export.pca <- input$export.pca
-          export.box <- input$export.box
-          
-            
+             
           ## label
           global.param$label <- gsub('_| |,|;|\\:|\\+|\\*', '-', input$label)
           #global.param$label <- input$label
@@ -1675,25 +1592,38 @@ shinyServer(
           ## groups to compare
           grp.comp <- unique( global.param$grp.comp )
           
+          ## ####################################
+          ##         what to export
+          export.volc <- input$export.volc & !(global.param$which.test %in% c('mod F', 'none'))
+          export.cm <- input$export.cm
+          export.hm <- input$export.hm
+          export.pca <- input$export.pca
+          export.box <- input$export.box
+          
+          #n.chunks <- sum( )
+          
+          
           #######################################
           ##    extract expression values
           res = res[, names(grp)]
           
           ## ####################################
           ##        perform pca
-          if(export.pca){
+          if(export.pca & nrow(res) > 2){
             pca=my.prcomp2( res, grp )
             global.results$pca <- pca
           }
           
           ## ################################################
           ##        update plotting parameters 
-          updatePlotparams()
+          savePlotparams()
           
 
           ## ##########################################################
           ##                       header
           ## ##########################################################
+          withProgress(message='Rmarkdown report', value=0, min = 0, max = 1, detail='hold on...',{
+            
           rmd <- paste('<a name="top"></a>
             \n#`r global.param$label` - analysis report
             \n***
@@ -1715,6 +1645,7 @@ shinyServer(
                       ',ifelse(export.cm, '\n     - [Correlation matrix](#corrmat)','' ),'
                       ',ifelse(export.box, '\n    - [Box-and-whisker plots](#boxplot)','' ),'
                        ', sep='')
+          #setProgress(value=0.1)
           ## ##########################################################
           ##                   data set
           ## ##########################################################
@@ -1777,7 +1708,7 @@ shinyServer(
           ## #######################################################
           ##                  results
           ## #######################################################
-          
+          #setProgress(0.2)
           ## ##########################################################
           ## Quantified features
           rmd <- paste(rmd, "
@@ -1829,7 +1760,7 @@ shinyServer(
                       \n[Back to top](#top)
                        \n", sep='\n')
           
-     
+          #setProgress(0.3)
           ## ##########################################################
           ##                 Heatmap
           ## ##########################################################
@@ -1877,7 +1808,7 @@ shinyServer(
               }
         
           }
-          
+          setProgress(0.5)
           ## ##########################################################
           ##                       volcano
           ## ##########################################################
@@ -1887,7 +1818,7 @@ shinyServer(
               rmd <- paste(rmd, "
               \n***
               \n### Volcano Plot <a name=\"volcanos\"></a>
-              \n```{r volcano, echo=F, fig.width=6, fig.height=6}
+              \n```{r volcano, echo=F, fig.width=7, fig.height=7}
               \nwithProgress(message='Exporting', detail='volcano plot',{
               \nfor(j in 1:length(grp.comp)){
               \n  local({
@@ -1901,6 +1832,7 @@ shinyServer(
               \n", sep='\n')
             
           }
+          #setProgress(0.6)
           ## ############################################################
           ##                       PCA
           ## ############################################################
@@ -1954,7 +1886,7 @@ shinyServer(
             
             }
           } # end if export.pca
-          
+          #setProgress(0.7)
           ###############################################################
           ##            QC
           rmd <- paste(rmd, '
@@ -2001,7 +1933,7 @@ shinyServer(
                            , sep='\n')
            
           } # end if export.cm
-          
+          #setProgress(0.8)
           ## ##########################################################
           ##                Boxplots
           ## ##########################################################
@@ -2047,7 +1979,7 @@ shinyServer(
           } # end if export.cm
           
           
-          
+          #setProgress(0.9)
           ## ##########################################################
           ##                    session info
           ## ##########################################################
@@ -2065,48 +1997,44 @@ shinyServer(
           ##                  render document
           cat('## Rendering Rmarkdown file\n')
           writeLines(rmd, con=paste(global.param$session.dir, paste(fn.rmd, 'rmd', sep='.'), sep='/'))
-          rmarkdown::render(paste(global.param$session.dir, paste(fn.rmd, 'rmd', sep='.'), sep='/'))
-
           
-          #fn.rmd <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
-          global.param$rmd.name=paste(fn.rmd, 'html', sep='.')
-
-          
-          ## #####################################
-          ##         save session
-          #if(input$export.save.session){
-          #
-          #  ## convert to list
-          #  global.plotparam.imp <- reactiveValuesToList(global.plotparam)
-          #  global.input.imp <- reactiveValuesToList(global.input)
-          #  global.param.imp <- reactiveValuesToList(global.param)
-          #  global.results.imp <- reactiveValuesToList(global.results)
-          #  volc.imp <-  reactiveValuesToList(volc)
+          render.rmd <- try(
+            rmarkdown::render(paste(global.param$session.dir, paste(fn.rmd, 'rmd', sep='.'), sep='/'))
+          )
             
-          #  fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
-          #  save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
-          #  
-          #  }
+          }) # end withProgress
           
-          global.results$export.rmd <- TRUE
+          if(class(render.rmd) == 'try-error'){
+            #save(render.rmd, file='rmd.RData')
+            
+            showModal(modalDialog(
+              size='m',
+              title = "Problem generating R Markdown report",
+              render.rmd[[1]],
+              HTML('<br><br>Please install pandoc for your OS from <a href="https://github.com/jgm/pandoc/releases/tag/2.1.1
+" target="_blank_">https://github.com/jgm/pandoc/releases/tag/2.1.1/</a><br>Please restart R after installing pandoc.')
+            ))
+            
+          } else {
+            global.param$rmd.name=paste(fn.rmd, 'html', sep='.')
+            global.results$export.rmd <- TRUE
+          }
+          
+          ## trigger selectize update
+          global.param$update.ppi.select <- TRUE
+          global.param$update.ppi.select.scat <- TRUE
+          
           updateTabsetPanel(session, 'mainPage', selected='Export')
         })
         
-        ## #############################################################
-        ## observer
-        ##            save current state as session on the server 
-        ##
-        ## 
-        observeEvent(input$export.save.session, {
-          
-          ## #####################################
-          ## update label
-          global.param$label <- gsub('_| |,|;|\\:|\\+|\\*', '-', input$label)
+        ####################################################
+        ##         function to save current state
+        ## #################################################
+        saveSession <- function(){
           
           #########################################################
           ## save current plotting parameters
-          updatePlotparams()
-          
+          savePlotparams()
           global.param$session.saved <- TRUE
           
           #########################################################
@@ -2121,23 +2049,63 @@ shinyServer(
           ## save as R-object
           ## no label present
           if(is.null(global.param$label)){
-            
             fn.tmp <- paste(global.param$session.dir, paste('session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep='/')
-            
             save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
-            #fn.zip <- paste( gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
-            
           }
           ## label present
           if(!is.null(global.param$label) | nchar(global.param$label) == 0){
-            
             fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
-            
             save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
-            #fn.zip <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
-            
           }
+        }
+        ## #############################################################
+        ## observer
+        ##            save current state as session on the server 
+        ##
+        ## 
+        observeEvent(input$export.save.session, {
+          
+          ## #####################################
+          ## update label
+          global.param$label <- gsub('_| |,|;|\\:|\\+|\\*', '-', input$label)
+          
+          ## #####################################
+          ## check wether a session with the same name exists
+          double.check <- T
+          check.session <- dir( global.param$session.dir, pattern=paste('^', global.param$label, '_session_[0-9]{4}-[0-9]{2}-[0-9]{2}-.*\\.RData$', sep=''), full.names = T)
+          if(length(check.session) > 0){
+            double.check <- F
+            showModal(modalDialog(
+              size='s',
+              title = "Overwrite existing session?",
+              ##fluidPage(
+            ##    fluidRow(column(12, 'Overwrite session?'))
+            ##  ),
+            footer = NULL,
+            fluidRow(    
+              column(6, actionButton(inputId = 'session.overwrite' , label='Yes')),
+                column(6, modalButton(label='Cancel'))
+              )
+            ))
+            ## observe "yes"-button
+            observeEvent(input$session.overwrite,{
+              double.check <- T
+              if(file.exists(check.session))
+                file.remove(check.session)
+              saveSession()
+              removeModal()
+            })
+          }
+          if(double.check)
+            saveSession()
+          
+          ## trigger selectize update
+          global.param$update.ppi.select <- TRUE
+          global.param$update.ppi.select.scat <- TRUE
+          
+          
           updateTabsetPanel(session, 'mainPage', selected='Export')
+          
         })
         
         ## ##########################################################################
@@ -2181,28 +2149,27 @@ shinyServer(
               global.param$xls.name <- fn.tmp
               
               ## Excel
-              WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
-              
+              render.xlsx <- try(
+                WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
+              )
+              #save(render.xlsx, file='xlsx.RData')
             })
           
-          ## #####################################
-          ##         save session
-          # if(input$export.save.session){
-          #   updatePlotparams()
-          #   
-          #   ## convert to list
-          #   global.plotparam.imp <- reactiveValuesToList(global.plotparam)
-          #   global.input.imp <- reactiveValuesToList(global.input)
-          #   global.param.imp <- reactiveValuesToList(global.param)
-          #   global.results.imp <- reactiveValuesToList(global.results)
-          #   volc.imp <-  reactiveValuesToList(volc)
-          #   
-          #   fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
-          #   save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
-          #   
-          # }
-          # 
-          global.results$export.xls <- TRUE
+          if(class(render.xlsx) == 'try-error' | !render.xlsx){
+            showModal(modalDialog(
+              size='m',
+              title = "Problem generating Excel sheet",
+              #render.xlsx[[1]],
+              HTML('Perl required to generate xlsx files. For Windows OS please install Strawberry Perl (<a href="http://strawberryperl.com/" target="_blank_">http://strawberryperl.com/</a><br>R needs to be restarted after installing Perl.)')
+            ))
+          } else {
+            global.results$export.xls <- TRUE
+          }
+          
+          ## trigger selectize update
+          global.param$update.ppi.select <- TRUE
+          global.param$update.ppi.select.scat <- TRUE
+          
           updateTabsetPanel(session, 'mainPage', selected='Export')
           
         })
@@ -2223,7 +2190,7 @@ shinyServer(
 
             ## #####################################
             ## update plot params
-            updatePlotparams()
+            savePlotparams()
 
             ###############################
             ## apply filter
@@ -2556,47 +2523,6 @@ shinyServer(
                 })
             }
 
-            # #########################################################
-            # ##          save session parameters
-            # #########################################################
-            # global.input.imp <- reactiveValuesToList(global.input)
-            # global.param.imp <- reactiveValuesToList(global.param)
-            # global.results.imp <- reactiveValuesToList(global.results)
-            # 
-            # #########################################################
-            # ## save current plotting parameters
-            # #########################################################
-            # 
-            # ## heatmap
-            # global.plotparam$hm.scale <- input$hm.scale
-            # global.plotparam$hm.clust <- input$hm.clust
-            # global.plotparam$hm.cexCol <- input$hm.cexCol
-            # global.plotparam$hm.cexRow <- input$hm.cexRow
-            # global.plotparam$hm.max <- input$hm.max
-            # global.plotparam$hm.max.val <- input$hm.max.val
-            # ## pca
-            # global.plotparam$pca.x <- input$pca.x
-            # global.plotparam$pca.y <- input$pca.y
-            # global.plotparam$pca.z <- input$pca.z
-            # ## multiscatter
-            # global.plotparam$ms.max <- input$ms.max
-            # global.plotparam$ms.min <- input$ms.min
-            # global.plotparam$ms.max <- input$ms.max
-            # ## correlation matrix
-            # global.plotparam$cm.upper <- input$cm.upper
-            # global.plotparam$cm.lower <- input$cm.lower
-            # global.plotparam$cm.numb <- input$cm.numb
-            # ## fanplot
-            # global.plotparam$HC.fan.show.tip.label <- input$HC.fan.show.tip.label
-            # global.plotparam$HC.fan.tip.cex <- input$HC.fan.tip.cex
-            # 
-            # 
-            # ## convert to list
-            # global.plotparam.imp <- reactiveValuesToList(global.plotparam)
-            # 
-            # ## volcano coordinates
-            # volc.imp <-  reactiveValuesToList(volc)
-            # 
             #################################
             ##       name of zip archive
             ## no label present
@@ -2615,8 +2541,10 @@ shinyServer(
             #########################################################
             ##   export parameters as small text file
             #########################################################
+            global.param.imp <- reactiveValuesToList(global.param)
             params <- global.param.imp[c('log.transform', 'norm.data', 'filt.data',  'repro.filt.val', 'sd.filt.val', 'which.test', 'filter.type', 'filter.value')]
-
+            #params <- global.param[[c('log.transform', 'norm.data', 'filt.data',  'repro.filt.val', 'sd.filt.val', 'which.test', 'filter.type', 'filter.value')]]
+            
             params.txt <- unlist(lapply(params, paste, collapse=';'))
             params.txt <-  paste(names(params.txt),params.txt, sep='\t')
 
@@ -2655,11 +2583,12 @@ shinyServer(
 
             ###################################################
             ## run command
-	          if(OS == 'Windows')
-                system( paste('zip -0 ', paste(global.param$session.dir, fn.zip, sep='/'), ' ', paste(fn.all.abs, collapse=' '),sep='') )
-            else
+	          if(OS == 'Windows') {
+                #system( paste('zip -0 ', paste(global.param$session.dir, fn.zip, sep='/'), ' ', paste(fn.all.abs, collapse=' '),sep='') )
+	              system( paste('bin/zip.exe -0 ', paste(global.param$session.dir, fn.zip, sep='/'), ' ', paste(fn.all.abs, collapse=' '),sep='') )
+            } else {
                 system( paste('cd ', global.param$session.dir,' && zip -0 ', fn.zip, ' ', paste(fn.all, collapse=' '), sep='') )
-
+            }
             ## store file.name
 	          global.param$zip.name=fn.zip
             ## cat('test16\n')
@@ -2676,12 +2605,13 @@ shinyServer(
               all.zip <- all.zip[ -which.max(file.info(all.zip)$ctime) ]
               file.remove(all.zip)
             }
-            #
-
-            # remove Rdata file, if session won't be saved            
-            #if(!input$export.save.session)
-            #    file.remove(fn.tmp)
-
+            # 
+  
+            ## trigger selectize update
+            global.param$update.ppi.select <- TRUE
+            global.param$update.ppi.select.scat <- TRUE
+            
+            
              ###############################################################
              ## flag export
              global.results$export.results=TRUE
@@ -2717,7 +2647,7 @@ shinyServer(
 
             ## store name of id column
             global.param$id.col.value <- input$id.col.value
-
+cat('id: ', global.param$id.col.value, '\n')
             ## update 'input$id.col'
             global.input$id.col <- input$id.col
 
@@ -2835,12 +2765,40 @@ shinyServer(
                 validate(need(class(gct) != 'try-error', 'Error importing GCT 1.3 file.'))
               }
               
+              ## #################################################
+              ## robustify ids
+              gct@rid <- make.unique(make.names(gct@rid))
+              rownames(gct@rdesc) <- rownames(gct@mat) <- gct@rid
+              gct@cid <- make.unique(make.names(gct@cid))
+              rownames(gct@cdesc) <- colnames(gct@mat) <- gct@cid
+              
               # expression table
               tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
+              rownames(tab) <-tab$id
               
+              ## sample names
               colnames.tmp <- chopString(colnames(tab), STRLENGTH)
               names(colnames.tmp) <- colnames(tab)
               
+               
+              # id column 
+              global.param$id.col.value='id'
+              global.param$id.done=T
+              
+              # robustify ids
+              #ids <- make.unique( as.character(tab[, global.param$id.col.value] ), sep='_')
+              
+              ## replace values in id column
+              #tab[, global.param$id.col.value] <- ids
+              ## use id as rownames
+              #rownames(tab) <- ids
+              
+              ## #################
+              ## map to gene names
+              map.res <- mapIDs(tab$id)
+              global.results$keytype <- map.res$keytype
+              global.results$id.map <- map.res$id.map
+             
               ## store values
               global.input$table <- global.input$table.org <- tab
               global.input$file <- input$file
@@ -2848,29 +2806,12 @@ shinyServer(
               
               # meta data
               global.input$rdesc <- gct@rdesc
-              
               global.input$cdesc <- gct@cdesc
-              rownames(global.input$cdesc) <- make.names(rownames(global.input$cdesc)) # convert to proper names
+              #rownames(global.input$cdesc) <- make.names(make.unique( rownames(global.input$cdesc))) # convert to proper names
               
               global.param$cdesc.all <- global.param$cdesc.selection <- colnames(global.input$cdesc)
               
-              # id column 
-              global.param$id.col.value='id'
-              global.param$id.done=T
-              
-              # robustify ids
-              ids <- make.unique( as.character(tab[, global.param$id.col.value] ), sep='_')
-              ## replace values in id column
-              tab[, global.param$id.col.value] <- ids
-              ## use id as rownames
-              rownames(tab) <- ids
-              
-              ## #################
-              ## map to gene names
-              map.res <- mapIDs(ids)
-              global.results$keytype <- map.res$keytype
-              global.results$id.map <- map.res$id.map
-              
+               
               # flag
               global.param$file.gct3 <- T
               
@@ -2957,11 +2898,14 @@ shinyServer(
                 volc[[i]] <- volc.imp[[i]]
             }
             
+            ## #####################################################
             ## backwards compatibility II
             if(is.null(names(global.param$grp.colors)))
               names(global.param$grp.colors) <- names(global.param$grp.colors)
             if(is.null(global.param$session.saved))
               global.param$session.saved <- T
+            if(is.null( global.param$update.pca) )
+              global.param$update.pca <- TRUE
             
           
 
@@ -2978,38 +2922,10 @@ shinyServer(
                 updateNumericInput(session, inputId='filter.value.adj.p', value=global.param$filter.value)
             }
 
-            ## ##############################################################
-            ##                 update plotting parameters
-            ## ##############################################################
-
-            ## heatmap
-            updateSelectInput(session, inputId='hm.clust', selected=global.plotparam$hm.clust)
-            updateSelectInput(session, inputId='hm.scale', selected=global.plotparam$hm.scale)
-            updateNumericInput(session, inputId='cexCol', value=global.plotparam$hm.cexCol)
-            updateNumericInput(session, inputId='cexRow', value=global.plotparam$hm.cexRow)
-            updateNumericInput(session, inputId='hm.max.val', value=global.plotparam$hm.max.val)
-            updateCheckboxInput(session, inputId='hm.max', value=global.plotparam$hm.max)
-          
-
-            ## PCA
-            updateSelectInput(session, inputId='pca.x', selected=global.plotparam$pca.x)
-            updateSelectInput(session, inputId='pca.y', selected=global.plotparam$pca.y)
-            updateSelectInput(session, inputId='pca.z', selected=global.plotparam$pca.z)
-
-            ## multiscatter
-            updateCheckboxInput(session, inputId='ms.max', value=global.plotparam$ms.max)
-            updateNumericInput(session, inputId='ms.max.val', value=global.plotparam$ms.max.val)
-            updateNumericInput(session, inputId='ms.min.val', value=global.plotparam$ms.min.val)
-
-            ## correlation matrix
-            updateCheckboxInput(session, inputId='cm.numb', value=global.plotparam$cm.numb)
-            updateSelectInput(session, inputId='cm.upper', selected=global.plotparam$cm.upper)
-            updateSelectInput(session, inputId='cm.lower', selected=global.plotparam$cm.lower)
-
-            ## fanplot
-            updateCheckboxInput(session, inputId='HC.fan.show.tip.label', value= global.plotparam$HC.fan.show.tip.label)
-            updateNumericInput(session, inputId='HC.fan.tip.cex', value=global.plotparam$HC.fan.tip.cex)
-
+            ## ###############################################################
+            ## update plotting paramaters
+            updatePlotparams()
+            
             ##################################
             ## set flags
             global.param$file.done=T
@@ -3160,8 +3076,20 @@ shinyServer(
             names(grp)=grp.exprs$Column.Name
 
             ## update input table, keep id and expression columns
-            global.input$table <- global.input$table[ , c(global.param$id.col.value, names(grp))]
-
+            tab <- global.input$table[ , c(global.param$id.col.value, names(grp))]
+            
+            ## #################################
+            ## remove NA rows
+            na.row.idx <- apply(tab[, names(grp)], 1, function(x) sum(is.na(x))/length(x) )
+            na.row.idx <- which(na.row.idx == 1)
+            if(length(na.row.idx) > 0){
+              tab <- tab[-na.row.idx, ]
+              global.input$NA.rows <- length(na.row.idx)
+            }
+            
+            #global.input$table <- global.input$table[ , c(global.param$id.col.value, names(grp))]
+            global.input$table <- tab
+            
             ################################
             ## update number of groups
             global.param$N.grp <- length(unique( na.omit(grp)) )
@@ -3644,6 +3572,10 @@ shinyServer(
             ## #################################################################
             ## increment counter: will invoke the filter
             global.param$run.test <- global.param$run.test + 1
+            
+            ## #################################
+            ## flag to update PCA
+            global.param$update.pca <- TRUE
         })
 
 
@@ -3830,6 +3762,9 @@ shinyServer(
             ## trigger selectize update
             global.param$update.ppi.select <- TRUE
             global.param$update.ppi.select.scat <- TRUE
+            
+            ## flag to update PCA
+            global.param$update.pca <- TRUE
 
         })
 
@@ -3912,8 +3847,13 @@ shinyServer(
                 N.columns=length(grp),
                 N.groups=N.grp
             ))
+            
+            if(!is.null(global.input$NA.row)){
+              sum.tab[1,1] <- paste(sum.tab[1,1], '(no quant: ',global.input$NA.row,')')
+            }
+            
             ##View(sum.tab)
-            sum.tab <- data.frame(id=c('Rows', 'Expression columns', 'Groups'), sum.tab)
+            sum.tab <- data.frame(id=c('No. features', 'No. expression columns', 'No. groups'), sum.tab)
             colnames(sum.tab) <- c('', 'Number')
             ##rownames(sum.tab) <- c('Rows', 'Expression columns', 'Groups')
 
@@ -4085,14 +4025,10 @@ shinyServer(
             n.miss[names(na.row.idx)] <- na.row.idx
             n.miss <- cumsum(n.miss)
             
-            p <- plot_ly( x=as.numeric(names(n.miss)), y=n.miss, type='scatter', mode='lines+markers', marker=list(color = 'black'), line=list(color='black') )
-            p <- layout(p, title=paste('Fully quantified features:', n.miss[1]), xaxis=list(title=paste('# missing values')), yaxis=list(title=paste('# quantified features')))
+            p <- plot_ly( x=as.numeric(names(n.miss))/ncol(dat)*100, y=n.miss, type='scatter', mode='lines+markers', marker=list(color = 'black'), line=list(color='black') )
+            p <- layout(p, title=paste('Fully quantified features:', n.miss[1]), xaxis=list(title=paste('Percent missing'), showspikes=T, spikecolor='grey60'), yaxis=list(title=paste('# quantified features'), showspikes=T, spikecolor='grey60'))
             
-           # save(na.row.idx, dat, n.miss, file='tmp.RData')
-            
-            #p <- plot_ly( x=names(na.row.idx)[2:length(na.row.idx)], y=na.row.idx[2:length(na.row.idx)], type='bar' )
-            #p <- layout(p, title=paste('Fully quantified features:', na.row.idx[1]), xaxis=list(title=paste('# missing values')), yaxis=list(title=paste('# data rows')))
-            p
+           p
         })
         ## #############################################################################
         ##
@@ -4160,8 +4096,7 @@ shinyServer(
   
             tab <- global.results$filtered
             colnames(tab) <- sub('^X','',colnames(tab))
-            ##rownames(tab) <- tab[, input$id.col.value]
-
+           
             ## append annotation columns
             table.anno <- global.input$table.anno
 
@@ -4170,22 +4105,27 @@ shinyServer(
             if(!is.null(table.anno)){
                 if(is.null(dim(table.anno)))
                     table.anno <- data.frame(table.anno)
-               ## View(tab)
-               ## View(table.anno)
-                ##tab <- cbind(tab, table.anno[ rownames(tab), ])
+
                 tab <- left_join(tab, table.anno, 'id')
             }
 
             if(nrow(tab) > 0){
-                ## add links to GeneCard
+              
+                ## add links to GeneCard/UniProt
                 up.id <- tab$id
                 up.link <- link.db(up.id, global.results$keytype)
                 tab[, 'id'] <- up.link
             }
-            tab
+            datatable(tab, style = 'bootstrap', 
+                      width = 1000, escape = F,  filter='top', 
+                      rownames=F, options = list( pageLength = 10, scrollX = T, selection='none',
+                                                  fnRowCallback = JS("function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {ind = 2; $('td:eq('+ind+')', nRow).html( (aData[ind]).toFixed(2) );}")
+                                                  )
+                      )
+            #tab
 
-        }, options = list( pageLength = 20, scrollX = T), escape=F, filter='top', rownames=F)
-
+        #}, options = list( pageLength = 10, scrollX = T), escape=F, filter='top', rownames=F, server = T)
+        }, server=T)
 
         ## ################################################################################
         ##
@@ -4199,8 +4139,9 @@ shinyServer(
         ## - server side  rendering of selectizeInput
         ## ##################################################################
         observe({
+            #cat('now:', global.param$update.ppi.select, '\n')
             if( !global.param$update.ppi.select ) return()
-            ##cat('now:', global.param$update.ppi.select, '\n')
+            #cat('now:', global.param$update.ppi.select, '\n')
 
             grp.comp <- unique( global.param$grp.comp )
 
@@ -4403,13 +4344,37 @@ shinyServer(
                       volc[[paste('x', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('y', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('xy', grp.comp[my_i], sep='.')]] <- NULL
+                      volc[[paste('text', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('P.Value', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- NULL
                   })
-
+                    
+                  
+                  ## ######################################################
+                  ##       remove selected rows from table and volcano labels  
+                  observeEvent(input[[paste('volc.tab.reset.select', grp.comp[my_i], sep='.')]],{
+                      ## if so remove from the list
+                      #ids <- volc[[paste('text', grp.comp[my_i], sep='.')]]
+                      
+                      #idx <- c()
+                      #for(l in 1:length(ids))
+                      #  idx[l] = input[[ paste('rm', ids[l], grp.comp[my_i], sep='.') ]] 
+                      
+                      idx=input[[ paste( paste('volc.tab.selected', grp.comp[my_i], sep='.'), 'rows_selected', sep='_' )]]
+                      #cat('test', idx, '---\n')
+                      volc[[paste('x', grp.comp[my_i], sep='.')]] <- volc[[paste('x', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('y', grp.comp[my_i], sep='.')]] <- volc[[paste('y', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('text', grp.comp[my_i], sep='.')]] <- volc[[paste('text', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('xy', grp.comp[my_i], sep='.')]] <- volc[[paste('xy', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('P.Value', grp.comp[my_i], sep='.')]] <- volc[[paste('P.Value', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]][-idx]
+                      
+                      })
+                    
+                    
                   ## ####################################################
                   ## table of selected features
-                  output[[paste('volc.tab.selected', grp.comp[my_i], sep='.')]] <- renderTable({
+                  output[[paste('volc.tab.selected', grp.comp[my_i], sep='.')]] <- DT::renderDataTable({
 
                       if(is.null(volc[[paste('x', grp.comp[my_i], sep='.')]])) return()
                       if(length(volc[[paste('x', grp.comp[my_i], sep='.')]]) == 0) return()
@@ -4418,14 +4383,36 @@ shinyServer(
 
                       id.tmp <- volc[[paste('text', grp.comp[my_i], sep='.')]]
 
-                      dat.select = data.frame(id=unlist(volc[[paste('text', grp.comp[my_i], sep='.')]]), logFC=unlist(volc[[paste('x', grp.comp[my_i], sep='.')]]), P.Value=unlist(volc[[paste('P.Value', grp.comp[my_i], sep='.')]]), adj.P.Value=unlist(volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]]) )
+                      dat.select = data.frame(id=unlist(volc[[paste('text', grp.comp[my_i], sep='.')]]), logFC=round( unlist(volc[[paste('x', grp.comp[my_i], sep='.')]]), 2), P.Value=round( unlist(volc[[paste('P.Value', grp.comp[my_i], sep='.')]]),3), adj.P.Value=round( unlist(volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]]), 3) )
                       up.id <- dat.select[, 'id']
-                      #up.link <- paste("<a href='http://www.uniprot.org/uniprot/", sub('(_|,|;|\\.).*', '', up.id),"' target='_blank'>", up.id, "</a>", sep='')
-                      up.link <- link.db(up.id, global.results$keytype) 
+                      up.link <- link.db(up.id, global.results$keytype)
                       dat.select[, 'id'] <- up.link
 
-                      dat.select
-                  }, sanitize.text.function = function(x) x)
+                      #rm.button <- c()
+                      #for(l in 1:length(up.id)){
+                      #  rm.button[l] <- sprintf(
+                      #  "<input type=\"checkbox\" name=\"%s\" value=''/>",
+                      #  paste('rm', up.id[l], grp.comp[my_i], sep='.')
+                      #)
+                      #}
+                      #dat.select <- data.frame(Remove=rm.button, dat.select)
+                      #colnames(dat.select)[1] <- ""
+                      datatable(dat.select, escape=F, rownames = F, filter = 'none',autoHideNavigation = T,
+                                options = list( 
+                                  searching=F, paging=F, selection='multiple'#, dom='t', server=FALSE
+                                  #,callback = JS("table.rows().every(function(i, tab, row) {
+                                  #                var $this = $(this.node());
+                                  #              $this.attr('id', this.data()[0]);
+                                  #              $this.addClass('shiny-input-radiogroup');
+                                  #            });
+                                  #            Shiny.unbindAll(table.table().node());
+                                  #            Shiny.bindAll(table.table().node());")
+                                
+                                #                fnRowCallback = I("function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {ind = 2; $('td:eq('+ind+')', nRow).html( (aData[ind]).toFixed(2) );}")
+                                  )
+                                )
+                      #dat.select
+                  } )#, sanitize.text.function = function(x) x)
 
               }) ## end local
 
@@ -4456,7 +4443,7 @@ shinyServer(
             ## unfiltered data set
             res = as.data.frame( global.results$data$output )
 
-            ## #############################
+                  ## #############################
             ## p-values one-sample T
             if(global.param$which.test == 'One-sample mod T'){
 
@@ -4495,7 +4482,8 @@ shinyServer(
             ##cat(paste0('scat.y.', group), '\n')
             x.ax <- res[ , input[[ paste0('scat.x.', group) ]] ]
             y.ax <- res[ , input[[ paste0('scat.y.', group) ]] ]
-
+     
+            
             ## ##############################
             ## ids
             #IDs <- global.results$id.map$id.concat
@@ -4535,11 +4523,9 @@ shinyServer(
             ## ##############################
             ##        set up the  plot
             ## ##############################
-            if(PPI)
-                p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs, opacity=.2, showlegend=F, name='non-interactors' )
+            #if(PPI)
                 ##p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col, showlegend=FALSE), text=IDs, alpha=.1 )
-            else
-                p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs, showlegend=F )
+           
             ## ########################################################
             ##                  add PPI stuff
             ## ##########################################################
@@ -4573,17 +4559,60 @@ shinyServer(
                     col[ppi.int.idx] <- ppi.col[ nchar(ppi.col) > 0 ]
                     ppi.idx <- ppi.int.idx
 
+                    ## ###################################################
+                    ## plot non-interactors
+                    non.int.idx <- 1:nrow(dat.plot)[ -c(ppi.int.idx) ]
+                    if(length(ppi.bait.idx) > 0)
+                      non.int.idx <- non.int.idx[-c(ppi.bait.idx)]
+                    p <- plot_ly(x=dat.plot$x.ax[ non.int.idx ], y=dat.plot$y.ax[ non.int.idx], type='scatter', mode='markers', marker=list(size=10, color=col[non.int.idx]), text=IDs[non.int.idx], opacity=.2, showlegend=F, name='non-interactors' )
+                
+                    ## plot interactors    
                     p <- p %>% add_trace(x=dat.plot$x.ax[ppi.int.idx], y=dat.plot$y.ax[ppi.int.idx], type='scatter', mode = 'markers', marker=list( size=10, color=col[ppi.int.idx]), text=IDs[ppi.int.idx], name='Interactors', opacity=1 )
                 }
                 ## ################################
                 ## add bait
                 if(length(ppi.bait.idx) > 0){
+                    
                     col[ppi.bait.idx] <- 'green'
-                    ppi.idx <- c(ppi.idx, ppi.int.idx)
-
-                    p <- p %>% add_trace(x=dat.plot$x.ax[ppi.bait.idx], y=dat.plot$y.ax[ppi.bait.idx], type='scatter', mode = 'markers', marker=list( size=15, color=col[ppi.bait.idx]), text=IDs[ppi.bait.idx], name=paste('Bait protein:', ppi.bait), opacity=1 )
+                    #ppi.idx <- c(ppi.idx, ppi.int.idx)
+                    cat(ppi.bait , '\n')
+                    cat(ppi.bait.idx, '\n')
+                    
+                    
+                    p <- p %>% add_trace(x=dat.plot$x.ax[ppi.bait.idx], y=dat.plot$y.ax[ppi.bait.idx], type='scatter', mode = 'markers )#', marker=list( size=15, color=col[ppi.bait.idx]), text=IDs[ppi.bait.idx], name=paste('Bait protein:', ppi.bait), opacity=1 )
                 }
+            }  else { ## no PPI
+              p <- plot_ly(x=dat.plot$x.ax, y=dat.plot$y.ax, type='scatter', mode='markers', marker=list(size=10, color=col), text=IDs, showlegend=F )
             }
+            
+            ## ##############################
+            ##  reproducibility filter?
+            values.filtered <- global.results$values.filtered  
+            if(!is.null(values.filtered)){
+              
+              values.filtered <- values.filtered[[ group ]] 
+              
+              ## get the entire dataset
+              if(is.null(global.results$table.log))
+                tab <- data.frame(global.input$table)
+              else
+                tab <- data.frame(global.results$table.log)
+              
+              ## extract filtered values
+              filt.x <- tab[values.filtered, input[[ paste0('scat.x.', group) ]]]
+              filt.y <- tab[values.filtered, input[[ paste0('scat.y.', group) ]]]
+              
+              filt.dat <- data.frame(x=filt.x, y=filt.y)
+              
+              #p <- p %>% add_trace(
+              #  x=filt.dat$x,
+              #  y=filt.dat$y,
+              #  type='scatter', mode='markers', marker=list(size=15, color='blue'), opacity=.2, name='filtered values'
+              #  )
+              #save(values.filtered, file='filter.RData')
+            }
+            
+            
 
             ## some astethics
             p <- layout(p,
@@ -4632,6 +4661,7 @@ shinyServer(
             ## unfiltered data set
             res = as.data.frame( global.results$data$output )
 
+            
             ## #############################
             ## p-values
             if(global.param$which.test != 'mod F'){
@@ -5379,6 +5409,14 @@ shinyServer(
             } else {
                  withProgress({
                     setProgress(message = 'Processing...', detail= 'Generating Heatmap')
+                   #grp=global.param$grp
+                   #grp.col=global.param$grp.colors
+                   #grp.col.legend=global.param$grp.colors.legend
+                   #hm.clust=input$hm.clust
+                   #hm.title=hm.title
+                   #hm.scale=input$hm.scale
+                   #save(res, grp, grp.col, grp.col.legend,  hm.clust, hm.title, hm.scale, anno.col, anno.col.color, file='hm.RData')
+                   
                     #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
                    plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color)
                    })
@@ -5565,22 +5603,34 @@ shinyServer(
         ##
         ######################################################################################
         output$run.pca <- renderText({
+          
             if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
 
-            res <- global.results$filtered
+            #res <- global.results$filtered
 
-            validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
+            #validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
 
             grp <- global.param$grp
 
-            ## run PCA
-            withProgress(message = 'PCA...',{
-                    pca=my.prcomp2( res, grp )
-                  })
-
-            ## store results
-            global.results$pca <- pca
-
+            
+            if(is.null(global.results$pca) | global.param$update.pca == TRUE){
+              
+              res <- global.results$filtered
+              
+              validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
+              
+              ## run PCA
+              withProgress(message = 'PCA...',{
+                pca=my.prcomp2( res, grp )
+              })
+              ## store results
+              global.results$pca <- pca
+              global.param$update.pca <- FALSE
+              
+            } else {
+              pca <- global.results$pca
+            }
+            
             ## short summary, same as 'PCA' is generating
             txt = paste('<p><font size=\"5\">PCA model of a mean-centered and scaled matrix of ',length(grp), ' by ', nrow(pca$loadings), '.</font></p>')
             txt = paste(txt, '<p><font size=\"5\">Number of PCs to cover 90% of the variance:', min(which((cumsum(pca$var)/pca$totalvar) > .9)), '.</font></p>')
@@ -5606,14 +5656,37 @@ shinyServer(
         ## ###########################################################
         ## PCA plotly 2D scatter
         output$pcaxy.plotly <- renderPlotly({
-          if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+          #if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+          
+          if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
           ##if(!is.null(error$msg)) return()
 
-          pca <- global.results$pca
           grp <- global.param$grp
           grp.unique <- unique(grp)
           grp.colors <- global.param$grp.colors[names(grp)]
-
+          
+          if(is.null(global.results$pca) | global.param$update.pca == TRUE){
+ 
+            res <- global.results$filtered
+          
+            validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
+            
+            ## run PCA
+            withProgress(message = 'PCA...',{
+              pca=my.prcomp2( res, grp )
+            })
+            ## store results
+            global.results$pca <- pca
+            global.param$update.pca <- FALSE
+            
+          } else {
+            pca <- global.results$pca
+          }
+          
+          
+          
+         # pca <- global.results$pca
+          
           # selected PCs
           pca.x <- as.numeric(sub('PC ','', input$pca.x))
           pca.y <- as.numeric(sub('PC ','', input$pca.y))
@@ -5640,17 +5713,32 @@ shinyServer(
         ################################################
         ## PCA plotly 3D scatterplot
         output$pcaxyz.plotly <- renderPlotly({
-            if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
-            ##if(!is.null(error$msg)) return()
-
-            validate(need(length(global.param$grp) >= 3, 'Cannot generate 3D plots from data with dimension < 3.'))
-
-            ##if(length(global.param$grp) < 3) return()
-
-            pca <- global.results$pca
+            
+          if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
+            
             grp <- global.param$grp
             grp.unique <- unique(grp)
             grp.colors <- global.param$grp.colors[names(grp)]
+            
+            
+            
+            if(is.null(global.results$pca) | global.param$update.pca == TRUE){
+              
+              res <- global.results$filtered
+              
+              validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
+              
+              ## run PCA
+              withProgress(message = 'PCA...',{
+                pca=my.prcomp2( res, grp )
+              })
+              ## store results
+              global.results$pca <- pca
+              global.param$update.pca <- FALSE
+              
+            } else {
+              pca <- global.results$pca
+            }
             
             # selected PCs
             pca.x <- as.numeric(sub('PC ','', input$pca.x))
@@ -5675,6 +5763,7 @@ shinyServer(
             p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, 'vs. PC', pca.z, sep=''), scene=list( xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)), zaxis=list(title=paste('PC', pca.z))) )
 
         })
+        
         ####################################################
         ## PCA loadings
         output$pca.loadings <- renderPlot({

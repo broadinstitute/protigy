@@ -52,6 +52,8 @@ shinyServer(
             export.results=F, 
             
             pca=NULL,
+            cm=NULL,
+            
             repro.filt=NULL,
 
             ## ids and gene names
@@ -110,7 +112,8 @@ shinyServer(
             update.ppi.select.scat=FALSE, ## trigger selectize, scatterplot
             collapse.ppi=TRUE,             ## should PPI query panel be collapsed?
             
-            update.pca=FALSE
+            update.pca=FALSE,
+            update.cm=FALSE
 
         )
 
@@ -132,7 +135,8 @@ shinyServer(
             volc.hyper.fc=1,    ## min. FC for hyperbolic curve
             volc.hyper.curv=3,  ## curvation parameter for hyperbol. curve
             
-           # volc.reset=F,    ## flag to trigger reset of annotated points
+            #volc.reset=F,    ## flag to trigger reset of annotated points
+            volc.init=T,
             
             ## heatmap
             hm.cexCol=8,
@@ -140,7 +144,9 @@ shinyServer(
             hm.scale="none",
             hm.max=FALSE,
             hm.max.val=4,
-
+            hm.show.rownames=T,
+            hm.show.colnames=T,
+            
             ## PCA
             pca.x='PC 1',
             pca.y='PC 2',
@@ -431,7 +437,21 @@ shinyServer(
                                     fluidRow(
                                         box(title="Missing values", solidHeader = T, status = "primary",width = 12,
                                             plotlyOutput('summary.missing.data.row'))
+                                    ),
+                                    fluidRow(
+                                      column(6, 
+                                             box(title="Significant features (down-regulated)", solidHeader = T, status = "primary",width = 12,
+                                         
+                                             plotOutput('summary.upset.dn'))
+                                            
+                                          ),
+                                      column(6,
+                                         box( title="Significant features (up-regulated)", solidHeader = T, status = "primary",width = 12,  
+                                              plotOutput('summary.upset.up')) 
+                                         )   
+                                      
                                     )
+                                    
                           ) ## end tab panel
 
 
@@ -605,6 +625,12 @@ shinyServer(
                                         column(2, selectInput( "hm.clust", "Cluster", c("column","row","both","none"), selected=ifelse(global.param$which.test != "mod F", "none" ,"both"))),
                                         column(2, checkboxInput('hm.max', 'Cap values', value=global.plotparam$hm.max)),
                                         column(2, numericInput( "hm.max.val", "Max. value", value=global.plotparam$hm.max.val, step=1, min=2))
+                                        ),
+                                        fluidRow(
+                                          
+                                          column(2, checkboxInput('hm.show.colnames', 'Show column labels', value=global.plotparam$hm.show.colnames)),
+                                          column(2, checkboxInput('hm.show.rownames', 'Show row labels', value=global.plotparam$hm.show.rownames)),
+                                          column(8)
                                         ),
                                         fluidRow(
                                             column(12, align='center', plotOutput("HM", height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ), width=dynamicWidthHM(length(global.param$grp))) )
@@ -857,6 +883,19 @@ shinyServer(
                                                          )
                                                          )
  
+            ##############################
+            ## correlation boxplots
+            qc.tabs[[6]] <- tabPanel('Correlation boxplots',
+                                     
+                                     fluidPage(
+                                       fluidRow(
+                                         box(title='Correlation boxplots', solidHeader=T, status="primary", width=1000, height=800,
+                                             column(12, plotOutput("corr.box.group", 800, 600))
+                                        )
+                                      )
+                                     )
+                                     
+                            )
 
 
             ## #################################################################################
@@ -910,9 +949,9 @@ shinyServer(
                        #######################################
                        ## QC
                        if(global.param$which.test != 'none') {
-                           navbarMenu('QC', qc.tabs[[1]], qc.tabs[[2]], qc.tabs[[3]], qc.tabs[[4]], qc.tabs[[5]])
+                           navbarMenu('QC', qc.tabs[[1]], qc.tabs[[2]], qc.tabs[[3]], qc.tabs[[4]], qc.tabs[[5]], qc.tabs[[6]])
                        } else {
-                           navbarMenu('QC', qc.tabs[[1]], qc.tabs[[2]], qc.tabs[[4]], qc.tabs[[5]])
+                           navbarMenu('QC', qc.tabs[[1]], qc.tabs[[2]], qc.tabs[[4]], qc.tabs[[5]], qc.tabs[[6]])
                        },
 
                        ## #######################################
@@ -952,9 +991,9 @@ shinyServer(
                       #######################################
                       ## QC
                       if(global.param$which.test != 'none') {
-                        navbarMenu('QC', qc.tabs[[1]], qc.tabs[[2]], qc.tabs[[3]], qc.tabs[[4]], qc.tabs[[5]])
+                        navbarMenu('QC', qc.tabs[[1]], qc.tabs[[2]], qc.tabs[[3]], qc.tabs[[4]], qc.tabs[[5]], qc.tabs[[6]])
                       } else {
-                        navbarMenu('QC', qc.tabs[[1]], qc.tabs[[2]], qc.tabs[[4]], qc.tabs[[5]])
+                        navbarMenu('QC', qc.tabs[[1]], qc.tabs[[2]], qc.tabs[[4]], qc.tabs[[5]], qc.tabs[[6]])
                       },
                       
                       ## #######################################
@@ -1530,6 +1569,9 @@ shinyServer(
           global.plotparam$cexCol <- input$cexCol
           global.plotparam$hm.max.val <- input$hm.max.val
           global.plotparam$hm.max <- input$hm.max
+          global.plotparam$hm.show.rownames <- input$hm.show.rownames
+          global.plotparam$hm.show.colnames <- input$hm.show.colnames
+          
           ## pca
           global.plotparam$pca.x <- input$pca.x
           global.plotparam$pca.y <- input$pca.y
@@ -1558,6 +1600,9 @@ shinyServer(
           updateNumericInput(session, inputId='cexRow', value=global.plotparam$hm.cexRow)
           updateNumericInput(session, inputId='hm.max.val', value=global.plotparam$hm.max.val)
           updateCheckboxInput(session, inputId='hm.max', value=global.plotparam$hm.max)
+          updateCheckboxInput(session, inputId='hm.show.rownames', value=global.plotparam$hm.show.rownames)
+          updateCheckboxInput(session, inputId='hm.show.colnames', value=global.plotparam$hm.show.colnames)
+          
           ## PCA
           updateSelectInput(session, inputId='pca.x', selected=global.plotparam$pca.x)
           updateSelectInput(session, inputId='pca.y', selected=global.plotparam$pca.y)
@@ -1757,7 +1802,7 @@ shinyServer(
                        ## plot
                        ##p <- plot_ly( x=names(na.col.idx), y=na.col.idx,  color=grp, colors=grp.colors.legend, type='bar')
                       \np <- plot_ly(dat.plot, x=~x, y=~y, color=grp, colors=grp.colors.legend, type='bar')
-                      \np <- layout(p, title='Number of valid data points per data column', xaxis=list(title=paste('Data columns')), yaxis=list(title=paste('# data points')))
+                      \np <- layout(p, title='Number of quantified features per data column', xaxis=list(title=paste('Data columns')), yaxis=list(title=paste('# quant features')))
                        
                        ##################################################
                        ##global.param$session.import.init <- F
@@ -1802,9 +1847,9 @@ shinyServer(
                            \n  anno.col.color=list(Group=global.param$grp.colors.legend)
                            \n}
                            \nif(global.plotparam$hm.max){
-                           \n  plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$cexRow, fontsize_col= global.plotparam$cexCol, max.val=global.plotparam$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color)
+                           \n  plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$cexRow, fontsize_col= global.plotparam$cexCol, max.val=global.plotparam$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=global.plotparam$hm.show.rownames, show.colnames=global.plotparam$hm.show.colnames)
                            \n} else {
-                           \n  plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$cexRow, fontsize_col= global.plotparam$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color)
+                           \n  plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$cexRow, fontsize_col= global.plotparam$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=global.plotparam$hm.show.rownames, show.colnames=global.plotparam$hm.show.colnames)
                            \n}
                            \n}) # end withProgress
                            \n```   
@@ -2146,8 +2191,8 @@ shinyServer(
               fn.tmp <- sub(' ','_',
                             paste(
                                 global.param$label, '_',
-                                sub(' ', '_',global.param$which.test), '_',
-                                ifelse(global.param$log.transform != 'none', paste( global.param$log.transform, '_', sep=''), '_'),
+                                sub(' ', '_',global.param$which.test),
+                                ifelse(global.param$log.transform != 'none', paste( '_', global.param$log.transform, '_', sep=''), '_'),
                                 #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
                                 ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
                                 sub(' .*', '', Sys.time()),".xlsx", sep='') 
@@ -2158,7 +2203,6 @@ shinyServer(
               render.xlsx <- try(
                 WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
               )
-              #save(render.xlsx, file='xlsx.RData')
             })
           
           if(class(render.xlsx) == 'try-error' | !render.xlsx){
@@ -2277,10 +2321,35 @@ shinyServer(
                     if(input$hm.max){
                         ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, cellheight=min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
                         #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow(global.results$filtered), unit='in'), 20 ), cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
-                        plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=global.param$anno.col, anno.col.color=global.param$anno.col.color)
+                        plotHM(res=res, 
+                               grp=global.param$grp, 
+                               grp.col=global.param$grp.colors, 
+                               grp.col.legend=global.param$grp.colors.legend,  
+                               hm.clust=input$hm.clust, 
+                               hm.title=hm.title, 
+                               hm.scale=input$hm.scale, 
+                               fontsize_row=input$cexRow, 
+                               fontsize_col=input$cexCol, 
+                               max.val=input$hm.max.val, 
+                               style=global.param$which.test, 
+                               anno.col=global.param$anno.col, 
+                               anno.col.color=global.param$anno.col.color,
+                               filename = fn.hm, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
                       
                     } else {
-                      plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=global.param$anno.col, anno.col.color=global.param$anno.col.color)
+                      plotHM(res=res, 
+                             grp=global.param$grp, 
+                             grp.col=global.param$grp.colors, 
+                             grp.col.legend=global.param$grp.colors.legend,  
+                             hm.clust=input$hm.clust, 
+                             hm.title=hm.title, 
+                             hm.scale=input$hm.scale, 
+                             fontsize_row=input$cexRow, 
+                             fontsize_col=input$cexCol, 
+                             style=global.param$which.test, 
+                             anno.col=global.param$anno.col, 
+                             anno.col.color=global.param$anno.col.color,
+                             filename=fn.hm, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
                       
                       ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm,  width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow( global.results$filtered ), unit='in'), 20 ), cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
                     }
@@ -2775,9 +2844,10 @@ cat('id: ', global.param$id.col.value, '\n')
               ## robustify ids
               gct@rid <- make.unique(make.names(gct@rid))
               rownames(gct@rdesc) <- rownames(gct@mat) <- gct@rid
-              gct@cid <- make.unique(make.names(gct@cid))
-              rownames(gct@cdesc) <- colnames(gct@mat) <- gct@cid
-              
+              #if(!is.null(gct@cid)){
+                gct@cid <- make.unique(make.names(gct@cid))
+                rownames(gct@cdesc) <- colnames(gct@mat) <- gct@cid
+              #}
               # expression table
               tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
               rownames(tab) <-tab$id
@@ -2911,7 +2981,8 @@ cat('id: ', global.param$id.col.value, '\n')
               global.param$session.saved <- T
             if(is.null( global.param$update.pca) )
               global.param$update.pca <- TRUE
-            
+            if(is.null( global.param$update.cm) )
+              global.param$update.cm <- TRUE
           
 
             ## ##############################################################
@@ -3595,6 +3666,8 @@ cat('id: ', global.param$id.col.value, '\n')
             ## #################################
             ## flag to update PCA
             global.param$update.pca <- TRUE
+            ## flag to update correlation matrix
+            global.param$update.cm <- TRUE
         })
 
 
@@ -3784,7 +3857,9 @@ cat('id: ', global.param$id.col.value, '\n')
             
             ## flag to update PCA
             global.param$update.pca <- TRUE
-
+            ## flag to update correlation matrix
+            global.param$update.cm <- TRUE
+            
         })
 
 
@@ -4005,6 +4080,154 @@ cat('id: ', global.param$id.col.value, '\n')
             }
 
         })
+        ###################################################################################
+        ##
+        ##                upset plot comparing significant hits
+        ##
+        ###################################################################################
+        output$summary.upset.up <- renderPlot({
+          
+          if(is.null(global.results$data)) return()
+          if(!is.null(error$msg)) return()
+          
+          ## tested groups
+          grp.comp=unique(global.param$grp.comp)
+          
+         
+          
+          validate( need( !global.param$which.test %in% c('modF', 'none'), paste('Only available for multi-group one-or two-sample moderated T-tests!')) )
+          validate( need( length(grp.comp), paste('Need at least 2 groups!')) )
+          validate( need( nrow(global.results$filtered) > 0 , 'No significant features to compare!') )
+         
+           # results 
+          res <- global.results$data$output
+          
+          
+          ## extract filter type
+          filter.type=global.param$filter.type
+          filter.value=global.param$filter.value
+          
+          if(filter.type == 'adj.p')
+            test.tab <- res[, grep( paste(paste('^adj.P.Val', grp.comp, sep='.'), collapse='|' ), colnames(res) ) ] %>% data.matrix()
+
+          if(filter.type == 'nom.p')
+            test.tab <- res[, grep( paste(paste('^P.Value', grp.comp, sep='.'), collapse='|' ), colnames(res)) ]  %>% data.matrix()
+          
+          # fold change
+          fc.tab  <- res[, grep( paste(paste('^logFC', grp.comp, sep='.'), collapse='|' ), colnames(res)) ]  %>% data.matrix()
+           
+          
+          ## binary 'upset' matrix 
+          na.idx <- is.na(test.tab)
+          ## up-regulated
+          sig.up.idx <- test.tab < filter.value & !is.na(test.tab) & fc.tab > 0 & !is.na(fc.tab)
+          #notsig.up.idx <- test.tab >= filter.value & !is.na(test.tab) # & fc.tab > 0 & !is.na(fc.tab)
+          
+          #test.tab.up <- test.tab
+          test.tab.up <- matrix(0, nrow=nrow(test.tab), ncol=ncol(test.tab), dimnames=dimnames(test.tab))
+          colnames(test.tab.up) <- sub('^adj.P.Val\\.|^P.Value\\.', '', colnames(test.tab.up))
+          
+          #test.tab.up[fc.tab < 0 & !is.na(fc.tab)] <- 0
+          test.tab.up[sig.up.idx] <- 1
+          #test.tab.up[notsig.up.idx] <- 0
+          #test.tab.up[na.idx] <- 0
+          
+         
+          #save(test.tab, test.tab.dn, fc.tab, sig.dn.idx, filter.value, file='upset.RData')
+          
+          ## need at least two groups with significnat features
+          tmp <- apply(test.tab.up, 2, sum)
+          tmp.idx <- which(tmp > 0)
+          
+          validate( need( length(tmp.idx) > 1, paste( 'Can\'t draw plot!\n\nOnly one group with significant features (', colnames(test.tab.up)[tmp.idx], ').') ) )
+          
+          test.tab.up <- test.tab.up[, tmp.idx]
+          
+          ## colors one-sample -> use color vector of different groups
+          ## colors two-sample -> no colors
+          sets.bar.color <- rep('grey', ncol(test.tab.up))
+          
+          ## plot
+          #par(mfrow=c(1,2))
+          upset(data.frame( test.tab.up ), 
+                order.by='degree', 
+                nintersects=NA,
+                text.scale=c(2,2,1.5, 1.2, 2, 2),
+                point.size=6, main.bar.color='darkblue',
+                sets.bar.color=sets.bar.color
+                
+                )
+          
+     
+        })
+        output$summary.upset.dn <- renderPlot({
+          
+          if(is.null(global.results$data)) return()
+          if(!is.null(error$msg)) return()
+          
+          ## tested groups
+          grp.comp=unique(global.param$grp.comp)
+          
+          validate( need( !global.param$which.test %in% c('modF', 'none'), paste('Only available for multi-group one-or two-sample moderated T-tests.')) )
+          validate( need( length(grp.comp), paste('Need at least 2 groups.')) )
+          
+          # results 
+          res <- global.results$data$output
+          
+          
+          ## extract filter type
+          filter.type=global.param$filter.type
+          filter.value=global.param$filter.value
+          
+          if(filter.type == 'adj.p')
+            test.tab <- res[, grep( paste(paste('^adj.P.Val', grp.comp, sep='.'), collapse='|' ), colnames(res) ) ] %>% data.matrix()
+          
+          if(filter.type == 'nom.p')
+            test.tab <- res[, grep( paste(paste('^P.Value', grp.comp, sep='.'), collapse='|' ), colnames(res)) ]  %>% data.matrix()
+          
+          # fold change
+          fc.tab  <- res[, grep( paste(paste('^logFC', grp.comp, sep='.'), collapse='|' ), colnames(res)) ]  %>% data.matrix()
+          
+          
+          ## binary 'upset' matrix 
+          na.idx <- is.na(test.tab)
+        
+          ## down regulated
+          sig.dn.idx <- test.tab < filter.value & !is.na(test.tab) & fc.tab < 0 & !is.na(fc.tab)
+          #notsig.dn.idx <- test.tab >= filter.value & !is.na(test.tab)# & fc.tab < 0 & !is.na(fc.tab)
+          
+          
+          
+          test.tab.dn <- matrix(0, nrow=nrow(test.tab), ncol=ncol(test.tab), dimnames=dimnames(test.tab))
+          colnames(test.tab.dn) <- sub('^adj.P.Val\\.|^P.Value\\.', '', colnames(test.tab.dn))
+          test.tab.dn[sig.dn.idx] <- 1
+         
+          ## need at least two groups with significnat features
+          tmp <- apply(test.tab.dn, 2, sum)
+          tmp.idx <- which(tmp > 0)
+          
+          validate( need( length(tmp.idx) > 1, paste( 'Can\'t draw plot!\n\nOnly one group with significant features (', colnames(test.tab.dn)[tmp.idx], ').') ) )
+          
+          test.tab.dn <- test.tab.dn[, tmp.idx]
+          #save(test.tab, test.tab.dn, fc.tab, sig.dn.idx, filter.value, file='upset.RData')
+          
+          ## colors one-sample -> use color vector of different groups
+          ## colors two-sample -> no colors
+          sets.bar.color <- rep('grey', ncol(test.tab.dn))
+          
+          ## plot
+          upset(data.frame( test.tab.dn), 
+                          order.by='degree', 
+                          nintersects=NA,
+                          text.scale=c(2,2,1.5, 1.2, 2, 2),
+                          point.size=6, main.bar.color='darkblue',
+                          sets.bar.color=sets.bar.color
+          )
+          
+        })
+        
+        
+        
         ##@###############################################################
         ##
         ##          missing data distribution
@@ -4045,7 +4268,7 @@ cat('id: ', global.param$id.col.value, '\n')
             n.miss <- cumsum(n.miss)
             
             p <- plot_ly( x=as.numeric(names(n.miss))/ncol(dat)*100, y=n.miss, type='scatter', mode='lines+markers', marker=list(color = 'black'), line=list(color='black') )
-            p <- layout(p, title=paste('Fully quantified features:', n.miss[1]), xaxis=list(title=paste('Percent missing'), showspikes=T, spikecolor='grey60'), yaxis=list(title=paste('# quantified features'), showspikes=T, spikecolor='grey60'))
+            p <- layout(p, title=paste('Fully quantified features:', n.miss[1]), xaxis=list(title=paste('Max. percent missing'), showspikes=T, spikecolor='grey60'), yaxis=list(title=paste('# quant. features'), showspikes=T, spikecolor='grey60'))
             
            p
         })
@@ -4056,7 +4279,6 @@ cat('id: ', global.param$id.col.value, '\n')
         ## #############################################################################
         output$summary.nonmissing.data <- renderPlotly({
             if(is.null(global.results$data)) return()
-
 
             if(global.param$log.transform == 'none')
                 tab <- data.frame(global.input$table.org)
@@ -4094,7 +4316,7 @@ cat('id: ', global.param$id.col.value, '\n')
             ## plot
             ##p <- plot_ly( x=names(na.col.idx), y=na.col.idx,  color=grp, colors=grp.colors.legend, type='bar')
             p <- plot_ly(dat.plot, x=~x, y=~y, color=grp, colors=grp.colors.legend, type='bar')
-            p <- layout(p, title='Number of valid data points per data column', xaxis=list(title=paste('Data columns')), yaxis=list(title=paste('# data points')))
+            p <- layout(p, title='Number of quantified features per sample column', xaxis=list(title=paste('Sample columns')), yaxis=list(title=paste('# quant. features')))
 
             ##################################################
             ##global.param$session.import.init <- F
@@ -5283,20 +5505,43 @@ cat('id: ', global.param$id.col.value, '\n')
             id.col <- global.param$id.col.value
             rownames(tab) <- tab[, id.col]
             
-            ## table
-            tab <- tab[, setdiff(colnames(tab), id.col)]
             ## get groups
             grp <-  global.param$grp
             grp <- sort(grp)
+            
+            
+            #############################################
+            ## get correlation matrix
+            if(is.null(global.results$cm) | global.param$update.cm == TRUE){
+              
+              ## calculate correlatio matrix
+              withProgress(message = 'Correlation matrix...',{
+                cm=calculateCorrMat( tab=tab,
+                                     grp=grp,
+                                     #id.col=id.col,
+                                     lower= global.plotparam$cm.lower, upper= global.plotparam$cm.upper
+                )
+              })
+              
+              ## store results
+              global.results$cm <- cm
+              global.param$update.cm <- FALSE
+              
+            } else {
+              cm <- global.results$cm
+            }
             tab <- tab[, names(grp)]
-
             colnames(tab) <- chopString(colnames(tab), STRLENGTH)
-
-           ###############################
+            
+            ## table
+            #tab <- tab[, setdiff(colnames(tab), id.col)]
+            
+            ###############################
             ## plot
             withProgress({
                 setProgress(message = 'Processing...', detail= 'Calculating correlations')
                 my.multiscatter(tab, 
+                                cm=cm,
                                 repro.filt=global.results$values.filtered, 
                                 grp=grp,  
                                 grp.col.legend=global.param$grp.colors.legend[unique(grp)], 
@@ -5308,6 +5553,17 @@ cat('id: ', global.param$id.col.value, '\n')
             })
         }
  
+        
+        ## ##############################################
+        ## observe input to trigger update 
+        observeEvent(c(input$cm.lower, input$cm.upper),{
+          
+          global.plotparam$cm.lower <- input$cm.lower
+          global.plotparam$cm.upper <- input$cm.upper
+          
+          global.param$update.cm <- TRUE
+        })
+        
         #####################################################
         ## correlation matrix
         output$correlation.matrix <- renderPlot({
@@ -5339,13 +5595,35 @@ cat('id: ', global.param$id.col.value, '\n')
                   grp.col <- grp.col[names(grp)]
                   grp.col.leg <- grp.col.leg[unique(grp)]
                 
-                
-                 plotCorrMat(tab=tab,
-                             id.col=id.col.value,
+                  
+                  ## get correlation matrix
+                  if(is.null(global.results$cm) | global.param$update.cm == TRUE){
+                    
+                    
+                    ## calculate correlatio matrix
+                    withProgress(message = 'Correlation matrix...',{
+                      cm=calculateCorrMat( tab=tab,
+                                           grp=grp,
+                                           #id.col=id.col.value,
+                                           lower= global.plotparam$cm.lower, upper= global.plotparam$cm.upper
+                                           )
+                    })
+                    
+                    ## store results
+                    global.results$cm <- cm
+                    global.param$update.cm <- FALSE
+                    
+                  } else {
+                    cm <- global.results$cm
+                  }
+                  
+                 plotCorrMat(#tab=tab,
+                             #id.col=id.col.value,
+                            cm=cm,
                              grp=grp,
                              grp.col.legend=grp.col.leg,
                              #lower=input$cm.lower, upper=input$cm.upper, display_numbers=input$cm.numb)
-                             lower=input$cm.lower, upper=input$cm.upper, display_numbers=input$cm.numb, width=dynamicWidthHM( length(global.param$grp), unit='in'), height=dynamicWidthHM( length(global.param$grp), unit='in' ))
+                             lower= global.plotparam$cm.lower, upper= global.plotparam$cm.upper, display_numbers=input$cm.numb, width=dynamicWidthHM( length(global.param$grp), unit='in'), height=dynamicWidthHM( length(global.param$grp), unit='in' ))
              })
         })#, width=1200, height=1000)
 
@@ -5381,16 +5659,57 @@ cat('id: ', global.param$id.col.value, '\n')
             grp <- sort(global.param$grp)
             grp.col.legend <- global.param$grp.colors.legend
 
+            
+            ## update selection
+            tab <- tab[, c(id.col, names(grp))]
+            #grp.col <- grp.col[names(grp)]
+            grp.col.legend <- grp.col.legend[unique(grp)]
+            
             ## table
-            tab <- tab[, setdiff(colnames(tab), id.col)]
+            #tab <- tab[, setdiff(colnames(tab), id.col)]
             tab <- tab[, names(grp)]
 
-
-            if( is.null(global.results$cm) ) ## will always be NULL atm
-                cm <- cor(tab, use='pairwise', method='pearson')
-
-
-
+            ## ############################################
+            ## get correlation matrix
+            if(is.null(global.results$cm) | global.param$update.cm == TRUE){
+              
+              
+              ## calculate correlatio matrix
+              withProgress(message = 'Correlation matrix...',{
+                cm=calculateCorrMat( tab=tab,
+                                     grp=grp,
+                                    #id.col=id.col,
+                                     lower= global.plotparam$cm.lower, upper= global.plotparam$cm.upper
+                )
+              })
+              
+              ## store results
+              global.results$cm <- cm
+              global.param$update.cm <- FALSE
+              
+            } else {
+              cm <- global.results$cm
+            }
+           
+            ## #############################################
+            ## extract correlations for each group
+            cor.group <- lapply(names(grp.col.legend), function(x){
+              cm.grp=cm[ names(grp) [grp == x], names(grp) [grp == x]]
+              cm.grp[upper.tri(cm.grp, diag = FALSE)]
+              }  )
+            #save(cor.group, file='cor.group.RData')
+            
+            ylim <- c(min(unlist(cor.group))-0.1*min(unlist(cor.group)), max( unlist(cor.group))+0.1*max(unlist(cor.group)) )
+            
+            # plot
+            fancyBoxplot(cor.group, col=grp.col.legend, names=names(grp.col.legend), 
+                         show.numb = 'median', numb.col='grey80', 
+                         main=paste('Pairwise intra-group correlations (', global.plotparam$cm.upper,')'),
+                         ylab='Correlation coeffient',
+                         ylim=ylim,
+                         numb.cex=1)
+            legend('topright', legend=names(grp.col.legend), fill=grp.col.legend, bty='n')
+            
         })
 
         ## #################################################################################
@@ -5467,7 +5786,7 @@ cat('id: ', global.param$id.col.value, '\n')
                 withProgress({
                      setProgress(message = 'Processing...', detail= 'Generating Heatmap')
                      #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
-                  plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color)
+                  plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
                   
                   })
             } else {
@@ -5482,7 +5801,7 @@ cat('id: ', global.param$id.col.value, '\n')
                    #save(res, grp, grp.col, grp.col.legend,  hm.clust, hm.title, hm.scale, anno.col, anno.col.color, file='hm.RData')
                    
                     #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
-                   plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color)
+                   plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
                    })
             }
         },

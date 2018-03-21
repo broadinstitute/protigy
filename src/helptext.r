@@ -33,11 +33,20 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.2.2 March XX, 2018</b>
+<ul>
+<li>Heatmap: row and column labels can be disabled now.</li>
+<li>UpSet plots: inter-group comparison of significantlye regulated features.</li>
+</ul>
+<b>v0.8.2.1 March 14, 2018</b>
+<ul>
+<li>Correlation: correlation matrix calculated centrally in a separate function and shared with plots using correlations: multiscatter, correlation heatmap, correlation boxplot.</li>
+<li>Correlation: novel QC-tab depicting pairwise intra-group correlations as boxplots.</li>
+</ul>
 <b>v0.8.2 February 27, 2018</b>
 <ul>
 <li>Misc: Installable on Mac OS.</li>
 <li>Misc: group selection now correctly updated in saved sessions.</li>
-<li> </li>
 </ul>
 <b>v0.8.1 February 26, 2018</b>
 <ul>

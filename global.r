@@ -31,7 +31,7 @@ p_load (RColorBrewer)
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.2"
+VER="0.8.2.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -121,6 +121,9 @@ p_load(DT)
 p_load(maptools)
 p_load(ggrepel)
 p_load(dplyr)
+
+p_load(UpSetR)
+p_load(gridExtra)
 
 ## id mapping
 p_load(RSQLite)
@@ -256,7 +259,8 @@ mapIDs <- function(ids,
             if(keytype != 'UNKNOWN'){
               
               # try human 
-              if(orgtype == 'UNKNOWN'){ 
+              if(orgtype == 'UNKNOWN'){
+                cat('trying human...\n')
                 id.map.tmp <- try( mapIds(org.Hs.eg.db, keys=id.query[ sample(1:length(id.query), n.try)] , column=c('SYMBOL'), keytype=keytype, multiVals='first') )
                 if(class(id.map.tmp) != 'try-error'){
                   orgtype='HSA'
@@ -264,20 +268,23 @@ mapIDs <- function(ids,
               }
               # try mouse
               if(orgtype == 'UNKNOWN'){ 
+                cat('trying mouse...\n')
                 id.map.tmp <- try( mapIds(org.Mm.eg.db, keys=id.query[ sample(1:length(id.query), n.try)] , column=c('SYMBOL'), keytype=keytype, multiVals='first') )
                   if(class(id.map.tmp) != 'try-error'){
                     orgtype='MMU'
                   }
               }
               # try rat
-              if(orgtype == 'UNKNOWN'){ 
+              if(orgtype == 'UNKNOWN'){
+                cat('trying rat...\n')
                 id.map.tmp <- try( mapIds(org.Rn.eg.db, keys=id.query[ sample(1:length(id.query), n.try)] , column=c('SYMBOL'), keytype=keytype, multiVals='first') )
                 if(class(id.map.tmp) != 'try-error'){
                   orgtype='RNO'
                 }
               }
               # try zebrafish
-              if(orgtype == 'UNKNOWN'){ 
+              if(orgtype == 'UNKNOWN'){
+                cat('trying zebrafish...\n')
                 id.map.tmp <- try( mapIds(org.Dr.eg.db, keys=id.query[ sample(1:length(id.query), n.try)] , column=c('SYMBOL'), keytype=keytype, multiVals='first') )
                 if(class(id.map.tmp) != 'try-error'){
                   orgtype='DRE'
@@ -308,9 +315,11 @@ mapIDs <- function(ids,
               
             } else {
     
+              ## if successful
               id.map.tmp[which(is.na(id.map.tmp))] <- 'NotFound'
-              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=id.map.tmp, id.concat=paste(ids, id.map.tmp, sep='_'), stringsAsFactors=F)
-              }
+              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=as.character(id.map.tmp), id.concat=paste(ids, id.map.tmp, sep='_'), stringsAsFactors=F)
+            
+            }
 
             ## results
             res <- list()

@@ -139,7 +139,7 @@ p_load(org.Dr.eg.db)
 #  devtools::install_github('cmap/morpheus.R')
 #p_load(morpheus)
 
-# Required for cmpaR gctx file format. Fails to install on shiny-proteomics, but not reuqired as of now.
+# Required for cmpaR gctx file format. Fails to install on shiny-proteomics, but not required as of now.
 #p_load (rhdf5) 
 
 
@@ -147,6 +147,7 @@ p_load(org.Dr.eg.db)
 source('src/modT.r')
 source('src/pheatmap.r')
 source('src/helptext.r')
+#source('src/my_io.r')
 source('src/gct-io.r')
 source('src/plots.r')
 

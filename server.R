@@ -2830,8 +2830,8 @@ cat('id: ', global.param$id.col.value, '\n')
             #                     GCT 1.3
             } else if( length( grep( '^\\#1\\.3', readLines(fn,n=1))) > 0){
               
-              
               # parse gct file
+              #gct <- try( parse.gctx2(fn) )
               gct <- try( parse.gctx(fn) )
               #cat('test2\n')
 
@@ -2839,15 +2839,15 @@ cat('id: ', global.param$id.col.value, '\n')
                 error$msg <- paste('<p>Error importing GCT 1.3 file:<br>', gct[1],'<p>') 
                 validate(need(class(gct) != 'try-error', 'Error importing GCT 1.3 file.'))
               }
-              
+              #save(gct, file='gct.RData')
               ## #################################################
               ## robustify ids
-              gct@rid <- make.unique(make.names(gct@rid))
+              #gct@rid <- make.unique(make.names(gct@rid))
               rownames(gct@rdesc) <- rownames(gct@mat) <- gct@rid
-              #if(!is.null(gct@cid)){
+              if(!is.null(gct@cid)){
                 gct@cid <- make.unique(make.names(gct@cid))
                 rownames(gct@cdesc) <- colnames(gct@mat) <- gct@cid
-              #}
+              }
               # expression table
               tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
               rownames(tab) <-tab$id

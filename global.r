@@ -9,7 +9,7 @@
 ##
 ## This file defines global parameters, loads all required R-packages and defines the actual functions to perform data filtering,
 ## data normalization, the moderated test statistics, and visualization. The code for moderated t-tests,
-## two-component normalization and the reproducibility filter has been written by Mani DR and
+## two-component normalization and the reproducibility filter has been written by D. R. Mani and
 ## adopted by me for intergration into a Shiny-Server environment.
 ##
 ##
@@ -31,7 +31,7 @@ p_load (RColorBrewer)
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.2.1"
+VER="0.8.2.4"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -72,7 +72,7 @@ p_load(shinyjs)
 ## colors
 
 ## heatmap
-##p_load(pheatmap)
+p_load(pheatmap)
 p_load(heatmaply)
 
 # clustering
@@ -145,10 +145,10 @@ p_load(org.Dr.eg.db)
 
 
 source('src/modT.r')
-source('src/pheatmap.r')
+#source('src/pheatmap.r')
 source('src/helptext.r')
-#source('src/my_io.r')
-source('src/gct-io.r')
+source('src/my_io.r')
+#source('src/gct-io.r')
 source('src/plots.r')
 
 

@@ -25,7 +25,8 @@ plotHM <- function(res,
                    style,
                    hc.method='ward.D2',
                    hc.dist='pearson',
-                   filename=NA, 
+                   ##filename=NA,
+                   fn=NA,
                    cellwidth=NA, 
                    cellheight=NA, 
                    max.val=NA, 
@@ -40,7 +41,11 @@ plotHM <- function(res,
                    #cdesc=NULL,
                    #cdesc.grp=NULL,
                    plotly=F,
+                   verbose=T,
                    ...){
+  
+  if(verbose)
+    cat('\n-- plotHM --\n')
   
   ## convert to data matrix
   res <- data.matrix(res)
@@ -132,13 +137,14 @@ plotHM <- function(res,
   ## plot the heatmap
   if(!plotly){
     # pheatmap
+    #View(res)
     pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
-             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, main=hm.title, 
+             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm,  main=hm.title, 
              annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), 
              breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, 
              labels_row=hm.rownames, na_col='black', scale='none', 
              annotation_names_col = F, height=height, width=width,
-             show_rownames = show.rownames, show_colnames = show.colnames)
+             show_rownames = show.rownames, show_colnames = show.colnames, ...)
   } else {
     
     #save(anno.col.color, anno.col, res, grp, file='tmp.RData')
@@ -150,6 +156,7 @@ plotHM <- function(res,
     #anno.col.color <- anno.col.color[grp]
     
     anno.col.color <-unlist(lapply(colnames(anno.col), function(x) unlist(anno.col.color[[x]])))
+    ##View(anno.col.color)
     show.rownames=F
     if(show.rownames)
       heatmaply(res, labCol = NA, margins = margins, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
@@ -162,7 +169,10 @@ plotHM <- function(res,
                 colorbar_xanchor = 'right', colorbar_yanchor = 'bottom', row_dend_left = TRUE,
                 plot_method = "ggplot", seriate = 'mean', key=FALSE, hide_colorbar = T) 
   }
-}
+
+  #if(verbose)
+  #  cat('\n-- plotHM exit--\n')
+  }
 
 ## #####################################################################
 ##

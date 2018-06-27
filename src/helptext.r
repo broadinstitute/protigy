@@ -33,10 +33,20 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
-<b>v0.8.2.2 March XX, 2018</b>
+<b>v0.8.2.4 June 27, 2018</b>
+<ul>
+<li><mark>BUGFIX:</mark> duplicated session ids: included a timestamp-based seed before generating the seesion id. It happened that the sample function returned the same string/number combination.</li>
+<li>Misc: session id is doubled checked whether it exists as folder on the server.</li>
+<li>Export: all files except RData-session files and zip-archives are removed from the server.</li>
+</ul>
+<b>v0.8.2.3 April 20, 2018</b>
+<ul>
+<li>Misc: updated code for 2-component normalization (by D. R. Mani).</li>
+</ul>
+<b>v0.8.2.2 April 17, 2018</b>
 <ul>
 <li>Heatmap: row and column labels can be disabled now.</li>
-<li>UpSet plots: inter-group comparison of significantlye regulated features.</li>
+<li>UpSet plots: inter-group comparison of significantly regulated features.</li>
 </ul>
 <b>v0.8.2.1 March 14, 2018</b>
 <ul>

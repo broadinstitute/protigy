@@ -273,7 +273,7 @@ shinyServer(
           
           #if(is.null(session$user)) return()
           if(!global.param$session.saved) return()
-          label <- paste("Session:",global.param$label)
+          label <- paste("Session:", global.param$label)
           
           notificationItem(label, status='success', shiny::icon("folder", "fa-1x", lib='glyphicon')) 
            
@@ -940,7 +940,7 @@ shinyServer(
                        #######################################
                        #navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
                        #navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]], pca.tab2[[3]]),
-                      navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]]),
+                       navbarMenu('PCA', pca.tab2[[1]], pca.tab2[[2]]),
                        #######################################
                        ##           insert table preview
                        #######################################
@@ -1025,19 +1025,34 @@ shinyServer(
             #if(!is.null(input$file)) return()
             #if(!is.null( global.input$file)) return()
             if(global.param$file.done) return()
+            cat( '---------------------------------\n')
           
-          
-            ##View(ppi$iw[1:10, ])
-
             ## ######################################
             ## generate session ID and prepare data
             ## directory
             #########################################
-
+  
             ## generate 'session id'
-            if(is.null(global.param$session))
+            if(is.null(global.param$session)){
+              
+              cat('No session id found:', global.param$session, '\n')
+              
+              cat('creating session id...\n')
+              
+              ## set a seed for 'sample'
+              ## it happened that the same session ids were created...
+              session.id.ok <- FALSE
+              while(!session.id.ok){
+                
+                set.seed(as.numeric(Sys.time()))
                 global.param$session <- paste(paste(letters[sample(26, 5)], collapse=''), paste(sample(100,5), collapse=''), sep='')
-
+              
+                ## check whether the session ids exists as directory on the server
+                if(!dir.exists( paste(DATADIR, global.param$user,'/' ,global.param$session, '/', sep='') )) session.id.ok <- TRUE
+              }
+              cat('session:', global.param$session, '\n')
+            }
+            
             ## ##############################################
             ## authenticated session
             ##if(is.null(global.param$user)){
@@ -1571,6 +1586,11 @@ shinyServer(
           global.plotparam$hm.max <- input$hm.max
           global.plotparam$hm.show.rownames <- input$hm.show.rownames
           global.plotparam$hm.show.colnames <- input$hm.show.colnames
+          ## volcano
+          #global.plotparam$volc.ps <- input$volc.ps
+          #global.plotparam$volc.ls <- input$volc.ls
+          #global.plotparam$volc.grid <- input$volc.grid
+          #global.plotparam$volc. <- input$volc.ps
           
           ## pca
           global.plotparam$pca.x <- input$pca.x
@@ -1728,7 +1748,7 @@ shinyServer(
                        \nif(global.param$filt.data == 'Reproducibility'){
                        \nwf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, paste( global.param$filt.data, ' (alpha=',global.param$repro.filt.val, ')',sep=''), global.param$which.test,
                        \npaste( global.param$filter.type, ' < ', global.param$filter.value)))
-                       \nwf.tab <- data.frame(id=wf.tab.ids, wf.tab, stringsAsFactors=F)
+                       \nwf.tab <- data.frame(id=wf.tab.ids, value=wf.tab, stringsAsFactors=F)
                        \n}
                        \n## SD filter
                        \nif(global.param$filt.data == 'StdDev'){
@@ -1971,12 +1991,32 @@ shinyServer(
               \ntab <- tab[, c(id.col.value, names(grp))]
               \ngrp.col <- grp.col[names(grp)]
               \ngrp.col.leg <- grp.col.leg[unique(grp)]
-              \nplotCorrMat(tab=tab,
-              \n            id.col=id.col.value,
-              \n            grp=grp,
-              \n            grp.col.legend=grp.col.leg,
-              \n            lower=global.plotparam$cm.lower, upper=global.plotparam$cm.upper, 
-              \n            display_numbers=global.plotparam$cm.numb, verbose=F)
+
+              \n## get correlation matrix
+              \nif(is.null(global.results$cm) | global.param$update.cm == TRUE){
+                   \n## calculate correlatio matrix
+                   \nwithProgress(message = "Correlation matrix...",{
+                   \ncm=calculateCorrMat( tab=tab,
+                                         \ngrp=grp,
+                                         \nlower= global.plotparam$cm.lower, upper= global.plotparam$cm.upper
+                  \n)
+                  \n})
+                  
+                  \n## store results
+                  \nglobal.results$cm <- cm
+                  \nglobal.param$update.cm <- FALSE
+                  
+                \n} else {
+                \n  cm <- global.results$cm
+                \n}
+                \nplotCorrMat(#tab=tab,
+                \n            #id.col=id.col.value,
+                \n            cm=cm,
+                \n            grp=grp,
+                \n            grp.col.legend=grp.col.leg,
+                \n  lower=input$cm.lower, upper=input$cm.upper, 
+                \n  display_numbers=input$cm.numb, 
+                \n  verbose=F)
               \n}) # end with progress
               \n```\n
               \n 
@@ -2286,8 +2326,31 @@ shinyServer(
                 grp.col <- grp.col[names(grp)]
                 grp.col.leg <- grp.col.leg[unique(grp)]
                 
-                plotCorrMat(tab=tab,
-                            id.col=id.col.value,
+                ## get correlation matrix
+                if(is.null(global.results$cm) | global.param$update.cm == TRUE){
+                  
+                  
+                  ## calculate correlatio matrix
+                  withProgress(message = 'Correlation matrix...',{
+                    cm=calculateCorrMat( tab=tab,
+                                         grp=grp,
+                                         #id.col=id.col.value,
+                                         lower= global.plotparam$cm.lower, upper= global.plotparam$cm.upper
+                    )
+                  })
+                  
+                  ## store results
+                  global.results$cm <- cm
+                  global.param$update.cm <- FALSE
+                  
+                } else {
+                  cm <- global.results$cm
+                }
+                
+                ## plot
+                plotCorrMat(#tab=tab,
+                            #id.col=id.col.value,
+                            cm=cm,
                             grp=grp,
                             grp.col.legend=grp.col.leg,
                   lower=input$cm.lower, upper=input$cm.upper, 
@@ -2302,57 +2365,64 @@ shinyServer(
             ############################################################
             if(input$export.hm){
 
-                ##filter.res()
-                ##res = global.results$filtered
-
                 if(nrow(res) >= 3){
+                  
                     withProgress(message='Exporting', detail='heatmap',{
+                      
                     fn.hm <- paste(global.param$session.dir, 'heatmap.pdf', sep='/')
+                    
                     ## heatmap title
                     hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
                     hm.title <- paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
 
                     # column annotation
-                    if(!is.null(global.input$cdesc))
-                      hm.cdesc <- global.input$cdesc[global.param$cdesc.selection,  ]
-                    else
-                      hm.cdesc <- NULL
+                    if(!is.null(global.param$anno.col)){
+                      anno.col=global.param$anno.col
+                      anno.col.color=global.param$anno.col.color
+                    } else {
+                      anno.col=data.frame(Group=global.param$grp)
+                      anno.col.color=list(Group=global.param$grp.colors.legend)
+                    }
                     
                     if(input$hm.max){
-                        ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=ifelse(ncol(res)<40, 40, 20), fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, cellheight=min( dynamicHeightHM( nrow(global.results$filtered)), 1500 )/nrow(global.results$filtered))
-                        #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, filename=fn.hm, width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow(global.results$filtered), unit='in'), 20 ), cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
-                        plotHM(res=res, 
-                               grp=global.param$grp, 
-                               grp.col=global.param$grp.colors, 
-                               grp.col.legend=global.param$grp.colors.legend,  
-                               hm.clust=input$hm.clust, 
-                               hm.title=hm.title, 
-                               hm.scale=input$hm.scale, 
-                               fontsize_row=input$cexRow, 
-                               fontsize_col=input$cexCol, 
-                               max.val=input$hm.max.val, 
-                               style=global.param$which.test, 
-                               anno.col=global.param$anno.col, 
-                               anno.col.color=global.param$anno.col.color,
-                               filename = fn.hm, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
-                      
-                    } else {
+                     pdf(fn.hm)
                       plotHM(res=res, 
                              grp=global.param$grp, 
                              grp.col=global.param$grp.colors, 
                              grp.col.legend=global.param$grp.colors.legend,  
-                             hm.clust=input$hm.clust, 
+                             hm.clust=global.plotparam$hm.clust, 
                              hm.title=hm.title, 
-                             hm.scale=input$hm.scale, 
-                             fontsize_row=input$cexRow, 
-                             fontsize_col=input$cexCol, 
+                             hm.scale=global.plotparam$hm.scale, 
+                             fontsize_row= global.plotparam$cexRow, 
+                             fontsize_col= global.plotparam$cexCol, 
+                             max.val=global.plotparam$hm.max.val, 
                              style=global.param$which.test, 
-                             anno.col=global.param$anno.col, 
-                             anno.col.color=global.param$anno.col.color,
-                             filename=fn.hm, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
-                      
-                      ##plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, filename=fn.hm,  width=dynamicWidthHM(length(global.param$grp), unit='in'), height=min( dynamicHeightHM( nrow( global.results$filtered ), unit='in'), 20 ), cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
-                    }
+                             anno.col=anno.col, 
+                             anno.col.color=anno.col.color, 
+                             show.rownames=global.plotparam$hm.show.rownames, 
+                             show.colnames=global.plotparam$hm.show.colnames)#,
+                            # fn = fn.hm)
+                      dev.off()
+                   
+                    } else {
+                     pdf(fn.hm)
+                      plotHM(res=res,
+                             grp=global.param$grp,
+                             grp.col=global.param$grp.colors,
+                             grp.col.legend=global.param$grp.colors.legend,
+                             hm.clust=global.plotparam$hm.clust,
+                             hm.title=hm.title,
+                             hm.scale=global.plotparam$hm.scale,
+                             fontsize_row= global.plotparam$cexRow,
+                             fontsize_col= global.plotparam$cexCol,
+                             style=global.param$which.test,
+                             anno.col=anno.col,
+                             anno.col.color=anno.col.color,
+                             show.rownames=global.plotparam$hm.show.rownames,
+                             show.colnames=global.plotparam$hm.show.colnames)#,
+                             #fn = fn.hm)
+                      dev.off()
+                      }
                     })
                 } ## end if nrow(res)>3
 
@@ -2671,7 +2741,17 @@ shinyServer(
             #----------------------------------------------------------------------
             #             clean up
 	          # remove archived files: all files except RData
-	          fn.rm <- gsub('"|\'', '', fn.all.abs[-grep('\\.RData[\\"|\']$', fn.all.abs)]) 
+	          rdata.idx <- grep('\\.RData[\\"|\']$', fn.all.abs)
+	          fn.rm <- fn.all.abs
+	          if(length(rdata.idx) > 0)
+	            fn.rm <- fn.rm[-rdata.idx]
+	          
+	          #fn.rm <- gsub('"|\'', '', fn.all.abs[]) 
+	          fn.rm <- gsub('"|\'', '', fn.rm)
+	          
+	        #  cat('ALL FILES:', fn.all.abs, '\n')
+	        #  cat('CLEAN UP:', fn.rm, '\n')
+	          
             file.remove(fn.rm)
             
             # keep only the latest zip file
@@ -2831,23 +2911,26 @@ cat('id: ', global.param$id.col.value, '\n')
             } else if( length( grep( '^\\#1\\.3', readLines(fn,n=1))) > 0){
               
               # parse gct file
-              #gct <- try( parse.gctx2(fn) )
-              gct <- try( parse.gctx(fn) )
+              #gct <- parse.gctx(fn)
+              gct <- try( parse.gctx2(fn) )
+              #gct <- try( parse.gctx(fn) )
               #cat('test2\n')
 
               if(class(gct) == 'try-error'){
                 error$msg <- paste('<p>Error importing GCT 1.3 file:<br>', gct[1],'<p>') 
                 validate(need(class(gct) != 'try-error', 'Error importing GCT 1.3 file.'))
               }
-              #save(gct, file='gct.RData')
+              ##save(gct, file='gct.RData')
               ## #################################################
               ## robustify ids
-              #gct@rid <- make.unique(make.names(gct@rid))
+              gct@rid <- make.unique(make.names(gct@rid))
               rownames(gct@rdesc) <- rownames(gct@mat) <- gct@rid
-              if(!is.null(gct@cid)){
+              #if(!is.null(gct@cid)){
                 gct@cid <- make.unique(make.names(gct@cid))
-                rownames(gct@cdesc) <- colnames(gct@mat) <- gct@cid
-              }
+                if(nrow(gct@cdesc) > 0)
+                  rownames(gct@cdesc) <-gct@cid
+                colnames(gct@mat) <- gct@cid
+              #}
               # expression table
               tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
               rownames(tab) <-tab$id
@@ -4093,19 +4176,22 @@ cat('id: ', global.param$id.col.value, '\n')
           ## tested groups
           grp.comp=unique(global.param$grp.comp)
           
-         
-          
-          validate( need( !global.param$which.test %in% c('modF', 'none'), paste('Only available for multi-group one-or two-sample moderated T-tests!')) )
-          validate( need( length(grp.comp), paste('Need at least 2 groups!')) )
-          validate( need( nrow(global.results$filtered) > 0 , 'No significant features to compare!') )
-         
-           # results 
+          # results 
           res <- global.results$data$output
           
           
           ## extract filter type
           filter.type=global.param$filter.type
           filter.value=global.param$filter.value
+          
+          
+          
+          validate( need( global.param$which.test %in% c('One-sample mod T', 'Two-sample mod T'), paste('Only available for multi-group one-or two-sample moderated T-tests!')) )
+          validate( need( length(grp.comp), paste('Need at least 2 groups!')) )
+          validate( need( nrow(global.results$filtered) > 0 , 'No significant features to compare!') )
+          validate( need( filter.type %in% c('adj.p', 'nom.p'), paste('No significance filter defined!')) )
+          
+         
           
           if(filter.type == 'adj.p')
             test.tab <- res[, grep( paste(paste('^adj.P.Val', grp.comp, sep='.'), collapse='|' ), colnames(res) ) ] %>% data.matrix()
@@ -4135,11 +4221,11 @@ cat('id: ', global.param$id.col.value, '\n')
          
           #save(test.tab, test.tab.dn, fc.tab, sig.dn.idx, filter.value, file='upset.RData')
           
-          ## need at least two groups with significnat features
+          ## need at least two groups with significant features
           tmp <- apply(test.tab.up, 2, sum)
           tmp.idx <- which(tmp > 0)
           
-          validate( need( length(tmp.idx) > 1, paste( 'Can\'t draw plot!\n\nOnly one group with significant features (', colnames(test.tab.up)[tmp.idx], ').') ) )
+          validate( need( length(tmp.idx) > 1, paste('Nothing to show here!\n\nOnly one group with significant features (', colnames(test.tab.up)[tmp.idx], ').') ) )
           
           test.tab.up <- test.tab.up[, tmp.idx]
           
@@ -4160,6 +4246,7 @@ cat('id: ', global.param$id.col.value, '\n')
           
      
         })
+        ## upset plot: down regulated
         output$summary.upset.dn <- renderPlot({
           
           if(is.null(global.results$data)) return()
@@ -4167,9 +4254,6 @@ cat('id: ', global.param$id.col.value, '\n')
           
           ## tested groups
           grp.comp=unique(global.param$grp.comp)
-          
-          validate( need( !global.param$which.test %in% c('modF', 'none'), paste('Only available for multi-group one-or two-sample moderated T-tests.')) )
-          validate( need( length(grp.comp), paste('Need at least 2 groups.')) )
           
           # results 
           res <- global.results$data$output
@@ -4179,6 +4263,13 @@ cat('id: ', global.param$id.col.value, '\n')
           filter.type=global.param$filter.type
           filter.value=global.param$filter.value
           
+          
+          validate( need( global.param$which.test %in% c('One-sample mod T', 'Two-sample mod T'), paste('Only available for multi-group one-or two-sample moderated T-tests.')) )
+          validate( need( length(grp.comp), paste('Need at least 2 groups.')) )
+          validate( need( nrow(global.results$filtered) > 0 , 'No significant features to compare!') )
+          validate( need( filter.type %in% c('adj.p', 'nom.p'), paste('No significance filter defined!')) )
+          
+        
           if(filter.type == 'adj.p')
             test.tab <- res[, grep( paste(paste('^adj.P.Val', grp.comp, sep='.'), collapse='|' ), colnames(res) ) ] %>% data.matrix()
           
@@ -4206,7 +4297,7 @@ cat('id: ', global.param$id.col.value, '\n')
           tmp <- apply(test.tab.dn, 2, sum)
           tmp.idx <- which(tmp > 0)
           
-          validate( need( length(tmp.idx) > 1, paste( 'Can\'t draw plot!\n\nOnly one group with significant features (', colnames(test.tab.dn)[tmp.idx], ').') ) )
+          validate( need( length(tmp.idx) > 1, paste( 'Nothing to show here!\n\nOnly one group with significant features (', colnames(test.tab.dn)[tmp.idx], ').') ) )
           
           test.tab.dn <- test.tab.dn[, tmp.idx]
           #save(test.tab, test.tab.dn, fc.tab, sig.dn.idx, filter.value, file='upset.RData')
@@ -5859,7 +5950,7 @@ cat('id: ', global.param$id.col.value, '\n')
           #else
           #  hm.cdesc <- NULL
           #  hm.cdesc <- global.param$grp
-          
+          #debug(plotHM)
           ######################################
           ## plot
           if(input$hm.int.max){

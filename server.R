@@ -1442,7 +1442,15 @@ shinyServer(
               ))
         })
         # ##################################################
+        # reset group selection if the type of test changed
+        observeEvent( input$which.test, {
+          global.param$grp.comp.selection <- global.param$grp.comp.all
+          global.param$grp.selection <- global.param$grp.all
+        })
+        
+        # ##################################################
         # update based on selection
+        #observeEvent(c(input$update.groups.button.modal, input$run.test),{  
         observeEvent(input$update.groups.button.modal,{  
           
           ## ####################

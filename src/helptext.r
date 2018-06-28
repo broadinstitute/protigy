@@ -33,6 +33,13 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.2.5 June 27, 2018</b>
+<ul>
+<li>Excel sheet: In case of <b>Two sample moderated T-test</b>, the table header will now report <b>KO.over.WT</b> instead of <b>WT.vs.KO</b>.</li>
+<li>Export: result files will also be epxorted in GCT v1.3 format.</li>
+<li>Barplot: fixed a bug causing the barplot of identified features mislabel the colors if the <i>Modify selected groups</i>-feature was used.</li>
+<li>Boxplots: fixed a bug resulting in slightly different numbers reported in the exported pdf file compared to the numbers shown in the app. This only happened in boxplots depicting values after normalization.</li>
+</ul>
 <b>v0.8.2.4 June 27, 2018</b>
 <ul>
 <li><mark>BUGFIX:</mark> duplicated session ids: included a timestamp-based seed before generating the seesion id. It happened that the sample function returned the same string/number combination.</li>
@@ -329,7 +336,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 <b>v0.4.1 Jul 1, 2016</b>
 <ul>
 <li>Novel tab summarizing the analysis.</i>
-<li>Data can now be log-transformed, e.g. for MaxQuant results.</li>
+<li>Data can now be log-transformed, e.g. for MaxQuant LFQ results.</li>
 <li>Added option to skip testing, e.g. for PCA analysis.</li>
 <li>User can specify principle components in the PCA scatterplot.</li>
 </ul>

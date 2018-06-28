@@ -31,7 +31,7 @@ p_load (RColorBrewer)
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.2.4"
+VER="0.8.2.5"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -41,7 +41,7 @@ SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
 GRPCOLORS <<- c(RColorBrewer::brewer.pal(8, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
 ## number of characters to display in plots/tables for column names
-STRLENGTH <<- 20
+STRLENGTH <<- 25
 ## operating system
 OS <<- Sys.info()['sysname']
 ## temp directory to write the Excel file
@@ -62,6 +62,8 @@ CONFAPP <<- 'http://shiny-proteomics.broadinstitute.org:3838/modTconf/'
 ## PIWIK location
 PIWIKURL <<- '//shiny-proteomics.broadinstitute.org/piwik/'
 
+
+
 #################################################################
 ## load required packages
 #################################################################
@@ -69,6 +71,10 @@ PIWIKURL <<- '//shiny-proteomics.broadinstitute.org/piwik/'
 p_load(shiny)
 p_load(shinydashboard)
 p_load(shinyjs)
+
+p_load(cmapR)
+p_load(magrittr)
+
 ## colors
 
 ## heatmap

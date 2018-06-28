@@ -49,6 +49,7 @@ shinyServer(
             #export.results=F,
             export.rmd=F,
             export.xls=F,
+            export.gct=F,
             export.results=F, 
             
             pca=NULL,
@@ -247,6 +248,7 @@ shinyServer(
             updateCheckboxInput(session, 'export.pca.loadings', 'PCA loadings (xls)', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.ms', 'Multiscatter', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.excel', 'Excel sheet', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.gct.file', 'GCT file', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.cm', 'Correlation matrix', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.profile', 'Profile plot', value=!input$export.toggle.all)
 
@@ -269,7 +271,7 @@ shinyServer(
 
         ## ########################################################
         ## session name
-        output$session.label <-renderMenu({
+        output$session.label <- renderMenu({
           
           #if(is.null(session$user)) return()
           if(!global.param$session.saved) return()
@@ -359,10 +361,11 @@ shinyServer(
                                               ## action and download button for rmd, xls and zip
                                               box(title="Export results", 
                                                   fluidPage(
-                                                    fluidRow(column(4, HTML('<a href="https://rmarkdown.rstudio.com/" target="_blank_">Markdown</a> report')), 
-                                                             column(4, HTML('Spreadsheet')), 
-                                                             column(4, HTML('Gimme all!'))),
-                                                    fluidRow(column(4, 
+                                                    fluidRow(column(3, HTML('<a href="https://rmarkdown.rstudio.com/" target="_blank_">Markdown</a> report')), 
+                                                             column(3, HTML('Spreadsheet')),
+                                                             column(3, HTML('GCT')),
+                                                             column(3, HTML('Gimme all!'))),
+                                                    fluidRow(column(3, 
                                                            if(!global.results$export.rmd)
                                                              actionButton('export.rmd', 'html', icon = icon("code", lib="font-awesome"))
                                                             #actionButton('export.rmd', 'html', icon = icon("code", lib="font-awesome"), style="color: #000000; background-color: #ffa09b; border-color: #c7c9c7")
@@ -370,13 +373,20 @@ shinyServer(
                                                              downloadButton('download.rmd', 'html', style="color: #00a805") 
                                                             #downloadButton('download.rmd', 'html', style="color: #000000; background-color: #b7ff9b; border-color: #c7c9c7") 
                                                            ),
-                                                    column(4,
+                                                    column(3,
                                                            if(!global.results$export.xls)
-                                                            actionButton('export.xls', 'xslx', icon = icon("table", lib="font-awesome"))
+                                                            actionButton('export.xls', 'xlsx', icon = icon("table", lib="font-awesome"))
                                                            else
-                                                            downloadButton('download.xls', 'xslx', style="color: #00a805")
+                                                            downloadButton('download.xls', 'xlsx', style="color: #00a805")
                                                            ),
-                                                    column(4, if(!global.results$export.results)
+                                                    column(3,
+                                                           if(!global.results$export.gct)
+                                                             actionButton('export.gct', 'GCT', icon = icon("table", lib="font-awesome"))
+                                                           else
+                                                             downloadButton('download.gct', 'GCT', style="color: #00a805")
+                                                    ),
+                                                    
+                                                    column(3, if(!global.results$export.results)
                                                       actionButton('export.results', 'zip', icon = icon("archive", lib="font-awesome"))
                                                       else
                                                         downloadButton('download.results', 'zip', style="color: #00a805"))
@@ -397,6 +407,7 @@ shinyServer(
                                                   checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
                                                   checkboxInput('export.ms', 'Multiscatter',value=T),
                                                   checkboxInput('export.excel', 'Excel sheet',value=T),
+                                                  checkboxInput('export.gct.file', 'GCT file',value=T),
                                                   checkboxInput('export.cm', 'Correlation matrix',value=T),
                                                   checkboxInput('export.profile', 'Profile plot',value=T),
                                                   
@@ -1218,8 +1229,6 @@ shinyServer(
           tab <- global.input$table
           cdesc <- global.input$cdesc
           
-          #cat('\n\n', cdesc[, input$grp.gct3],'\n\n')
-          
           # store grp coloum
           global.param$grp.gct3 <- input$grp.gct3
           
@@ -1229,10 +1238,7 @@ shinyServer(
           names(Experiment) <- Column.Name
           Experiment[ rownames(cdesc) ] <- cdesc[, input$grp.gct3]
           
-          #grp.gct3 <- input$grp.gct3
-          #save(tab, cdesc, grp.gct3, file='tmp.RData')
-          
-          
+
           global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  input$grp.gct3)
           
           # data frame
@@ -2201,6 +2207,101 @@ shinyServer(
         
         ## ##########################################################################
         ## observer
+        ##                      export GCT file
+        ##
+        ## ##########################################################################
+        observeEvent(input$export.gct, {
+          
+          if(!is.null(error$msg)) return()
+          
+          ## update label
+          global.param$label <- gsub('_| |,|;|\\:|\\+|\\*', '-', input$label)
+          
+          res.comb <- global.results$data$output
+          grp.srt <- sort(global.param$grp)
+          
+          ## append annotation columns
+          if(!is.null(global.input$table.anno))
+            res.comb <- left_join(res.comb,  global.input$table.anno, 'id')
+          
+          
+          ## #########################################################
+          ## Two sample moderated T- test:
+          ## adjust labels in the header of the Excel sheet
+          ## WT.vs.KO -> KO.over.WT
+          if(global.param$which.test == 'Two-sample mod T'){
+            
+            colnames.tmp <- colnames(res.comb)
+            grp.comp <- unique(global.param$grp.comp)
+            
+            for(g in grp.comp){
+              g.new <- strsplit(g, '\\.vs\\.') %>% unlist
+              g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
+              colnames.tmp <- gsub(g, g.new, colnames.tmp)
+            }
+            colnames(res.comb) <- colnames.tmp
+          }
+          
+          ##expDesign <- data.frame(Column=names(grp.srt), Experiment=grp.srt)
+          
+          fn.tmp <- sub(' ','_',
+                        paste(
+                          global.param$label, '_',
+                          sub(' ', '_',global.param$which.test),
+                          ifelse(global.param$log.transform != 'none', paste( '_', global.param$log.transform, '_', sep=''), '_'),
+                          #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
+                          ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
+                          sub(' .*', '', Sys.time()), sep='') 
+          )
+          
+          ## assemble gct file
+          withProgress(message='Exporting', detail='GCT file',{
+            ##rdesc <- global.results$data$output
+            rdesc <- res.comb
+            mat <- rdesc[, names(grp.srt)] %>% data.matrix
+            rdesc <- rdesc[ ,-which(colnames(rdesc) %in% names(grp.srt))]
+            if(global.param$file.gct3){
+              #View( global.input$cdesc)
+              cdesc <- global.input$cdesc[ names(grp.srt),]
+            } else {
+              cdesc <- data.frame(experiment=grp.srt)
+            }
+            cid <- names(grp.srt)
+            rid <- rdesc[, global.param$id.col.value] #rownames(mat)
+            res.gct <- new('GCT')
+            res.gct@mat <- mat
+            res.gct@rid <- rid
+            res.gct@cid <- cid
+            res.gct@rdesc <- rdesc
+            res.gct@cdesc <- cdesc
+            
+            #render.gct <- try(
+              write.gct(res.gct, ofile =  sub('\\.xlsx','', paste(global.param$session.dir, fn.tmp, sep='/')) )
+            #)
+          })
+          global.param$gct.name <- paste(fn.tmp, '_n', ncol(mat),'x',nrow(mat) ,'.gct', sep='')
+          
+          #if(class(render.gct) == 'try-error' | !render.gct){
+          #  showModal(modalDialog(
+          #    size='m',
+          #    title = "Problem generating GCT file",
+          #    #render.xlsx[[1]],
+          #    HTML('cmapR package required.')
+          #  ))
+          #} else {
+            global.results$export.gct <- TRUE
+          #}
+          
+          ## trigger selectize update
+          global.param$update.ppi.select <- TRUE
+          global.param$update.ppi.select.scat <- TRUE
+          
+          updateTabsetPanel(session, 'mainPage', selected='Export')
+        })
+        
+        
+        ## ##########################################################################
+        ## observer
         ##                      export Excel sheet
         ##
         ## ##########################################################################
@@ -2224,11 +2325,28 @@ shinyServer(
             ## append annotation columns
             if(!is.null(global.input$table.anno))
               res.comb <- left_join(res.comb,  global.input$table.anno, 'id')
+            
+            ## #########################################################
+            ## Two sample moderated T- test:
+            ## adjust labels in the header of the Excel sheet
+            ## WT.vs.KO -> KO.over.WT
+            if(global.param$which.test == 'Two-sample mod T'){
               
-              expDesign <- data.frame(Column=names(tmp), Experiment=tmp)
+              colnames.tmp <- colnames(res.comb)
+              grp.comp <- unique(global.param$grp.comp)
               
-              ## generate_filename
-              fn.tmp <- sub(' ','_',
+              for(g in grp.comp){
+                g.new <- strsplit(g, '\\.vs\\.') %>% unlist
+                g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
+                colnames.tmp <- gsub(g, g.new, colnames.tmp)
+              }
+              colnames(res.comb) <- colnames.tmp
+            }
+            
+            expDesign <- data.frame(Column=names(tmp), Experiment=tmp)
+              
+            ## generate_filename
+            fn.tmp <- sub(' ','_',
                             paste(
                                 global.param$label, '_',
                                 sub(' ', '_',global.param$which.test),
@@ -2237,13 +2355,13 @@ shinyServer(
                                 ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
                                 sub(' .*', '', Sys.time()),".xlsx", sep='') 
                             )
-              global.param$xls.name <- fn.tmp
+            global.param$xls.name <- fn.tmp
               
-              ## Excel
-              render.xlsx <- try(
-                WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
-              )
-            })
+            ## Excel
+            render.xlsx <- try(
+              WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
+            )
+          })
           
           if(class(render.xlsx) == 'try-error' | !render.xlsx){
             showModal(modalDialog(
@@ -2529,6 +2647,13 @@ shinyServer(
                         ## normalized ratios
                         tab <- data.frame(global.results$table.norm)
                         
+                        
+                        # update selection
+                        tab <- tab[, c(id.col.value, names(grp))]
+                        grp.col <- grp.col[names(grp)]
+                        grp.col.leg <- grp.col.leg[unique(grp)]
+                        
+                        
                         ## pdf
                         pdf(fn.box, 12, max(3, .6*length(global.param$grp)))
                         makeBoxplot(tab, id.col.value, grp, grp.col, grp.col.leg)
@@ -2642,30 +2767,117 @@ shinyServer(
                 withProgress(message='Exporting', detail='Excel sheet',{
 
                     res.comb <- global.results$data$output
-                    tmp <- sort(global.param$grp)
+                    grp.srt <- sort(global.param$grp)
 
                     ## append annotation columns
                     if(!is.null(global.input$table.anno))
                         res.comb <- left_join(res.comb,  global.input$table.anno, 'id')
-                        ##res.comb <- cbind(res.comb, Annotation.starts.here=rep('', nrow(res.comb)), global.input$table.anno)
+                       
 
-                    expDesign <- data.frame(Column=names(tmp), Experiment=tmp)
+                    ## #########################################################
+                    ## Two sample moderated T- test:
+                    ## adjust labels in the header of the Excel sheet
+                    ## WT.vs.KO -> KO.over.WT
+                    if(global.param$which.test == 'Two-sample mod T'){
+                      
+                      colnames.tmp <- colnames(res.comb)
+                      grp.comp <- unique(global.param$grp.comp)
+                      
+                      for(g in grp.comp){
+                        g.new <- strsplit(g, '\\.vs\\.') %>% unlist
+                        g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
+                        colnames.tmp <- gsub(g, g.new, colnames.tmp)
+                      }
+                      colnames(res.comb) <- colnames.tmp
+                    }
+                    
+                    expDesign <- data.frame(Column=names(grp.srt), Experiment=grp.srt)
 
-                    ## generate_filename
                     fn.tmp <- sub(' ','_',
-                                  paste(global.param$session.dir, '/', 'results_',
-                                        sub(' ', '_',global.param$which.test), '_',
-                                        ifelse(global.param$log.transform != 'none', paste( global.param$log.transform, '_', sep=''), '_'),
-                                        ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
-                                        #ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
-                                        sub(' .*', '', Sys.time()),".xlsx", sep=''))
-
-                    global.param$ExcelFileName <- fn.tmp
+                                  paste(
+                                    global.param$label, '_',
+                                    sub(' ', '_',global.param$which.test),
+                                    ifelse(global.param$log.transform != 'none', paste( '_', global.param$log.transform, '_', sep=''), '_'),
+                                    #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
+                                    ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
+                                    sub(' .*', '', Sys.time()),".xlsx", sep='') 
+                    )
+                    global.param$xls.name <- fn.tmp
+                    
                     ## Excel
-                    ## WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=fn.tmp, FreezeRow=1, FreezeCol=1, SheetNames=c('modT', 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
-                    WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=fn.tmp, FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
-
+                    render.xlsx <- try(
+                      WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
+                    )
                 })
+            }
+            
+            
+            ## ###############################################################                    
+            ##                       GCT v1.3
+            ## ###############################################################
+            if(input$export.gct.file){
+              
+              res.comb <- global.results$data$output
+              grp.srt <- sort(global.param$grp)
+              
+              ## append annotation columns
+              if(!is.null(global.input$table.anno))
+                res.comb <- left_join(res.comb,  global.input$table.anno, 'id')
+              
+              
+              ## #########################################################
+              ## Two sample moderated T- test:
+              ## adjust labels in the header of the Excel sheet
+              ## WT.vs.KO -> KO.over.WT
+              if(global.param$which.test == 'Two-sample mod T'){
+                
+                colnames.tmp <- colnames(res.comb)
+                grp.comp <- unique(global.param$grp.comp)
+                
+                for(g in grp.comp){
+                  g.new <- strsplit(g, '\\.vs\\.') %>% unlist
+                  g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
+                  colnames.tmp <- gsub(g, g.new, colnames.tmp)
+                }
+                colnames(res.comb) <- colnames.tmp
+              }
+              
+              ##expDesign <- data.frame(Column=names(grp.srt), Experiment=grp.srt)
+              
+              fn.tmp <- sub(' ','_',
+                            paste(
+                              global.param$label, '_',
+                              sub(' ', '_',global.param$which.test),
+                              ifelse(global.param$log.transform != 'none', paste( '_', global.param$log.transform, '_', sep=''), '_'),
+                              #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
+                              ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
+                              sub(' .*', '', Sys.time()),".xlsx", sep='') 
+              )
+              
+              ## assemble gct file
+              withProgress(message='Exporting', detail='GCT file',{
+                    ##rdesc <- global.results$data$output
+                    rdesc <- res.comb
+                    mat <- rdesc[, names(grp.srt)] %>% data.matrix
+                    rdesc <- rdesc[ ,-which(colnames(rdesc) %in% names(grp.srt))]
+                    if(global.param$file.gct3){
+                      #View( global.input$cdesc)
+                      cdesc <- global.input$cdesc[ names(grp.srt),]
+                    } else {
+                      cdesc <- data.frame(experiment=grp.srt)
+                    }
+                    cid <- names(grp.srt)
+                    rid <- rdesc[, global.param$id.col.value] #rownames(mat)
+                    res.gct <- new('GCT')
+                    res.gct@mat <- mat
+                    res.gct@rid <- rid
+                    res.gct@cid <- cid
+                    res.gct@rdesc <- rdesc
+                    res.gct@cdesc <- cdesc
+                    write.gct(res.gct, ofile =  sub('\\.xlsx','', paste(global.param$session.dir, fn.tmp, sep='/')) )
+              })
+                   
+                
             }
 
             #################################
@@ -3987,6 +4199,13 @@ cat('id: ', global.param$id.col.value, '\n')
             file.copy( paste(global.param$session.dir, global.param$xls.name, sep='/'), file)
           }, contentType = "application/xlsx"
         )
+        ## download handler for GCT file
+        output$download.gct <- downloadHandler(
+          filename = function(){paste('results', global.param$gct.name, sep='_')},
+          content = function(file){
+            file.copy( paste(global.param$session.dir, global.param$gct.name, sep='/'), file)
+          }, contentType = "application/gct"
+        )
         
         #########################################
         ## download handler for experimental design template
@@ -4187,7 +4406,7 @@ cat('id: ', global.param$id.col.value, '\n')
           
           
           validate( need( global.param$which.test %in% c('One-sample mod T', 'Two-sample mod T'), paste('Only available for multi-group one-or two-sample moderated T-tests!')) )
-          validate( need( length(grp.comp), paste('Need at least 2 groups!')) )
+          validate( need( length(grp.comp) > 1, paste('Need at least 2 groups!')) )
           validate( need( nrow(global.results$filtered) > 0 , 'No significant features to compare!') )
           validate( need( filter.type %in% c('adj.p', 'nom.p'), paste('No significance filter defined!')) )
           
@@ -4265,7 +4484,7 @@ cat('id: ', global.param$id.col.value, '\n')
           
           
           validate( need( global.param$which.test %in% c('One-sample mod T', 'Two-sample mod T'), paste('Only available for multi-group one-or two-sample moderated T-tests.')) )
-          validate( need( length(grp.comp), paste('Need at least 2 groups.')) )
+          validate( need( length(grp.comp) > 1, paste('Need at least 2 groups.')) )
           validate( need( nrow(global.results$filtered) > 0 , 'No significant features to compare!') )
           validate( need( filter.type %in% c('adj.p', 'nom.p'), paste('No significance filter defined!')) )
           
@@ -4382,7 +4601,8 @@ cat('id: ', global.param$id.col.value, '\n')
             grp.colors <- global.param$grp.colors
 
             ## extract expression values
-            dat <- tab[, -which(colnames(tab) == global.param$id.col.value)]
+            #dat <- tab[, -which(colnames(tab) == global.param$id.col.value)]
+            dat <- tab[, names(grp)]
             dat <- data.matrix(dat)
 
             ## ############################################################

@@ -130,6 +130,7 @@ p_load(dplyr)
 
 p_load(UpSetR)
 p_load(gridExtra)
+p_load(vioplot)
 
 ## id mapping
 p_load(RSQLite)

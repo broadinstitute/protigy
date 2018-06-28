@@ -8,7 +8,7 @@ library(pacman)
 ## deal with non-unique rid
 parse.gctx2 <- function( fname, ... ){
   
-  p_load(cmapR)
+  #p_load(cmapR)
   p_load(magrittr)
   
   

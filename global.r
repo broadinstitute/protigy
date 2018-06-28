@@ -31,7 +31,7 @@ p_load (RColorBrewer)
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.2.5"
+VER="0.8.2.6"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -72,7 +72,7 @@ p_load(shiny)
 p_load(shinydashboard)
 p_load(shinyjs)
 
-p_load(cmapR)
+#p_load(cmapR)
 p_load(magrittr)
 
 ## colors
@@ -154,7 +154,7 @@ source('src/modT.r')
 #source('src/pheatmap.r')
 source('src/helptext.r')
 source('src/my_io.r')
-#source('src/gct-io.r')
+source('src/gct-io.r')
 source('src/plots.r')
 
 

@@ -33,6 +33,10 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.2.6 June 27, 2018</b>
+<ul>
+<li>Misc: Disabled the cmapR-package because of installation problems of the required package <i>rhdf5</i> on a <i>Red Hat Enterprise Linux 6.9</i> machine. The io.R file from the cmapR GitHub repository is used instead. </li>
+</ul>
 <b>v0.8.2.5 June 27, 2018</b>
 <ul>
 <li>Excel sheet: In case of <b>Two sample moderated T-test</b>, the table header will now report <b>KO.over.WT</b> instead of <b>WT.vs.KO</b>.</li>

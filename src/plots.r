@@ -183,7 +183,12 @@ plotHM <- function(res,
 cdesc.colors <- function(cdesc, cdesc.grp, grp.col.legend){
   
   # reorder
-  #save(cdesc.grp, cdesc, grp.col.legend, file='tmp.RData')    
+  #save(cdesc.grp, cdesc, grp.col.legend, file='tmp.RData')
+  
+  ## remove 'id'
+  #if('id' %in% rownames(cdesc))
+  #  cdesc <- cdesc[ -which(rownames(cdesc) == 'id'), ] 
+  
   anno.col <- cdesc[, c( colnames(cdesc)[-which(colnames(cdesc) == cdesc.grp)] , colnames(cdesc)[which(colnames(cdesc) == cdesc.grp)])]
   
   # COLORS for class vector used for marker selection
@@ -279,7 +284,7 @@ HCluster <- function(res, hm.clust, hc.method='ward.D2', hc.dist=c('euclidean', 
       rowv.dist <- rowv.dist[-na.idx.row, ]
       rowv.dist <- rowv.dist[, -na.idx.row]
     }
-    save(rowv.dist, res, file='tmp.RData')
+    #save(rowv.dist, res, file='tmp.RData')
     #Rowv=hclust(as.dist(rowv.dist), method=hc.method)
     Rowv= fastcluster::hclust(as.dist(rowv.dist), method=hc.method)
     Colv=FALSE

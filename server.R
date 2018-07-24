@@ -3140,19 +3140,31 @@ cat('id: ', global.param$id.col.value, '\n')
                 error$msg <- paste('<p>Error importing GCT 1.3 file:<br>', gct[1],'<p>') 
                 validate(need(class(gct) != 'try-error', 'Error importing GCT 1.3 file.'))
               }
-              ##save(gct, file='gct.RData')
+              
               ## #################################################
               ## robustify ids
               gct@rid <- make.unique(make.names(gct@rid))
-              rownames(gct@rdesc) <- rownames(gct@mat) <- gct@rid
-              #if(!is.null(gct@cid)){
-                gct@cid <- make.unique(make.names(gct@cid))
-                if(nrow(gct@cdesc) > 0)
-                  rownames(gct@cdesc) <-gct@cid
-                colnames(gct@mat) <- gct@cid
-              #}
+              rownames(gct@mat) <- gct@rid
+              if(nrow(gct@rdesc) > 0){
+                rownames(gct@rdesc) <- gct@rid   
+              }
+              
+              gct@cid <- make.unique(make.names(gct@cid))
+              if(nrow(gct@cdesc) > 0)
+                rownames(gct@cdesc) <-gct@cid
+              colnames(gct@mat) <- gct@cid
+              
+              ## remove 'id'
+              if('id' %in% colnames(gct@cdesc))
+                gct@cdesc <- gct@cdesc[ ,-which(colnames(gct@cdesc) == 'id') ] 
+              
+              
               # expression table
-              tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
+              if(nrow(gct@rdesc) > 0 ){
+                tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
+              } else {
+                tab <- data.frame(id=gct@rid, gct@mat, stringsAsFactors = F)
+              }
               rownames(tab) <-tab$id
               
               ## sample names
@@ -3186,6 +3198,8 @@ cat('id: ', global.param$id.col.value, '\n')
               # meta data
               global.input$rdesc <- gct@rdesc
               global.input$cdesc <- gct@cdesc
+
+              
               #rownames(global.input$cdesc) <- make.names(make.unique( rownames(global.input$cdesc))) # convert to proper names
               
               global.param$cdesc.all <- global.param$cdesc.selection <- colnames(global.input$cdesc)
@@ -3998,7 +4012,6 @@ cat('id: ', global.param$id.col.value, '\n')
 
             ## test results
             res <- data.frame(global.results$data$output, stringsAsFactors=F )
-            ##View(data.frame(global.results$data$output))
 
             ## get the filter type
             global.param$filter.type=input$filter.type
@@ -4065,8 +4078,11 @@ cat('id: ', global.param$id.col.value, '\n')
                     ## one/two sample tests
                     if(global.param$which.test != 'mod F'){
 
-                        res <- res[ which( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, function(x) sum(x < input$filter.value.nom.p))) > 0), ]
-                        res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min))  ), ]
+                        #res <- res[ which( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, function(x) sum(x < input$filter.value.nom.p))) > 0), ]
+                      res <- res[ which( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, 
+                                                       function(x) sum(x < input$filter.value.nom.p, na.rm=T))
+                                                ) > 0), ]
+                      res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min))  ), ]
                         ## now separate for each group comparison
                         res.groups <- lapply(groups.comp, function(g){
                             res[ which( res[, paste('P.Value.', g, sep='')] < input$filter.value.nom.p) , ]
@@ -4103,8 +4119,13 @@ cat('id: ', global.param$id.col.value, '\n')
                     ## one/two sample tests
                     if(global.param$which.test != 'mod F'){
 
-                        res <- res[ which( unlist(apply( res[, grep('^adj.P.Val', colnames(res) )], 1, function(x) sum(as.numeric(x) < input$filter.value.adj.p ))) > 0), ]
-                        res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min))  ), ]
+                        #res <- res[ which( unlist(apply( res[, grep('^adj.P.Val', colnames(res) )], 1, function(x) sum(as.numeric(x) < input$filter.value.adj.p ))) > 0), ]
+                      res <- res[ which( unlist(apply( res[, grep('^adj.P.Val', colnames(res) )], 1, 
+                                                       function(x) sum(as.numeric(x) < input$filter.value.adj.p, ra.rm=T ))
+                                                ) > 0), ]
+                      
+                      res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min))  ), ]
+                        
                         ## now separate for each group comparison
                         res.groups <- lapply(groups.comp, function(g){
                             res[ which( res[, paste('adj.P.Val.', g, sep='')] < input$filter.value.adj.p) , ]
@@ -4458,7 +4479,11 @@ cat('id: ', global.param$id.col.value, '\n')
           
           ## colors one-sample -> use color vector of different groups
           ## colors two-sample -> no colors
-          sets.bar.color <- rep('grey', ncol(test.tab.up))
+          #sets.bar.color <- rep('grey', ncol(test.tab.up))
+          sets.bar.color <- 'grey'
+          
+          #save(test.tab.up, sets.bar.color, fc.tab, filter.value, file='upset.RData')
+          
           
           ## plot
           #par(mfrow=c(1,2))
@@ -4531,7 +4556,8 @@ cat('id: ', global.param$id.col.value, '\n')
           
           ## colors one-sample -> use color vector of different groups
           ## colors two-sample -> no colors
-          sets.bar.color <- rep('grey', ncol(test.tab.dn))
+          #sets.bar.color <- rep('grey', ncol(test.tab.dn))
+          sets.bar.color <- 'grey'
           
           ## plot
           upset(data.frame( test.tab.dn), 
@@ -6018,16 +6044,19 @@ cat('id: ', global.param$id.col.value, '\n')
               }  )
             #save(cor.group, file='cor.group.RData')
             
-            ylim <- c(min(unlist(cor.group))-0.1*min(unlist(cor.group)), max( unlist(cor.group))+0.1*max(unlist(cor.group)) )
+            #ylim <- c(min(unlist(cor.group))-0.1*min(unlist(cor.group)), max( unlist(cor.group))+0.1*max(unlist(cor.group)) )
+            ylim <- c(min(unlist(cor.group))-0.1*min(unlist(cor.group)), 1)
             
             # plot
+            par(mar=c(8, 5, 2, 1))
             fancyBoxplot(cor.group, col=grp.col.legend, names=names(grp.col.legend), 
                          show.numb = 'median', numb.col='grey80', 
                          main=paste('Pairwise intra-group correlations (', global.plotparam$cm.upper,')'),
                          ylab='Correlation coeffient',
                          ylim=ylim,
-                         numb.cex=1)
-            legend('topright', legend=names(grp.col.legend), fill=grp.col.legend, bty='n')
+                         numb.cex=1,
+                         las=2)
+            legend('topright', legend=names(grp.col.legend), fill=grp.col.legend, bty='n', ncol = ifelse(length(grp.col.legend) > 4, 2, 1))
             
         })
 

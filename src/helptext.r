@@ -33,10 +33,20 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.3 July 23, 2018</b>
+<ul>
+<li><mark>BUG:</mark> fixed a bug resulting in an inaccurate number of significant features reported in the heatmap.</li>
+<li>UpSet-plot: small bugfix casuing a crash under certein circumstances.</li>
+<li>Correlation boxplots: changed some aesthetics of the plot.</li>
+</ul>
+<b>v0.8.2.8 July 2, 2018</b>
+<ul>
+<li>Misc: fixed a bug causing the app to crash if a GCT 1.3 file <mark>witout</mark> row meta data was uploaded.</li>
+</ul>
 <b>v0.8.2.7 June 28, 2018</b>
 <ul>
-<li>Misc: fixed a bug causing the app to crash under certain combinations of <i>Modify selected groups</i> and test selections.</ul>
-<font size=\"3\">
+<li>Misc: fixed a bug causing the app to crash under certain combinations of <i>Modify selected groups</i> and test selections.</li>
+</ul>
 <b>v0.8.2.6 June 28, 2018</b>
 <ul>
 <li>Misc: disabled the cmapR-package because of installation problems of the required package <i>rhdf5</i> on a <i>Red Hat Enterprise Linux 6.9</i> machine. The io.R file from the cmapR GitHub repository is used instead. </li>
@@ -50,7 +60,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.2.4 June 27, 2018</b>
 <ul>
-<li><mark>BUGFIX:</mark> duplicated session ids: included a timestamp-based seed before generating the seesion id. It happened that the sample function returned the same string/number combination.</li>
+<li><mark>BUG:</mark> duplicated session ids: included a timestamp-based seed before generating the seesion id. It happened that the sample function returned the same string/number combination.</li>
 <li>Misc: session id is doubled checked whether it exists as folder on the server.</li>
 <li>Export: all files except RData-session files and zip-archives are removed from the server.</li>
 </ul>

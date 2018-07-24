@@ -33,6 +33,12 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.3.1 July 24, 2018</b>
+<ul>
+<li>Misc: robustified filtering of significant features for plotting purposes.</li>
+<li>Misc: disabled Javascript code in the datatable().</li>
+<li>Correlation boxplots: changed some more aesthetics.</li>
+</ul>
 <b>v0.8.3 July 23, 2018</b>
 <ul>
 <li><mark>BUG:</mark> fixed a bug resulting in an inaccurate number of significant features reported in the heatmap.</li>
@@ -41,7 +47,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.2.8 July 2, 2018</b>
 <ul>
-<li>Misc: fixed a bug causing the app to crash if a GCT 1.3 file <mark>witout</mark> row meta data was uploaded.</li>
+<li>Misc: fixed a bug causing the app to crash if a GCT 1.3 file <b>witout row meta data</b> was uploaded.</li>
 </ul>
 <b>v0.8.2.7 June 28, 2018</b>
 <ul>

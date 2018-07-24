@@ -31,7 +31,7 @@ p_load (RColorBrewer)
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.3"
+VER="0.8.3.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data

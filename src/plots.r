@@ -183,12 +183,6 @@ plotHM <- function(res,
 cdesc.colors <- function(cdesc, cdesc.grp, grp.col.legend){
   
   # reorder
-  #save(cdesc.grp, cdesc, grp.col.legend, file='tmp.RData')
-  
-  ## remove 'id'
-  #if('id' %in% rownames(cdesc))
-  #  cdesc <- cdesc[ -which(rownames(cdesc) == 'id'), ] 
-  
   anno.col <- cdesc[, c( colnames(cdesc)[-which(colnames(cdesc) == cdesc.grp)] , colnames(cdesc)[which(colnames(cdesc) == cdesc.grp)])]
   
   # COLORS for class vector used for marker selection
@@ -390,16 +384,48 @@ fancyBoxplot <- function(x,
   
   ##################################
   if(length(x) == 1){
+    
+    col <- col[1]
+    at <- 1
     x = unlist(x)
     plot(NA, axes=F, xlab=xlab, ylab=ylab, ylim=ylim, type="n", main=main, ...)
     
-    vioplot( x, add=T, at=1, col=col, drawRect=drawRect, wex=vio.wex, ...)
-    boxplot( x, add=T, at=1, border=box.border, pch=box.pch, ...)
-  }
-  
-  #################################
-  if(length(x) > 1){
+    #vioplot( x, add=T, at=1, col=col, drawRect=drawRect, wex=vio.wex, ...)
+    #boxplot( x, add=T, at=1, border=box.border, pch=box.pch, ...)
     
+    vioplot( x, add=T, at=at, col=my.col2rgb(col, vio.alpha), drawRect=drawRect, border=F, wex=vio.wex,...)
+    boxplot( x, add=T, at=at, border=box.border, pch=box.pch, col=col, axes=F,...)
+    
+    if(show.numb=='median')
+      text(at, median(x), round(median(x),2), pos=numb.pos, cex=numb.cex, offset=0.1, col=numb.col )
+    if(show.numb=='mean')
+      text(at, mean(x), round(median(x),2), pos=numb.pos, cex=numb.cex, offset=0.1, col=numb.col )
+    if(show.numb=='median.top')
+      text(at, ylim[2], round(median(x),2), pos=1, cex=numb.cex, offset=0.1, col=numb.col )
+    if(show.numb=='median.bottom')
+      text(at, ylim[1], round(median(x),2), pos=3, cex=numb.cex, offset=0.1, col=numb.col )
+    
+    ## axes
+    if(xaxis){
+      axis(1, at=at, labels=names.x, las=las, cex.axis=cex.names)
+    }
+    if(yaxis){
+      axis(2, las=2)
+    }
+    ## grid
+    if(grid){
+      if(is.null(grid.at))
+        abline( h=floor(ylim[1]):ceiling(ylim[2]), col='grey', lty='dotted' )
+      else
+        abline( h=grid.at, col='grey', lty='dotted' )
+      
+    }
+    
+    
+
+    ## more than one     
+  } else {
+
     ## xlim
     if(is.null(xlim))
       xlim=c(0.5, length(x)+0.5)
@@ -434,13 +460,17 @@ fancyBoxplot <- function(x,
       
     }
     
+    # box border
+    if( length(box.border) != length(x) )
+      box.border <- rep(box.border[1], length(x))
+    
     ## plot each box/violin
     for(i in 1:length(x)){
       
       if(length(x[[i]]) > 0){
         
         vioplot( x[[i]], add=T, at=at[i], col=my.col2rgb(col[i], vio.alpha), drawRect=drawRect, border=F, wex=vio.wex,...)
-        boxplot( x[[i]], add=T, at=at[i], border=box.border, pch=box.pch, col=col[i], axes=F,...)
+        boxplot( x[[i]], add=T, at=at[i], border=box.border[i], pch=box.pch, col=col[i], axes=F,...)
         
         if(show.numb=='median')
           text(at[i], median(x[[i]]), round(median(x[[i]]),2), pos=numb.pos, cex=numb.cex, offset=0.1, col=numb.col )

@@ -779,8 +779,8 @@ shinyServer(
             ## ###########################################
             table.tab <- tabPanel('Table',
                      fluidPage(
-                         fluidRow(column(12, tags$h3(paste('Result table')))),
-                         fluidRow(column(12, tags$br())),
+                         #fluidRow(column(12, tags$h3(paste('Result table')))),
+                         #fluidRow(column(12, tags$br())),
                          fluidRow(column(12, dataTableOutput("tableprev")))
                      )
                      )
@@ -3989,21 +3989,22 @@ cat('id: ', global.param$id.col.value, '\n')
 
 
         ###################################################################################
-        ##
+        ## observer
         ##
         ##                   filter the test results accross multiple groups
         ##
         ##
         ###################################################################################
-        ##filter.res  <-  reactive({
         observeEvent(c(input$filter.type, input$filter.value.top.n, input$filter.value.nom.p, input$filter.value.adj.p, global.param$run.test),{
 
             ## only run after one analysis has been completed
             if(global.param$run.test == 0 | is.null(input$filter.type)) return()
 
-            cat('\n-- filter.res --\n')
-            cat('filter.type: ', global.param$filter.type, '\nfilter.value:', global.param$filter.value, '\n')
-
+            #cat('\n-- filter.res --\n')
+            #cat('filter.type: ', global.param$filter.type, '\nfilter.value:', global.param$filter.value, '\n')
+            #cat('filter.type: ', input$filter.type, '\nfilter.value:', input$filter.value, '\n')
+            #cat('filter.type: ', input$filter.type, '\n')
+            
             ## ######################################
             ## get the current tab
             tab.select <- input$mainPage
@@ -4016,6 +4017,7 @@ cat('id: ', global.param$id.col.value, '\n')
             ## get the filter type
             global.param$filter.type=input$filter.type
 
+            
             #################################
             ## top N
             if(global.param$filter.type=='top.n'){
@@ -4029,11 +4031,11 @@ cat('id: ', global.param$id.col.value, '\n')
                     if(global.param$which.test != 'mod F'){
 
                         ## order according to minimal p-value
-                        res <- res[ order( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, min))  ), ]
+                        res <- res[ order( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, min, na.rm=T))  ), ]
                         res <- res[ 1:input$filter.value.top.n, ]
 
                         ## order according to FC
-                        res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min))  ), ]
+                        #res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min, na.rm=T))  ), ]
 
                         ## now separate for each group comparison
                         res.groups <- lapply(groups.comp, function(g){
@@ -4079,12 +4081,14 @@ cat('id: ', global.param$id.col.value, '\n')
                     if(global.param$which.test != 'mod F'){
 
                         #res <- res[ which( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, function(x) sum(x < input$filter.value.nom.p))) > 0), ]
+                      # keep all features that are significant in at least one group comparison
                       res <- res[ which( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, 
                                                        function(x) sum(x < input$filter.value.nom.p, na.rm=T))
                                                 ) > 0), ]
-                      res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min))  ), ]
-                        ## now separate for each group comparison
-                        res.groups <- lapply(groups.comp, function(g){
+                      #res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min, na.rm=T))  ), ]
+                      
+                      ## now separate for each group comparison
+                      res.groups <- lapply(groups.comp, function(g){
                             res[ which( res[, paste('P.Value.', g, sep='')] < input$filter.value.nom.p) , ]
                         })
                         names(res.groups) <- groups.comp
@@ -4100,7 +4104,7 @@ cat('id: ', global.param$id.col.value, '\n')
                 ## one group comparison
                 } else {
                     res <- res[which(res[, paste('P.Value.', groups.comp, sep="")] < input$filter.value.nom.p), ]
-                    res <-  res[order(res[, paste('logFC.', groups.comp, sep="")]), ]
+                    res <-  res[order( res[, paste('logFC.', groups.comp, sep="") ]), ]
                     res.groups <- list(res)
                     names(res.groups) <- groups.comp
                 }
@@ -4121,10 +4125,12 @@ cat('id: ', global.param$id.col.value, '\n')
 
                         #res <- res[ which( unlist(apply( res[, grep('^adj.P.Val', colnames(res) )], 1, function(x) sum(as.numeric(x) < input$filter.value.adj.p ))) > 0), ]
                       res <- res[ which( unlist(apply( res[, grep('^adj.P.Val', colnames(res) )], 1, 
-                                                       function(x) sum(as.numeric(x) < input$filter.value.adj.p, ra.rm=T ))
+                                                       #function(x) sum(as.numeric(x) < input$filter.value.adj.p, na.rm=T ))
+                                                       #function(x) sum(as.numeric(x) < input$filter.value.adj.p, na.rm=T ))
+                                                       function(x) sum( x < input$filter.value.adj.p, na.rm=T ))
                                                 ) > 0), ]
                       
-                      res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min))  ), ]
+                      #res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min,  na.rm=T))  ), ]
                         
                         ## now separate for each group comparison
                         res.groups <- lapply(groups.comp, function(g){
@@ -4162,6 +4168,10 @@ cat('id: ', global.param$id.col.value, '\n')
                 names(res.groups) <- groups.comp
             }
 
+            cat('\n-- filter.res --\n')
+            cat('filter.type: ', global.param$filter.type, '\nfilter.value:', global.param$filter.value, '\n')
+            
+            
             ###################################################
             ## global filter accross all experiments
             ##rownames(res) <- res[, 'id.concat']
@@ -4695,6 +4705,8 @@ cat('id: ', global.param$id.col.value, '\n')
                 tab <- left_join(tab, table.anno, 'id')
             }
 
+            
+            
             if(nrow(tab) > 0){
               
                 ## add links to GeneCard/UniProt
@@ -4702,14 +4714,17 @@ cat('id: ', global.param$id.col.value, '\n')
                 up.link <- link.db(up.id, global.results$keytype)
                 tab[, 'id'] <- up.link
             }
+            
+            #View(tab)
+            
             datatable(tab, style = 'bootstrap', 
                       width = 1000, escape = F,  filter='top', 
                       rownames=F, options = list( pageLength = 10, scrollX = T, selection='none',
-                                                  fnRowCallback = JS("function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {ind = 2; $('td:eq('+ind+')', nRow).html( (aData[ind]).toFixed(2) );}")
+                                                  autoWidth = TRUE#,
+                                                  #fnRowCallback = JS("function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {ind = 2; $('td:eq('+ind+')', nRow).html( (aData[ind]).toFixed(2) );}")
                                                   )
                       )
             #tab
-
         #}, options = list( pageLength = 10, scrollX = T), escape=F, filter='top', rownames=F, server = T)
         }, server=T)
 
@@ -6048,14 +6063,17 @@ cat('id: ', global.param$id.col.value, '\n')
             ylim <- c(min(unlist(cor.group))-0.1*min(unlist(cor.group)), 1)
             
             # plot
+            #debug(fancyBoxplot)
             par(mar=c(8, 5, 2, 1))
-            fancyBoxplot(cor.group, col=grp.col.legend, names=names(grp.col.legend), 
-                         show.numb = 'median', numb.col='grey80', 
+            fancyBoxplot(cor.group, col='white', box.border=unlist(grp.col.legend), vio.alpha = 0, lwd=2.5,
+                         names=names(grp.col.legend), grid=F,
+                         show.numb = 'median', numb.col='black', 
                          main=paste('Pairwise intra-group correlations (', global.plotparam$cm.upper,')'),
                          ylab='Correlation coeffient',
                          ylim=ylim,
                          numb.cex=1,
                          las=2)
+            
             legend('topright', legend=names(grp.col.legend), fill=grp.col.legend, bty='n', ncol = ifelse(length(grp.col.legend) > 4, 2, 1))
             
         })

@@ -21,6 +21,7 @@
 ## changelog: 20160614 - included 'na' to indicate missing values
 ##                     - outsourced Mani's code to a separate file 'modT.r'
 ################################################################################################################
+#options( stringsAsFactors = F )
 
 ## R package managing tool
 if (!require("pacman")) install.packages ("pacman")
@@ -31,7 +32,7 @@ p_load (RColorBrewer)
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.3.1"
+VER="0.8.4.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -71,6 +72,9 @@ PIWIKURL <<- '//shiny-proteomics.broadinstitute.org/piwik/'
 p_load(shiny)
 p_load(shinydashboard)
 p_load(shinyjs)
+
+## required to install limma in R >= 3.5
+p_load(BiocManager)
 
 #p_load(cmapR)
 p_load(magrittr)
@@ -711,7 +715,7 @@ sd.filter <- function(tab, grp.vec, id.col, sd.perc){
 
     ##View(tab)
     values.filt <- lapply(groups, function(x) filt.idx)
-
+    names(values.filt) <- groups
     return(list(table=tab, values.filtered=values.filt))
 }
 

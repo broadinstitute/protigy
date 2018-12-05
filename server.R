@@ -506,14 +506,14 @@ shinyServer(
                                                                             choices=NULL,
                                                                             selected=NULL,
                                                                             options = list(
-                                                                                maxOptions=5,
+                                                                                maxOptions=10,
                                                                                 placeholder='Bait protein',
                                                                                 onInitialize = I('function() { this.setValue(""); }')
                                                                             )
 
                                                                             )
                                                              ),
-                                                      column(3, checkboxGroupInput(paste('ppi.db.scat', grp.unique[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw', 'Reactome (human)' = 'react'), selected=c('bg', 'iw', 'react') ))#,
+                                                      column(3, checkboxGroupInput(paste('ppi.db.scat', grp.unique[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw', 'Reactome (human)' = 'react'), selected=c('bg') ))#,
                                                       #column(3, checkboxInput( paste('ppi.show.labels.scat', grp.unique[i], sep='.' ), 'Show labels', value=F) )
 
                                                       ##column(1)
@@ -575,16 +575,16 @@ shinyServer(
                                                                   selectizeInput( inputId=gsub('\\.','', gsub('\\.', '', paste0('ppi.bait.', groups.comp[i])) ), label=NULL,
                                                                                ## choices=global.results$id.map$id.concat,
                                                                                 choices=NULL,
-                                                                                selected=NULL,
+                                                                                selected=' ',
                                                                                 options = list(
-                                                                                    maxOptions=5,
+                                                                                    maxOptions=10,
                                                                                     placeholder='Bait protein',
                                                                                     onInitialize = I('function() { this.setValue(""); }')
                                                                                 )
     
                                                                                 )
                                                                  ),
-                                                          column(3, checkboxGroupInput(paste('ppi.db', groups.comp[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw', 'Reactome (human)' = 'react'), selected=c('bg', 'iw', 'react') )),
+                                                          column(3, checkboxGroupInput(paste('ppi.db', groups.comp[i], sep='.' ), 'Source data', choices=c('BioGRID (human)' = 'bg', 'InWeb' = 'iw', 'Reactome (human)' = 'react'), selected=c('bg') )),
                                                           column(3, checkboxInput( paste('ppi.show.labels', groups.comp[i], sep='.' ), 'Show labels', value=F) ),
     
                                                           column(1, checkboxInput( paste('ppi.hyper.filt', groups.comp[i], sep='.' ), 'Hyperbolic curve', value=F)),
@@ -1227,8 +1227,9 @@ shinyServer(
         observeEvent(input$update.grp.gct3, {
           
           tab <- global.input$table
-          cdesc <- global.input$cdesc
-          
+          cdesc <- data.frame(global.input$cdesc)
+          #if(nrow)
+          #View(head(cdesc))
           # store grp coloum
           global.param$grp.gct3 <- input$grp.gct3
           
@@ -1236,12 +1237,15 @@ shinyServer(
           Column.Name <- colnames(tab)
           Experiment <- rep('', length(Column.Name))
           names(Experiment) <- Column.Name
-          Experiment[ rownames(cdesc) ] <- cdesc[, input$grp.gct3]
+          Experiment[ rownames(cdesc) ] <- make.names(cdesc[, input$grp.gct3])
           
 
           global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  input$grp.gct3)
           
           # data frame
+         #cat( Column.Name, '\n')
+        #cat(Experiment,'\n')
+          
           grp.file=data.frame(
             Column.Name,
             Experiment,
@@ -1299,10 +1303,11 @@ shinyServer(
           
           # ####################################################  
           # colors for other annotation tracks
-          col.tmp <- cdesc.colors(cdesc, global.param$grp.gct3, grp.col.legend)
-          global.param$anno.col.all <- global.param$anno.col <- col.tmp$anno.col
-          global.param$anno.col.color.all <- global.param$anno.col.color <- col.tmp$anno.col.color
-          
+          if(ncol(cdesc) > 1){
+            col.tmp <- cdesc.colors(cdesc, global.param$grp.gct3, grp.col.legend)
+            global.param$anno.col.all <- global.param$anno.col <- col.tmp$anno.col
+            global.param$anno.col.color.all <- global.param$anno.col.color <- col.tmp$anno.col.color
+          }
 
           ## all done
           global.param$grp.done = T
@@ -1512,7 +1517,7 @@ shinyServer(
                      actionButton('run.test', 'Run analysis!'),
                      br(),
                      hr(),
-                     actionButton('select.groups.button', 'Modify selected groups')
+                     actionButton('select.groups.button', 'Selected groups')
                      #fluidRow(
                     #  column(6, actionButton('select.groups.button', 'Select Groups')),
                     #  column(6, actionButton('select.anno.button', 'Select Annotation Tracks'))
@@ -1539,7 +1544,7 @@ shinyServer(
                     #   column(6, actionButton('select.groups.button', 'Select Groups')),
                     #   column(6, actionButton('select.anno.button', 'Select Annotation Tracks'))
                      #)
-                     actionButton('select.groups.button', 'Modify selected groups')
+                     actionButton('select.groups.button', 'Select groups')
                 )
             }
 
@@ -1560,7 +1565,7 @@ shinyServer(
                      actionButton('run.test', 'Run analysis!'),
                      br(),
                      hr(),
-                     actionButton('select.groups.button', 'Modify selected groups')
+                     actionButton('select.groups.button', 'Select groups')
                 )
             }
 
@@ -1580,7 +1585,7 @@ shinyServer(
                     actionButton('run.test', 'Run analysis!'),
                     br(),
                     hr(),
-                    actionButton('select.groups.button', 'Modify selected groups')
+                    actionButton('select.groups.button', 'Select groups')
                 )
             }
 
@@ -1743,7 +1748,7 @@ shinyServer(
                   \ntab <- data.frame(global.input$table.org)
                   \ngrp <- global.param$grp
                   \nN.grp <- global.param$N.grp
-                  \nsum.tab <- t(data.frame(nrow(tab), length(grp), N.grp, ncol(global.input$table.anno)))
+                  \nsum.tab <- t(data.frame(global.input$N.feat, length(grp), N.grp, ncol(global.input$table.anno)))
                   \nsum.tab <- data.frame(id=c("No. rows", "No. expression columns", "No. expression groups", "No. annotation columns"), sum.tab)
                   \ncolnames(sum.tab) <- c("Data", "Number")
                   \nkable(sum.tab, row.names=F)
@@ -3143,7 +3148,8 @@ cat('id: ', global.param$id.col.value, '\n')
               
               ## #################################################
               ## robustify ids
-              gct@rid <- make.unique(make.names(gct@rid))
+              #gct@rid <- make.unique(make.names(gct@rid))
+              gct@rid <- make.unique( gct@rid )
               rownames(gct@mat) <- gct@rid
               if(nrow(gct@rdesc) > 0){
                 rownames(gct@rdesc) <- gct@rid   
@@ -3151,12 +3157,28 @@ cat('id: ', global.param$id.col.value, '\n')
               
               gct@cid <- make.unique(make.names(gct@cid))
               if(nrow(gct@cdesc) > 0)
-                rownames(gct@cdesc) <-gct@cid
+                rownames(gct@cdesc) <- gct@cid
               colnames(gct@mat) <- gct@cid
               
+              ## error checking for column meta data
+              if(nrow(gct@cdesc) == 0){
+                error$msg <- paste('<p>Error in GCT 1.3 file: No column meta data tracks defined! Need at least one column meta data track to use as class vector.<br><p>') 
+                validate( need(nrow(gct@cdesc) > 0, 'Error parsing GCT 1.3 column meta data.'))
+              }
+              
               ## remove 'id'
-              if('id' %in% colnames(gct@cdesc))
-                gct@cdesc <- gct@cdesc[ ,-which(colnames(gct@cdesc) == 'id') ] 
+              if('id' %in% colnames(gct@cdesc)){
+                cn.tmp <- colnames(gct@cdesc)
+                rm.idx <- which(colnames(gct@cdesc) == 'id')
+                #gct@cdesc <- data.frame(gct@cdesc[ ,-which(colnames(gct@cdesc) == 'id') ] )
+                gct@cdesc <- data.frame(gct@cdesc[ ,-rm.idx] )
+                cn.tmp <- cn.tmp[-rm.idx]
+                colnames(gct@cdesc) <- cn.tmp
+              }
+              if(ncol(gct@cdesc) == 1)
+                rownames(gct@cdesc) <- gct@cid
+              
+              
               
               
               # expression table
@@ -3196,6 +3218,13 @@ cat('id: ', global.param$id.col.value, '\n')
               global.input$table.colnames <- colnames.tmp
               
               # meta data
+              #rdesc <- data.frame(gct@rdesc)
+              #if(ncol(rdesc) == 1){
+              # if(length(rdesc) > 0)
+              #   rownames(rdesc) <- gct@rid
+              #}
+              #cdesc <- data.frame(gct@cdesc)
+              
               global.input$rdesc <- gct@rdesc
               global.input$cdesc <- gct@cdesc
 
@@ -3755,8 +3784,6 @@ cat('id: ', global.param$id.col.value, '\n')
                     global.results$values.filtered <- filt.tmp$values.filtered
                     global.results$table.filt <- tab
 
-
-
             }
 
             ## #############################################################################
@@ -3929,24 +3956,18 @@ cat('id: ', global.param$id.col.value, '\n')
             ## #########################################
             ##if(!is.null(global.results$id.map)){
             if( sum(c('id.concat', 'id.mapped', 'id.query') %in% colnames(res.comb)) < 3 ){
-                ##cat('test\n')
-                ##cat(res.comb$id[1:3], '\n')
-                ##res.comb <- data.frame(res.comb, stringsAsFactors=F)
-                ##cat(res.comb$id[1:3], '\n')
                 res.comb <- left_join(res.comb, global.results$id.map, 'id')
-                ##View(res.comb)
-                ##rownames(res.comb) <- res.comb[, 'id']
-                ##cat(res.comb$id[1:3], '\n')
-                ##cat('test2\n')
+              
             }
 
-            ##save(res.comb, file='tmp.RData')
-            ##rownames(res.comb) <- make.names(res.comb$id.concat)
             rownames(res.comb) <- make.names(res.comb$id)
 
             ## #########################################
             ## store the results
             global.results$data$output <- res.comb
+            
+            ## number of features withat least one non-missing vlaue
+            global.input$N.feat <- sum(apply( tab, 1, function(x) sum(is.na(x)/length(x))) < 1)
 
             ##cat(dim(global.results$data$output))
 
@@ -3963,10 +3984,6 @@ cat('id: ', global.param$id.col.value, '\n')
             ##            insert the panels for the volcanos
             ## #################################################################
             if(!(global.param$which.test %in% c('mod F', 'none'))){
-                
-                #reset.volc()
-                #resetVolcAnno()
-                #global.plotparam$volc.reset <- T
                 ins.volc()
             }
 
@@ -4000,11 +4017,6 @@ cat('id: ', global.param$id.col.value, '\n')
             ## only run after one analysis has been completed
             if(global.param$run.test == 0 | is.null(input$filter.type)) return()
 
-            #cat('\n-- filter.res --\n')
-            #cat('filter.type: ', global.param$filter.type, '\nfilter.value:', global.param$filter.value, '\n')
-            #cat('filter.type: ', input$filter.type, '\nfilter.value:', input$filter.value, '\n')
-            #cat('filter.type: ', input$filter.type, '\n')
-            
             ## ######################################
             ## get the current tab
             tab.select <- input$mainPage
@@ -4269,16 +4281,19 @@ cat('id: ', global.param$id.col.value, '\n')
             if(!is.null(error$msg)) return()
 
             tab <- data.frame(global.input$table.org)
-            ##View(tab)
-            ##cat(dim(tab), '\n')
+            
             grp <- global.param$grp
             N.grp <- global.param$N.grp
 
+           # N.feat <- sum(apply(tab, 1, function(x) sum(is.na(x)/length(x))) < 1)
+          #  global.input$N.feat <- N.feat
+            
             ##cat(nrow(tab), ' - ', length(grp), ' - ', N.grp)
 
             sum.tab <- t(data.frame(
                 ##id=c('Rows', 'Expression columns', 'Groups'),
-                N.rows=nrow(tab),
+                #N.rows=nrow(tab),
+                 global.input$N.feat,
                 N.columns=length(grp),
                 N.groups=N.grp
             ))
@@ -4753,12 +4768,17 @@ cat('id: ', global.param$id.col.value, '\n')
 
                 ## #################################
                 ## all ids found in data
-                choices=unlist(global.results$id.map$id.concat)
+                choices=c( unlist(global.results$id.map$id.concat) )
 
 
                 ## server-side rendering of selectizeInput
-                updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T)
-
+                #updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T)
+                 updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T, 
+                                       options= list(
+                                          onInitialize = I('function() { this.setValue(""); }')
+                                       )
+                 )
+                # 
                 ##}
             }
             global.param$update.ppi.select <- FALSE
@@ -5234,6 +5254,8 @@ cat('id: ', global.param$id.col.value, '\n')
             ## ##############################
             ##  reproducibility filter?
             values.filtered <- global.results$values.filtered[[group]]  
+            #View(values.filtered)
+            
             if(length(values.filtered) > 0){
 
               ## get the entire dataset
@@ -5257,8 +5279,7 @@ cat('id: ', global.param$id.col.value, '\n')
               )
               
             }
-            
-            
+          
 
             ## some astethics
             p <- layout(p,
@@ -5891,13 +5912,15 @@ cat('id: ', global.param$id.col.value, '\n')
               cm <- global.results$cm
             }
             tab <- tab[, names(grp)]
-            colnames(tab) <- chopString(colnames(tab), STRLENGTH)
+            #colnames(tab) <- chopString(colnames(tab), STRLENGTH)
             
             ## table
             #tab <- tab[, setdiff(colnames(tab), id.col)]
             
             ###############################
             ## plot
+            repro.filt=global.results$values.filtered
+            
             withProgress({
                 setProgress(message = 'Processing...', detail= 'Calculating correlations')
                 my.multiscatter(tab, 
@@ -6124,6 +6147,9 @@ cat('id: ', global.param$id.col.value, '\n')
             ## require at least three significant hits
             validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
 
+            ## number of features with at least one non-missing value
+            #n.feat <- sum( apply() )
+            
             #######################################
             ## heatmap title
             hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')

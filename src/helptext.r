@@ -33,6 +33,17 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.4.1 Dec 5, 2018</b>
+<ul>
+<li>Misc: Installation works in R >3.5</li>
+</ul>
+<b>v0.8.4 Nov 16, 2018</b>
+<ul>
+<li>Multiscatter: fixed bug that would should srtaight lines for each pairwise plot. Occured when column ids where longer than 20 characters.</li>
+<li>GCT 1.3: Error message if GCT file does not contain any column meta data tracks.</li>
+<li>Misc: fixed a bug causing the app to crash if a GCT 1.3 file with single <b>column meta data track</b> was uploaded.</li>
+<li>Misc: renamed  <i>Modify selected groups</i> to  <i>Select groups</i>.</li>
+</ul>
 <b>v0.8.3.1 July 24, 2018</b>
 <ul>
 <li>Misc: robustified filtering of significant features for plotting purposes.</li>
@@ -42,12 +53,12 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 <b>v0.8.3 July 23, 2018</b>
 <ul>
 <li><mark>BUG:</mark> fixed a bug resulting in an inaccurate number of significant features reported in the heatmap.</li>
-<li>UpSet-plot: small bugfix casuing a crash under certein circumstances.</li>
+<li>UpSet-plot: small bugfix causing a crash under certein circumstances.</li>
 <li>Correlation boxplots: changed some aesthetics of the plot.</li>
 </ul>
 <b>v0.8.2.8 July 2, 2018</b>
 <ul>
-<li>Misc: fixed a bug causing the app to crash if a GCT 1.3 file <b>witout row meta data</b> was uploaded.</li>
+<li>Misc: fixed a bug causing the app to crash if a GCT 1.3 file <b>without row meta data</b> was uploaded.</li>
 </ul>
 <b>v0.8.2.7 June 28, 2018</b>
 <ul>
@@ -488,12 +499,16 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 <li><b>Quantile</b>: Transform the data such that the quantiles of all sample distributions are the equal.</li>
 <li><b>none</b>: The data will be taken as is. Should be used if the data has been already normalized.</li>
 </ul>
-<br>
 <p><h3>Filter data</h3>
 <b>Reproducibility:</b><br>
 Remove features that were not reproducibly quantifified across replicate measurements. Only available for <b>one-sample tests</b> and will be ignored otherwise. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue.</p>
+
 <b>StdDev:</b><br>
-Remove features with low standard deviation across all samples. Only useful if applied to sample cohorts that were quantified against a common reference.
+Remove features with low standard deviation across all samples. Only useful if applied to sample cohorts that were quantified against a common reference. The percentile <b><i>P</i></b> you specify 
+in the slider refers to the <b><i>P</i></b> percent of features having the <b>lowest standard deviation</b> across sample columns which will be <b>excluded prior to analyis</b>.
+Using this type of filter is useful to explore result of unsupervised clustering of the data without running a statistical test.
+
+
 <br><h3>Select test</h3>You can choose between a one-sample, two-sample moderate T-tests, moderated F-test or no testing.
 <ul>
 <li><b>One-sample mod T</b>: For each test whether the group mean is significantly different from zero. Only meaningful to <b>ratio data</b>!</li>

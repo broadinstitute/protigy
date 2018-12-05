@@ -196,6 +196,7 @@ cdesc.colors <- function(cdesc, cdesc.grp, grp.col.legend){
   # annotation track names, without the one used for marker selection
   anno.track.names <- setdiff(colnames(anno.col), cdesc.grp) 
   for(i in  1:length(anno.track.names)){
+    
     # track name
     anno.track.tmp <- anno.track.names[i]
     
@@ -857,7 +858,7 @@ my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5,
       ###########################
       ## diagonal
       if(i == j){
-        p = ggplot(dat, aes(x=x)) + geom_histogram(fill=grp.col.legend[current.group], colour=grp.col.legend[current.group], binwidth=sum(abs(range(dat$x, na.rm=T)))/50) + ggtitle(colnames(mat)[i]) + theme(plot.title=element_text(size=9)) + theme( panel.background = element_blank(), plot.margin=unit(rep(0, 4), 'cm')) + xlab(paste('N',sum(!is.na(dat$x)), sep='=')) + ylab('') + xlim(lim[1], lim[2]) ##+ annotate('text', label=sum(!is.na(dat$x)), x=unit(0, 'npc'), y=unit(0, 'npc'))
+        p = ggplot(dat, aes(x=x)) + geom_histogram(fill=grp.col.legend[current.group], colour=grp.col.legend[current.group], binwidth=sum(abs(range(dat$x, na.rm=T)))/50) + ggtitle( chopString(colnames(mat)[i], STRLENGTH)) + theme(plot.title=element_text(size=9)) + theme( panel.background = element_blank(), plot.margin=unit(rep(0, 4), 'cm')) + xlab(paste('N',sum(!is.na(dat$x)), sep='=')) + ylab('') + xlim(lim[1], lim[2]) ##+ annotate('text', label=sum(!is.na(dat$x)), x=unit(0, 'npc'), y=unit(0, 'npc'))
         
         
       }

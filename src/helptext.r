@@ -35,7 +35,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 <font size=\"3\">
 <b>v0.8.4.1 Dec 5, 2018</b>
 <ul>
-<li>Misc: Installation works in R >3.5</li>
+<li>Misc: Compatible with R >3.5</li>
 </ul>
 <b>v0.8.4 Nov 16, 2018</b>
 <ul>

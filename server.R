@@ -575,11 +575,13 @@ shinyServer(
                                                                   selectizeInput( inputId=gsub('\\.','', gsub('\\.', '', paste0('ppi.bait.', groups.comp[i])) ), label=NULL,
                                                                                ## choices=global.results$id.map$id.concat,
                                                                                 choices=NULL,
-                                                                                selected=' ',
+                                                                                selected=NULL,
+                                                                                multiple=F,
                                                                                 options = list(
                                                                                     maxOptions=10,
                                                                                     placeholder='Bait protein',
-                                                                                    onInitialize = I('function() { this.setValue(""); }')
+                                                                                    oninit = I('function() { this.setValue(""); }')
+                                                                                    #onInitialize = I('function() { this.setValue(""); }')
                                                                                 )
     
                                                                                 )
@@ -1165,6 +1167,7 @@ shinyServer(
                 selectizeInput(inputId = 'session.browse', 
                                label = 'Saved sessions:',
                                choices=names(saved.sessions), 
+                               
                                options=list( 
                                  placeholder = 'Search sessions',
                                  onInitialize = I('function() { this.setValue(""); }')
@@ -4772,12 +4775,12 @@ cat('id: ', global.param$id.col.value, '\n')
 
 
                 ## server-side rendering of selectizeInput
-                #updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T)
-                 updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T, 
-                                       options= list(
-                                          onInitialize = I('function() { this.setValue(""); }')
-                                       )
-                 )
+                 updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T)
+                 #updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T, 
+                #                       options= list(
+                #                          onInitialize = I('function() { this.setValue(""); }')
+                #                       )
+                 #)
                 # 
                 ##}
             }

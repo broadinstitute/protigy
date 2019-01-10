@@ -33,6 +33,10 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.4.2 Jan 10, 2019</b>
+<ul>
+<li>Misc: Compatible with both R>=3.5 AND R<3.5</li>
+</ul>
 <b>v0.8.4.1 Dec 5, 2018</b>
 <ul>
 <li>Misc: Compatible with R >3.5</li>

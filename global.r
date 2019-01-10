@@ -32,7 +32,7 @@ p_load (RColorBrewer)
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.4.1"
+VER="0.8.4.2"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -55,6 +55,8 @@ APPDIR <<- getwd()
 ## directory to store data files
 ##DATADIR <<- ifelse(OS=='Windows', ".", "/local/shiny-data/")
 DATADIR <<- ifelse(OS=='Linux', "/local/shiny-data/", '.')
+## R version
+RVERSION <- as.numeric(paste(R.version$major, sub('\\..*','',R.version$minor), sep='.')) 
 
 ## email for trouble shooting
 MAIL <<- 'karsten@broadinstitute.org'
@@ -74,7 +76,8 @@ p_load(shinydashboard)
 p_load(shinyjs)
 
 ## required to install limma in R >= 3.5
-p_load(BiocManager)
+if(RVERSION >= 3.5)
+  p_load(BiocManager)
 
 #p_load(cmapR)
 p_load(magrittr)

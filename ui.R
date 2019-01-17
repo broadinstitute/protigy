@@ -58,6 +58,7 @@ shinyUI(
                       tags$head(tags$style(HTML('.shiny-server-account { display: none; }'))),
                       tags$head(tags$style(".wrapper {overflow: visible !important;}")),
 
+                      
                           ###############################
                           ## file upload
                           uiOutput("file.upload"),
@@ -153,6 +154,8 @@ shinyUI(
                ## hidden(
                     div( id= "app-content",
 
+                         manageSessionsUI('manageSessions'),
+                         
                          htmlOutput('error'),
 
                          printHTMLUI('getting.started'),

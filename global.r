@@ -26,13 +26,13 @@
 ## R package managing tool
 if (!require("pacman")) install.packages ("pacman")
 require('pacman')
-p_load (RColorBrewer)
+
 
 #################################################################
 ## global parameters
 #################################################################
 ## version number
-VER="0.8.4.2"
+VER <- "0.8.4.3"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -70,6 +70,7 @@ PIWIKURL <<- '//shiny-proteomics.broadinstitute.org/piwik/'
 #################################################################
 ## load required packages
 #################################################################
+p_load (RColorBrewer)
 
 p_load(shiny)
 p_load(shinydashboard)
@@ -164,7 +165,7 @@ source('src/helptext.r')
 source('src/my_io.r')
 source('src/gct-io.r')
 source('src/plots.r')
-
+source('src/manage_sessions.R')
 
 ## #####################################
 ## CSS for loading animantion

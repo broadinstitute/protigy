@@ -1177,9 +1177,20 @@ shinyServer(
                 ##selectInput('session.browse', paste('Saved sessions (', sub('_at_','@',global.param$user),')',sep=''), choices=sort(names(saved.sessions))),
                 actionButton('session.browse.import', 'Import'),
                 actionButton('session.manage', 'Manage sessions', onclick =paste("window.open('", CONFAPP,"', 'newwindow', 'width=500 height=600'); return false;", sep=''))
-            )
+                #actionButton('session.manage', 'Manage sessions')
+                
+                )
         })
 
+        ## ##################################################
+        ##
+        ##       observer for manage sessions module
+        ##
+        ## ##################################################
+        observeEvent(input$session.manage, {
+          callModule(manageSessions, id = 'manageSessions', data.dir=DATADIR,  session = session )
+          })
+        
         
         # ###################################################
         #       group assignment for gct 1.3 files

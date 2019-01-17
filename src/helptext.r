@@ -33,17 +33,21 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.4.3 Jan 17, 2019</b>
+<ul>
+<li>Misc (SSP only): Started to implement a shiny module for session management which will enable users to share saved sessions with collaborators/team members. Not used in this version though.</li>
+</ul>
 <b>v0.8.4.2 Jan 10, 2019</b>
 <ul>
-<li>Misc: Compatible with both R>=3.5 AND R<3.5</li>
+<li>Misc: Compatible with both, R>=3.5 AND R<3.5</li>
 </ul>
 <b>v0.8.4.1 Dec 5, 2018</b>
 <ul>
-<li>Misc: Compatible with R >3.5</li>
+<li>Misc: Compatible with R >=3.5</li>
 </ul>
 <b>v0.8.4 Nov 16, 2018</b>
 <ul>
-<li>Multiscatter: fixed bug that would should srtaight lines for each pairwise plot. Occured when column ids where longer than 20 characters.</li>
+<li>Multiscatter: fixed bug that would show straight lines for each pairwise plot. Occured when column ids where longer than 20 characters.</li>
 <li>GCT 1.3: Error message if GCT file does not contain any column meta data tracks.</li>
 <li>Misc: fixed a bug causing the app to crash if a GCT 1.3 file with single <b>column meta data track</b> was uploaded.</li>
 <li>Misc: renamed  <i>Modify selected groups</i> to  <i>Select groups</i>.</li>

@@ -1,5 +1,5 @@
 ################################################################################################################
-## Filename: global.r
+## Filename: global.R
 ## Created: October 09, 2015
 ## Author(s): Karsten Krug, Ozan Aygun
 ##
@@ -32,7 +32,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.4.3"
+VER <- "0.8.5"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data

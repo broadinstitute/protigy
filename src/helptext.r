@@ -33,6 +33,11 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.5 Jan 21, 2019</b>
+<ul>
+<li>Misc: Added BSD-3 license.</li>
+<li>Misc: Updated Readme file.</li>
+</ul>
 <b>v0.8.4.3 Jan 17, 2019</b>
 <ul>
 <li>Misc (SSP only): Started to implement a shiny module for session management which will enable users to share saved sessions with collaborators/team members. Not used in this version though.</li>

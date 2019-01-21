@@ -1,0 +1,1 @@
+Rtools for Windows (zip.exe) may be utilized to create zip-archive if used in a Windows environment. Rtools is governed by a separate license, Copyright © 2011 - 2019, The R Foundation and Rtools contributors (Prof. Brian Ripley, Duncan Murdoch and Jeroen Ooms). All rights reserved.  Additional information can be found at https://cran.r-project.org/bin/windows/Rtools/.

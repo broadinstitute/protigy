@@ -5,4 +5,6 @@
 .Rhistory
 conf/user-roles.txt
 rsconnect*
-.pptx
+*.pptx
+.gitignore
+.gitattributes

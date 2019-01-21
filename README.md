@@ -123,6 +123,6 @@ Below are slides presented during a BroadE workshop in Feb 2018 at the [Broad In
 
 ## License
 
-ProTIGY has been released under [BSD-3](https://github.com/broadinstitute/protigy/blob/master/LICENSE.html) license. ProTIGY is being developed and maintained at the [Proteomics Platform](https://www.broadinstitute.org/proteomics) of the [Broad Institute of MIT and Harvard](https://www.broadinstitute.org/).
+ProTIGY has been released under [BSD-3](https://github.com/broadinstitute/protigy/blob/master/LICENSE.md) license. ProTIGY is being developed and maintained at the [Proteomics Platform](https://www.broadinstitute.org/proteomics) of the [Broad Institute of MIT and Harvard](https://www.broadinstitute.org/).
 
 ***

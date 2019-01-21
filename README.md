@@ -78,12 +78,12 @@ The app can run locally on your Desktop computer (Windows/Linux/MAC) or can depl
 
 #### Running ProTGY locally
 
-**Software requirements:**
+Software requirements:
 
 * [R >3.4](https://cran.r-project.org/)
 * [Shiny](https://shiny.rstudio.com/) R-package : ```install.packages("shiny")```
 * [Pandoc](https://github.com/jgm/pandoc/releases/tag/2.1.1) (optional, required to create R Markdown reports)
-* [Perl](http://strawberryperl.com(Windows OS) (optional, required to create Excel sheets on Windows OS)
+* [Perl](http://strawberryperl.com) (optional, required to create Excel sheets on Windows OS)
 
 The easiest way to try out ProTIGY is to directly run it from GitHub. Open R and type:
 
@@ -123,6 +123,6 @@ Below are slides presented during a BroadE workshop in Feb 2018 at the [Broad In
 
 ## License
 
-ProTIGY has been released under [BSD-3](https://raw.githubusercontent.com/broadinstitute/protigy/master/LICENSE.html) license. ProTIGY is being developed and maintained at the [Proteomics Platform](https://www.broadinstitute.org/proteomics) of the [Broad Institute of MIT and Harvard](https://www.broadinstitute.org/).
+ProTIGY has been released under [BSD-3](https://github.com/broadinstitute/protigy/blob/master/LICENSE.html) license. ProTIGY is being developed and maintained at the [Proteomics Platform](https://www.broadinstitute.org/proteomics) of the [Broad Institute of MIT and Harvard](https://www.broadinstitute.org/).
 
 ***

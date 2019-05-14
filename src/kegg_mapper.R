@@ -8,13 +8,29 @@
 KEGGGENE_TO_KEGGPATHWAY_MAP='../etc/kegg_data/kegg_human_genes_to_pathways.csv'
 GENESYMBOL_TO_KEGGGENE_MAP='../ncbi_data/gene_to_entrez_and_kegg.csv'
 
-map_kegg_pathways <- function() {
-  #################################################
-  #                                               #
-  #          MAIN KEGG MAPPING WORKFLOW           #
-  #                                               #
-  #################################################
-  
+### OTHER PROTIGY NAMES THAT SHOULD BE GLOBALIZED
+COMPARISON_LIST_FIELD_NAME = 'grp.comp.all'
+FOLD_CHANGE_NAME_BASE = 'logFC'
+SIGNIFICANCE_NAME_BASE = 'adj.P.Val'
+DATA_OBJECT_NAME = 'data'
+DATA_OUTPUT_OBJECT_NAME = 'output'
+JOINER_CHARACTER = '.'
+
+map_kegg_pathways <- function(protigy_parameters, protigy_results) {
+  #######################################################################################
+  #                                                                                     #
+  #          MAIN KEGG MAPPING WORKFLOW                                                 #
+  #                                                                                     #
+  #                                                                                     #
+  # param: protigy_parameters - global.param.imp from protigy data structure            #
+  #                           - must contain 'grp.comp.all' list                        #
+  #                                                                                     #
+  # param: protigy_results    - global.results.imp from protigy data structure          #
+  #                           - must contain 'data' list with 'output' dataframe        #
+  #                                                                                     #
+  #                                                                                     #
+  #######################################################################################
+
   # Gather potential comparisons
   
   # Map gene symbols to KEGG ids
@@ -33,6 +49,35 @@ map_kegg_pathways <- function() {
   
 }
 
+
+gather_comparisons_and_make_column_names <- function(protigy_parameters) {
+  #######################################################################################
+  #                                                                                     #
+  # function: gather_comparisons_and_make_column_names                                  #
+  #   makes a dataframe containing all relevant comparisons and names the columns for   #
+  #   use in determining significance and directionality                                #
+  #                                                                                     #
+  # param: protigy_parameters - global.param.imp from protigy data structure            #
+  #                           - must contain 'grp.comp.all' list                        #
+  #                                                                                     #
+  # returns: dataframe with the following fields:                                       #
+  #    comparison_name                                                                  #
+  #    significance_name                                                                #
+  #    foldchange_name                                                                  #
+  #                                                                                     #
+  #######################################################################################
+  
+  comparison_names = protigy_parameters[[COMPARISON_LIST_FIELD_NAME]]
+  
+  comparison_nomenclature_df = data.frame(
+    comparison_name = comparison_names,
+    significance_name = paste(SIGNIFICANCE_NAME_BASE,comparison_names, sep=JOINER_CHARACTER),
+    foldchange_name = paste(SIGNIFICANCE_NAME_BASE,comparison_names, sep=JOINER_CHARACTER),
+    row.names = comparison_names
+  )
+
+  return(comparison_nomenclature_df)    
+}
 
 prepareKEGGhelperFunction <- function(report, fcfield = 'logFC', sigfield = 'adj.P.Val', sig_threshold = 0.1) {
   

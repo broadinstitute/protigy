@@ -5,8 +5,8 @@
 #################################################
 
 ### MAPPING DATA LOCATIONS (PART OF REPO, SHOULD UPDATE REGULARLY OR CREATE PIPELINE TO GENERATE AUTOMATICALLY)
-KEGGGENE_TO_KEGGPATHWAY_MAP='../etc/kegg_data/kegg_human_genes_to_pathways.csv'
-GENESYMBOL_TO_KEGGGENE_MAP='../ncbi_data/gene_to_entrez_and_kegg.csv'
+KEGGGENE_TO_KEGGPATHWAY_MAP='etc/kegg_data/kegg_human_genes_to_pathways.csv'
+GENESYMBOL_TO_KEGGGENE_MAP='etc/ncbi_data/gene_to_entrez_and_kegg.csv'
 
 ### OTHER PROTIGY NAMES THAT SHOULD BE GLOBALIZED
 COMPARISON_LIST_FIELD_NAME = 'grp.comp.all'
@@ -14,7 +14,13 @@ FOLD_CHANGE_NAME_BASE = 'logFC'
 SIGNIFICANCE_NAME_BASE = 'adj.P.Val'
 DATA_OBJECT_NAME = 'data'
 DATA_OUTPUT_OBJECT_NAME = 'output'
+GENE_SYMBOL_NAME = 'id.mapped'  # POTENTIALLY TO BE REPLACED BY ENTREZ GENE ID LATER
+ID_CONCAT_NAME = 'id.concat'
+
+### OTHER MISC GLOBALS
 JOINER_CHARACTER = '.'
+KEGG_GENE_ACCESSION_FIELDNAME = 'keggGene'
+
 
 map_kegg_pathways <- function(protigy_parameters, protigy_results) {
   #######################################################################################
@@ -78,6 +84,48 @@ gather_comparisons_and_make_column_names <- function(protigy_parameters) {
 
   return(comparison_nomenclature_df)    
 }
+
+
+annotate_genes_with_kegg_ids <- function(protigy_results){
+
+  
+  # Load the gene symbol to kegg accession mapping
+  gene_to_kegg_table = read.csv(GENESYMBOL_TO_KEGGGENE_MAP, stringsAsFactors = FALSE, row.names = 1)
+  
+  # Extract the whole protigy result table
+  protigy_result_table = protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]]
+
+  # Extract just the gene symbols and row ids from the protigy results, note uppercasing of gene symbol names
+  temporary_data_frame_for_merging = data.frame(
+    id = rownames(protigy_result_table),
+    id.concat = protigy_result_table[[ID_CONCAT_NAME]],
+    id.mapped = toupper(protigy_result_table[[GENE_SYMBOL_NAME]]),
+    row.names = rownames(protigy_result_table),
+    stringsAsFactors = FALSE 
+  )
+  
+  # Perform the merge
+  temp_merge_result = merge(
+    x = temporary_data_frame_for_merging,
+    y = gene_to_kegg_table,
+    by.x = 'id.mapped',
+    by.y = 'Approved.symbol',
+    all.x = TRUE,
+    sort = FALSE
+  )
+
+  # Reorder to match original order and select the kegg accessions
+  rownames(temp_merge_result) <- temp_merge_result[['id']]    
+  ordered_kegg_accessions <- temp_merge_result[rownames(protigy_result_table),KEGG_GENE_ACCESSION_FIELDNAME]
+  
+  # Rebind to original result table
+  protigy_result_table[[KEGG_GENE_ACCESSION_FIELDNAME]] <- ordered_kegg_accessions
+  
+  return(protigy_result_table)
+}
+
+
+
 
 prepareKEGGhelperFunction <- function(report, fcfield = 'logFC', sigfield = 'adj.P.Val', sig_threshold = 0.1) {
   

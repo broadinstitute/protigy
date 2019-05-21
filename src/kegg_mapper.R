@@ -587,6 +587,25 @@ getTextAreaText<-function(keggdataListObject, pathwayName, organismCode=defaultK
   return(return.stuff)
 }
 
+#' Generate 1 KEGG map file per Protigy comparison in dataset.
+#'
+#' Generates a single .html file for each comparison indicated in the Protigy parameters that links to KEGG.
+#'
+#' This function is useful for large Protigy analyses (e.g. > ~2 comparisons) that would generate unweildy output tables.
+#' Instead, it will take the 3 main Protigy objects and generate a single HTML file for each comparison indicated in the
+#' \code{global.imp.params$grp.comp} list
+#' 
+#' @param protigy_input The \code{global.imp.input} object from Protigy
+#' @param protigy_parameters The \code{global.imp.parameters} object from Protigy
+#' @param protigy_results The \code{global.imp.results} object from Protigy
+#' @param skip A list (of strings) of comparisons that should be explicitly skipped. Default is \code{c()}
+#' @return None
+#' 
+#' Note: the function will check to the existence of the output file before proceeding.  Presence of the file will result
+#' in skipping of the comparison.  Erase the file to get it to regenerate.
+#' 
+#' @examples 
+#' one_at_a_time_helper(global.imp.input, global.imp.parameters, global.imp.results)
 one_at_a_time_helper <- function (protigy_input, protigy_parameters, protigy_results, skip=c()) {
 
     if ( all(

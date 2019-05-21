@@ -9,7 +9,7 @@ KEGGGENE_TO_KEGGPATHWAY_MAP='etc/kegg_data/kegg_human_genes_to_pathways.csv'
 GENESYMBOL_TO_KEGGGENE_MAP='etc/ncbi_data/gene_to_entrez_and_kegg.csv'
 
 ### OTHER PROTIGY NAMES THAT SHOULD BE GLOBALIZED
-COMPARISON_LIST_FIELD_NAME = 'grp.comp.all'
+COMPARISON_LIST_FIELD_NAME = 'grp.comp'
 FOLD_CHANGE_NAME_BASE = 'logFC'
 SIGNIFICANCE_NAME_BASE = 'adj.P.Val'
 DATA_OBJECT_NAME = 'data'
@@ -26,7 +26,7 @@ defaultKEGGorganismtoken = "hsa"
 kurl<-"https://www.genome.jp/kegg-bin/mcolor_pathway"
 kurlbase<-'http://www.genome.jp';
 
-map_kegg_pathways <- function(protigy_parameters, protigy_results) {
+map_kegg_pathways <- function(protigy_parameters, protigy_results, output='data/output.html') {
   #######################################################################################
   #                                                                                     #
   #          MAIN KEGG MAPPING WORKFLOW                                                 #
@@ -94,7 +94,7 @@ map_kegg_pathways <- function(protigy_parameters, protigy_results) {
   }  
 
   # Generate HTML output document
-  html<-generateHTMLdocFromExtendedKEGGplotObject(html_generation_object,'data/output.html',sigcut=1)
+  html<-generateHTMLdocFromExtendedKEGGplotObject(html_generation_object,output,sigcut=1)
 
 }
 
@@ -313,7 +313,7 @@ findKEGGsetSizes<-function(DF, keggGeneField='keggGene', AdjPValField='adj.P.Val
     OutCategoryDiffExpressed <- totalDiffExpressedKEGGids - InCategoryDiffExpressed;
     InCategoryNotDiffExpressed <- length(allObservedGenesInPathway$keggGene) - InCategoryDiffExpressed;
     OutCategoryNotDiffExpressed <- totalKeggGeneIDs - InCategoryDiffExpressed - OutCategoryDiffExpressed - InCategoryNotDiffExpressed;
-    print(paste("Pathway",uniquePathways[n],"T:", length(allObservedGenesInPathway$keggGene), "ID:",  InCategoryDiffExpressed, "IN:", InCategoryNotDiffExpressed, "OD:",OutCategoryDiffExpressed,"ON:",OutCategoryNotDiffExpressed,sep=" "))
+    # print(paste("Pathway",uniquePathways[n],"T:", length(allObservedGenesInPathway$keggGene), "ID:",  InCategoryDiffExpressed, "IN:", InCategoryNotDiffExpressed, "OD:",OutCategoryDiffExpressed,"ON:",OutCategoryNotDiffExpressed,sep=" "))
     fpv<-fisher.test(matrix(c(InCategoryDiffExpressed,InCategoryNotDiffExpressed,OutCategoryDiffExpressed,OutCategoryNotDiffExpressed),nrow=2,ncol=2),alternative=alternative);
     outputData<-rbind(outputData,data.frame(pathwayCode=uniquePathways[n],pathwayDescription=uniquePathwaysDesc[n],fisherPval=fpv$p.value, nObs=length(allObservedGenesInPathway$keggGene), nSig=InCategoryDiffExpressed, sigLevel = AdjPValCut, stringsAsFactors=FALSE))
   }
@@ -466,7 +466,7 @@ generateHTMLdocFromExtendedKEGGplotObject<-function(EKPobject, file, sigcut=0.01
   }
   
   
-  filteredDataIndices<-which(EKPobject$pwenrichments[[indexCondition]]$fisherPval < sigcut)
+  filteredDataIndices<-which(EKPobject$pwenrichments[[indexCondition]]$fisherPval <= sigcut)
   for (j in 1:length(filteredDataIndices)) {
     currentPathwayName<-EKPobject$pwenrichments[[indexCondition]]$pathwayDescription[j]
     currentPathwayCode<-EKPobject$pwenrichments[[indexCondition]]$pathwayCode[j]
@@ -585,4 +585,51 @@ getTextAreaText<-function(keggdataListObject, pathwayName, organismCode=defaultK
   #webresult<-postForm(kurl, map = kPath, unclassified = kText, mode = "color", submit = "Exec", reference = "white", .opts= curlOptions(headerfunction = h$update))
   #newurl<-paste0(kurlbase,as.character(unlist((h$value())["Location"])));
   return(return.stuff)
+}
+
+one_at_a_time_helper <- function (protigy_input, protigy_parameters, protigy_results, skip=c()) {
+
+    if ( all(
+      make.names(rownames(protigy_input$table.anno))
+      ==
+      make.names(rownames(protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]]))
+    ) ) 
+    {
+      protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]][[GENE_SYMBOL_NAME]] <- 
+      vapply(strsplit(protigy_input$table.anno$geneSymbol,"\\|"), 
+             `[`, 1, FUN.VALUE=character(1))
+    } else {
+      stop("Annotation row names do not match data output rownames.")
+    }
+  
+    for (j in 1:length(protigy_parameters[[COMPARISON_LIST_FIELD_NAME]])) {
+
+      temp_param = list()
+      temp_result = list()
+      
+      temp_param[[COMPARISON_LIST_FIELD_NAME]]<-protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]
+
+      output_filename <- paste0('data/',temp_param[[COMPARISON_LIST_FIELD_NAME]],'.html')
+      
+      if (file.exists(output_filename)) {
+        print(paste0("Exists: ", protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]))
+        next
+      }
+      
+      if ( protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j] %in% skip ) {
+        print(paste0("Skipping: ", protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]))
+        next
+      } else {
+        print(paste0("Working: ", protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]))
+      }
+      
+      grep_string = paste(temp_param[[COMPARISON_LIST_FIELD_NAME]],GENE_SYMBOL_NAME,ID_CONCAT_NAME,sep="|")
+      grep_result <- grep(grep_string, colnames(protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]]))    
+      temp_result[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]] <- 
+        protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]][,grep_result]
+      
+      result_object <- map_kegg_pathways(protigy_parameters = temp_param, protigy_results = temp_result, output = output_filename)
+
+    }
+  
 }

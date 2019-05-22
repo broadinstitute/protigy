@@ -608,47 +608,55 @@ getTextAreaText<-function(keggdataListObject, pathwayName, organismCode=defaultK
 #' one_at_a_time_helper(global.imp.input, global.imp.parameters, global.imp.results)
 one_at_a_time_helper <- function (protigy_input, protigy_parameters, protigy_results, skip=c()) {
 
-    if ( all(
-      make.names(rownames(protigy_input$table.anno))
-      ==
-      make.names(rownames(protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]]))
-    ) ) 
-    {
-      protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]][[GENE_SYMBOL_NAME]] <- 
-      vapply(strsplit(protigy_input$table.anno$geneSymbol,"\\|"), 
-             `[`, 1, FUN.VALUE=character(1))
-    } else {
-      stop("Annotation row names do not match data output rownames.")
-    }
+  # CURRENTLY THIS WORKFLOW IS SPECIFIC TO DIA DATA SUPPLIED FROM SEBASTIAN VACA
   
-    for (j in 1:length(protigy_parameters[[COMPARISON_LIST_FIELD_NAME]])) {
+  # There are issues with how the gene symbol is determined or parsed
+  # Sometime it appears in the 'id.mapped' field of global.imp.results$data$output
+  # Sometimes it is in the geneSymbol field of global.imp.input$table.anno
+  # It seems like perhaps it appears in id.mapped if the user-specified "id" field is the uniprot accession number
+  # This probably causes Protigy to do the mapping
+  # I'm not sure where why is showed up in geneSymbol in Sebastian's data
+  if ( all(
+    make.names(rownames(protigy_input$table.anno))
+    ==
+    make.names(rownames(protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]]))
+  ) ) 
+  {
+    protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]][[GENE_SYMBOL_NAME]] <- 
+    vapply(strsplit(protigy_input$table.anno$geneSymbol,"\\|"), 
+           `[`, 1, FUN.VALUE=character(1))
+  } else {
+    stop("Annotation row names do not match data output rownames.")
+  }
 
-      temp_param = list()
-      temp_result = list()
-      
-      temp_param[[COMPARISON_LIST_FIELD_NAME]]<-protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]
+  for (j in 1:length(protigy_parameters[[COMPARISON_LIST_FIELD_NAME]])) {
 
-      output_filename <- paste0('data/',temp_param[[COMPARISON_LIST_FIELD_NAME]],'.html')
-      
-      if (file.exists(output_filename)) {
-        print(paste0("Exists: ", protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]))
-        next
-      }
-      
-      if ( protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j] %in% skip ) {
-        print(paste0("Skipping: ", protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]))
-        next
-      } else {
-        print(paste0("Working: ", protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]))
-      }
-      
-      grep_string = paste(temp_param[[COMPARISON_LIST_FIELD_NAME]],GENE_SYMBOL_NAME,ID_CONCAT_NAME,sep="|")
-      grep_result <- grep(grep_string, colnames(protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]]))    
-      temp_result[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]] <- 
-        protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]][,grep_result]
-      
-      result_object <- map_kegg_pathways(protigy_parameters = temp_param, protigy_results = temp_result, output = output_filename)
+    temp_param = list()
+    temp_result = list()
+    
+    temp_param[[COMPARISON_LIST_FIELD_NAME]]<-protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]
 
+    output_filename <- paste0('data/',temp_param[[COMPARISON_LIST_FIELD_NAME]],'.html')
+    
+    if (file.exists(output_filename)) {
+      print(paste0("Exists: ", protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]))
+      next
     }
+    
+    if ( protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j] %in% skip ) {
+      print(paste0("Skipping: ", protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]))
+      next
+    } else {
+      print(paste0("Working: ", protigy_parameters[[COMPARISON_LIST_FIELD_NAME]][j]))
+    }
+    
+    grep_string = paste(temp_param[[COMPARISON_LIST_FIELD_NAME]],GENE_SYMBOL_NAME,ID_CONCAT_NAME,sep="|")
+    grep_result <- grep(grep_string, colnames(protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]]))    
+    temp_result[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]] <- 
+      protigy_results[[DATA_OBJECT_NAME]][[DATA_OUTPUT_OBJECT_NAME]][,grep_result]
+    
+    result_object <- map_kegg_pathways(protigy_parameters = temp_param, protigy_results = temp_result, output = output_filename)
+
+  }
   
 }

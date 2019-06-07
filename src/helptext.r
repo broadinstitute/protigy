@@ -33,10 +33,15 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.5.1 June 06, 2019</b>
+<ul>
+<li>GCT: added GCT file with singed log-p-values to output zip-archive which can be used as ranking input for ssGSEA/PTM-SEA.</li>
+<li>PPI: fixed bug that would show protein-protein interactions of the first protein in the list as default in volcano and scatterplots in R vesion >=3.5.</li>
+</ul>
 <b>v0.8.5 Jan 21, 2019</b>
 <ul>
-<li>Misc: Added BSD-3 license.</li>
-<li>Misc: Updated Readme file.</li>
+<li>Misc: added BSD-3 license.</li>
+<li>Misc: updated Readme file.</li>
 </ul>
 <b>v0.8.4.3 Jan 17, 2019</b>
 <ul>
@@ -44,11 +49,11 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.4.2 Jan 10, 2019</b>
 <ul>
-<li>Misc: Compatible with both, R>=3.5 AND R<3.5</li>
+<li>Misc: compatible with both, R>=3.5 AND R<3.5</li>
 </ul>
 <b>v0.8.4.1 Dec 5, 2018</b>
 <ul>
-<li>Misc: Compatible with R >=3.5</li>
+<li>Misc: compatible with R >=3.5</li>
 </ul>
 <b>v0.8.4 Nov 16, 2018</b>
 <ul>

@@ -248,7 +248,7 @@ shinyServer(
             updateCheckboxInput(session, 'export.pca.loadings', 'PCA loadings (xls)', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.ms', 'Multiscatter', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.excel', 'Excel sheet', value=!input$export.toggle.all)
-            updateCheckboxInput(session, 'export.gct.file', 'GCT file', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.gct.file', 'GCT files: 1) original data and 2) singed log P-values', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.cm', 'Correlation matrix', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.profile', 'Profile plot', value=!input$export.toggle.all)
 
@@ -407,7 +407,7 @@ shinyServer(
                                                   checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
                                                   checkboxInput('export.ms', 'Multiscatter',value=T),
                                                   checkboxInput('export.excel', 'Excel sheet',value=T),
-                                                  checkboxInput('export.gct.file', 'GCT file',value=T),
+                                                  checkboxInput('export.gct.file', 'GCT files: 1) original data and 2) singed log P-values',value=T),
                                                   checkboxInput('export.cm', 'Correlation matrix',value=T),
                                                   checkboxInput('export.profile', 'Profile plot',value=T),
                                                   
@@ -507,8 +507,8 @@ shinyServer(
                                                                             selected=NULL,
                                                                             options = list(
                                                                                 maxOptions=10,
-                                                                                placeholder='Bait protein',
-                                                                                onInitialize = I('function() { this.setValue(""); }')
+                                                                                placeholder='Protein/Gene'#,
+                                                                                #onInitialize = I('function() { this.setValue(""); }')
                                                                             )
 
                                                                             )
@@ -572,16 +572,16 @@ shinyServer(
                                                   box( title='Protein-protein interactions', status = 'primary', width=12, collapsible = TRUE, solidHeader=T, collapsed=global.param$collapse.ppi,
                                                       fluidRow(
                                                           column(3,
-                                                                  selectizeInput( inputId=gsub('\\.','', gsub('\\.', '', paste0('ppi.bait.', groups.comp[i])) ), label=NULL,
-                                                                               ## choices=global.results$id.map$id.concat,
-                                                                                choices=NULL,
-                                                                                selected=NULL,
-                                                                                multiple=F,
-                                                                                options = list(
+                                                                  selectizeInput( inputId=gsub('\\.','', gsub('\\.', '', paste0('ppi.bait.', groups.comp[i])) ), 
+                                                                                  label=NULL,
+                                                                                  choices=NULL,
+                                                                                  selected=NULL,
+                                                                                  multiple=F,
+                                                                                  options = list(
                                                                                     maxOptions=10,
-                                                                                    placeholder='Bait protein',
-                                                                                    oninit = I('function() { this.setValue(""); }')
-                                                                                    #onInitialize = I('function() { this.setValue(""); }')
+                                                                                    placeholder='Protein/Gene'#,
+                                                                                    #oninit = I('function() { this.setValue(" "); }')
+                                                                                    #onInitialize = I('function() { this.setValue("Testtststs"); }')
                                                                                 )
     
                                                                                 )
@@ -1187,9 +1187,9 @@ shinyServer(
         ##       observer for manage sessions module
         ##
         ## ##################################################
-        observeEvent(input$session.manage, {
-          callModule(manageSessions, id = 'manageSessions', data.dir=DATADIR,  session = session )
-          })
+        #observeEvent(input$session.manage, {
+        #  callModule(manageSessions, id = 'manageSessions', data.dir=DATADIR,  session = session )
+        #})
         
         
         # ###################################################
@@ -2293,8 +2293,15 @@ shinyServer(
             } else {
               cdesc <- data.frame(experiment=grp.srt)
             }
+            #cat(global.param$id.col.value, '\n')
             cid <- names(grp.srt)
+            
+            #View(rdesc)
+            
             rid <- rdesc[, global.param$id.col.value] #rownames(mat)
+            
+            #cat('test\n')
+            
             res.gct <- new('GCT')
             res.gct@mat <- mat
             res.gct@rid <- rid
@@ -2839,8 +2846,12 @@ shinyServer(
             }
             
             
+            
             ## ###############################################################                    
             ##                       GCT v1.3
+            ## export two GCT files   
+            ## - input data plus test results
+            ## - signed, log-transformed p-values plus row-meta data
             ## ###############################################################
             if(input$export.gct.file){
               
@@ -2852,6 +2863,24 @@ shinyServer(
                 res.comb <- left_join(res.comb,  global.input$table.anno, 'id')
               
               
+              ## group comparisons: required for p-value GCT
+              grp.comp <- unique(global.param$grp.comp)
+              
+              ## column names for log p valueas and fc
+              ## depend on the type of test perfromed
+              logp.colnames <- logfc.colnames <- grp.comp
+              names(logp.colnames) <- names(logfc.colnames) <- grp.comp
+              
+              #############################################################
+              ## moderated F: single P-value column
+              ## 
+              # if(global.param$which.test == 'mod F'){
+              # 
+              #   logp.colnames <- c('Log.P.Value')
+              #   logfc.colnames <- c('')
+              #   
+              # }
+               
               ## #########################################################
               ## Two sample moderated T- test:
               ## adjust labels in the header of the Excel sheet
@@ -2859,33 +2888,88 @@ shinyServer(
               if(global.param$which.test == 'Two-sample mod T'){
                 
                 colnames.tmp <- colnames(res.comb)
-                grp.comp <- unique(global.param$grp.comp)
                 
                 for(g in grp.comp){
                   g.new <- strsplit(g, '\\.vs\\.') %>% unlist
                   g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
                   colnames.tmp <- gsub(g, g.new, colnames.tmp)
+                  
+                  grp.comp.pval.gct[g] <- g.new
+                  logp.colnames[g] <- paste0('Log.P.Value.', g.new)
+                  logfc.colnames[g] <- paste0('logFC.', g.new)
                 }
                 colnames(res.comb) <- colnames.tmp
               }
+            
+              ###########################################################
+              ## One-sample mod T
+              if(global.param$which.test == 'One-sample mod T'){
+                logp.colnames <- paste0('Log.P.Value.', logp.colnames)
+                logfc.colnames <- paste0('logFC.', logfc.colnames)
+              }
               
-              ##expDesign <- data.frame(Column=names(grp.srt), Experiment=grp.srt)
-              
+              ####################
+              ## filename 
               fn.tmp <- sub(' ','_',
                             paste(
                               global.param$label, '_',
                               sub(' ', '_',global.param$which.test),
                               ifelse(global.param$log.transform != 'none', paste( '_', global.param$log.transform, '_', sep=''), '_'),
-                              #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
                               ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
                               sub(' .*', '', Sys.time()),".xlsx", sep='') 
               )
+              
+              
+              ################################################
+              ## GCT file with transformed p-values as data
+              if( !global.param$which.test == 'mod F'){
+                    withProgress(message='Exporting', detail='GCT file (transformed P-values)',{
+                      ##rdesc <- global.results$data$output
+                      rdesc <- res.comb
+                      
+                      #if(global.param$which.test == 'Two-sample mod T'){
+                        logp <- rdesc[, logp.colnames] %>% data.matrix
+                        fc <- rdesc[, logfc.colnames ] %>% data.matrix
+                      #} else {
+                      #  logp <- rdesc[, paste0('Log.P.Value.', ) ] %>% data.matrix
+                      #  fc <- rdesc[, paste0('logFC.', grp.comp) ] %>% data.matrix
+                      #} 
+                      
+                      ## transformed and signed p-values
+                      mat <- logp*sign(fc)
+                      colnames(mat) <- paste0('signed.',colnames(logp))
+                      
+                      #mat <- rdesc[, names(grp.srt)] %>% data.matrix
+                      
+                      rdesc <- rdesc[ ,-which(colnames(rdesc) %in% names(grp.srt))]
+                      #if(global.param$file.gct3){
+                      #  cdesc <- global.input$cdesc[ names(grp.srt),]
+                      #} else {
+                      #  cdesc <- data.frame(experiment=grp.srt)
+                      #}
+                      cid <- colnames(mat)
+                      rid <- rdesc[, global.param$id.col.value] #rownames(mat)
+                      res.gct <- new('GCT')
+                      res.gct@mat <- mat
+                      res.gct@rid <- rid
+                      res.gct@cid <- cid
+                      res.gct@rdesc <- rdesc
+                      #res.gct@cdesc <- cdesc
+                      write.gct(res.gct, ofile =  sub('\\.xlsx','-transformed-p-val', paste(global.param$session.dir, fn.tmp, sep='/')) )
+                    })
+              } ## end if not mod F
+              
+              
+              #####################################################
+              ## GCT file
               
               ## assemble gct file
               withProgress(message='Exporting', detail='GCT file',{
                     ##rdesc <- global.results$data$output
                     rdesc <- res.comb
-                    mat <- rdesc[, names(grp.srt)] %>% data.matrix
+                    
+                    mat <- rdesc[, paste(names(grp.srt) ) ] %>% data.matrix
+                  
                     rdesc <- rdesc[ ,-which(colnames(rdesc) %in% names(grp.srt))]
                     if(global.param$file.gct3){
                       #View( global.input$cdesc)
@@ -2903,6 +2987,7 @@ shinyServer(
                     res.gct@cdesc <- cdesc
                     write.gct(res.gct, ofile =  sub('\\.xlsx','', paste(global.param$session.dir, fn.tmp, sep='/')) )
               })
+      
                    
                 
             }
@@ -4786,7 +4871,12 @@ cat('id: ', global.param$id.col.value, '\n')
 
 
                 ## server-side rendering of selectizeInput
-                 updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T)
+                 #updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T)#,
+                updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), choices=choices, selected="", server=T)#,
+                                       # options=list( 
+                                      #    placeholder = 'test'#,
+                                        #  oninit = I('function() { this.setValue(""); }')
+                                      #  ))
                  #updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T, 
                 #                       options= list(
                 #                          onInitialize = I('function() { this.setValue(""); }')
@@ -4815,7 +4905,7 @@ cat('id: ', global.param$id.col.value, '\n')
                 choices=unlist(global.results$id.map$id.concat)
 
                 ## server-side rendering of selectizeInput
-                updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.scat.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T)
+                updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.scat.',  grp.comp[i])), choices=choices, selected="", server=T)
             }
             global.param$update.ppi.select.scat <- FALSE
         })

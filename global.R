@@ -32,7 +32,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.5"
+VER <- "0.8.5.2"
 ## maximal filesize for upload
 MAXSIZEMB <<- 500
 ## list of strings indicating missing data
@@ -75,6 +75,8 @@ p_load (RColorBrewer)
 p_load(shiny)
 p_load(shinydashboard)
 p_load(shinyjs)
+p_load(shinyjqui)
+p_load(shinyalert)
 
 ## required to install limma in R >= 3.5
 if(RVERSION >= 3.5)

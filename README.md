@@ -1,7 +1,7 @@
 <img src="www/logo_v4.png" alt="Drawing" style="width: 200px;"/>
 
 
-This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interactive analysis of quantitative omics datasets. Primarily developed for mass spectrometry-based proteomics data ProTIGY supports any dataset that can be arranged as *p x n* matrix with *p* being features (e.g. proteins, transcripts, genes, ...) quantitativly measured across *n* samples (e.g. replicates of different experimental conditions, ... ). Examples of other datasets beyond proteomics include *RNA-seq* and gene expression *microarrays*.
+This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interactive analysis of quantitative omics datasets. Primarily developed for mass spectrometry-based proteomics data ProTIGY supports any dataset that can be arranged as *p x n* matrix with *p* being features (e.g. proteins, transcripts, genes, ...) quantitativly measured across *n* samples (e.g. replicates of different experimental conditions, ... ). Examples of other datasets other than proteomics include datasets derived from *RNA-seq* or gene expression *microarrays*.
 
 ***
 
@@ -55,8 +55,7 @@ This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interac
 ## How do I get my data into ProTIGY?
 ProTIGY takes any type of text file containing both, quantitative and annotation data as input. Result files of proteomics software packages such as [Spectrum Mill](https://www.agilent.com/en/products/software-informatics/masshunter-suite/masshunter-for-life-science-research/spectrum-mill) or [MaxQuant](https://www.biochem.mpg.de/5111795/maxquant) can be readily imported into ProTIGY. 
 
-The preferred data format is [GCT v1.3](https://clue.io/connectopedia/gct_format)
-, a tab-delimited text file format that is convenient for analysis of matrix-compatible datasets as it allows metadata about an experiment to be stored alongside the data from the experiment. 
+The preferred data format is [GCT v1.3](https://clue.io/connectopedia/gct_format), a tab-delimited text file format that is convenient for analysis of matrix-compatible datasets as it allows metadata about an experiment to be stored alongside the data from the experiment. 
 
 For file formats other than [GCT v1.3](https://clue.io/connectopedia/gct_format) a separate *experimental design* file annotating which columns in the uploaded data file contain expression data measured across different experimental conditions has to be uploaded separately. This file is dataset specific and a template can be downloaded from ProTIGY. 
 
@@ -73,10 +72,10 @@ More information on how to upload data into ProTIGY can be found in [this pdf fi
 
 ## How can I run ProTIGY on my own hardware?
 
-The app can run locally on your Desktop computer (Windows/Linux/MAC) or can deployed to [Shiny Server](https://www.rstudio.com/products/shiny/shiny-server/) environments.
+The app can run locally on your Desktop computer (Windows/Linux/MAC) or can deployed to a [Shiny Server](https://www.rstudio.com/products/shiny/shiny-server/) environment.
 
 
-#### Running ProTGY locally
+#### Running ProTIGY locally
 
 Software requirements:
 
@@ -85,13 +84,13 @@ Software requirements:
 * [Pandoc](https://github.com/jgm/pandoc/releases/tag/2.1.1) (optional, required to create R Markdown reports)
 * [Perl](http://strawberryperl.com) (optional, required to create Excel sheets on Windows OS)
 
-The easiest way to try out ProTIGY is to directly run it from GitHub. Open R and type:
+The easiest way to play around with ProTIGY is to directly run it from GitHub. Open R and type:
 
 ```{r}
 shiny::runGitHub("protigy", "broadinstitute")
 ```
 
-This command will download the repository and run the app. Please follow the instructions to make sure all required R packages will get properly installed. This process might take several minutes when you run the command for the first time. Please note that running ProTIGY from GitHub will reinitaite the download every time which depending on the available internet connection might take a moment. 
+This command will download the repository and run the app. Please follow the instructions to make sure all required R packages will get properly installed. This process might take several minutes when you run the command for the first time. Please note that running ProTIGY from GitHub will reinitaite the download every time which - depending on the available internet connection - might take a moment or two. 
 
 If you plan to use ProTIGY regularily we recommend to clone or download the repository to your local PC/Mac. To start the app open R and type:
 
@@ -108,7 +107,7 @@ To access all implemented features the app has to be deployed to a [Shiny Server
 * Save and retrieve app-sessions on the server.
 * Share saved sessions with your team.
 
-Please note that some server specific parameters (e.g. folder to store sessions, tmp folder, email for trouble shooting, ...) have to be modified in ```global.R```.  
+Please note that some server specific parameters (e.g. folder to store sessions data, tmp folder, email for trouble shooting, ...) have to be modified accordingly in ```global.R```.  
 
 ***
 

@@ -19,7 +19,8 @@ p_load(shiny)
 shinyUI(
 
     dashboardPage( skin='blue',
-
+                   #includeJqueryUI(),
+                  
                   ## ##########################################
                   ## header
                   dashboardHeader( title=paste(APPNAME, " (v",VER,")", sep=""),
@@ -141,6 +142,8 @@ shinyUI(
                 )),
                 
                 useShinyjs(),
+               # includeJqueryUI(), ## draggable modals
+                useShinyalert(),
                 inlineCSS(appCSS), # required for loading animation
 
                 ## #######################

@@ -168,19 +168,6 @@ shinyServer(
         volc <- reactiveValues()
         volc.brush <- reactiveValues()
 
-        
-       # observeEvent( global.plotparam$volc.reset, {
-      #    
-      #    if(global.plotparam$volc.reset){
-      #      rm(volc)
-      #      cat('reset', '\n')
-      #      volc <- reactiveValues()
-      #      global.plotparam$volc.reset <- F
-      #    }
-      ##    
-      #  })
-      
-
         ## ###################################################
         ##
         ##               RAM usage indicator
@@ -232,7 +219,14 @@ shinyServer(
         ## Error messages
         output$error <- renderText({
             if( is.null(error$msg) ) return()
-            HTML(paste('<p align=\"center\"><font size=\"5\" color=\"red\">', error$msg,'</font></p>'))
+          
+            if(is.null(error$title))
+              etitle <- 'Error'
+            else
+              etitle <- error$title
+            
+            shinyalert(etitle, error$msg, type = "error")
+            #HTML(paste('<p align=\"center\"><font size=\"5\" color=\"red\">', error$msg,'</font></p>'))
         })
 
         ## #########################################################
@@ -1424,12 +1418,6 @@ shinyServer(
         #     Modal window: group selection
         #
         # ###########################################################
-        #observeEvent(input$modal.toggle.groups, {
-        #    groups.all <- unique(global.param$grp.comp.all)        
-        #    groups.select <- unique(global.param$grp.comp.selection)
-        #    groups.flip <- setdiff(groups.all, groups.select)
-        #    global.param$grp.comp.selection <- groups.flip
-        #})
         observeEvent(input$select.groups.button, {
           
               showModal(modalDialog(
@@ -1448,18 +1436,51 @@ shinyServer(
                     column(6, HTML('<b>Select annotation tracks</b>'))
                     
                   ),
+                  fluidRow(
+                    column(6, actionButton(inputId = 'toggle.select.groups', label = 'Toggle selection')),
+                    column(6, actionButton(inputId = 'toggle.select.anno', label = 'Toggle selection'))
+                  ),
                   
                   fluidRow(
                     #if(length(unique(global.param$grp.comp.all)) > 10){
-                    column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection))),
+                    column( 6, checkboxGroupInput('select.groups', label=' ', 
+                                                  choices = unique(global.param$grp.comp.all), 
+                                                  selected = unique(global.param$grp.comp.selection) 
+                                                  #selected = NULL
+                            )),
                     #column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.all), selected = unique(global.param$grp.selection))),
                     #} else{ column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection)))},
-                    column( 6, checkboxGroupInput('select.anno', label=' ', choices = unique(global.param$cdesc.all), selected = unique(global.param$cdesc.selection)))
+                    column( 6, checkboxGroupInput('select.anno', label=' ', 
+                                                  choices = unique(global.param$cdesc.all), 
+                                                  selected = unique(global.param$cdesc.selection)
+                                                  #selected=NULL
+                                                  ))
                   )
                 ),
                 easyClose = FALSE
               ))
+          jqui_draggable(ui = '.modal-content')
         })
+        ####################################################
+        ## toggle group selection
+        observeEvent(input$toggle.select.groups, {
+          #if(input$select.groups.button == 0) return()
+          updateCheckboxGroupInput(inputId = 'select.groups', session = session,
+                                   selected = setdiff(unique(global.param$grp.comp.all), input$select.groups)
+                                   #selected = setdiff( global.param$grp.comp.all, unique(global.param$grp.comp.selection))
+                                   )
+        })
+        ####################################################
+        ## toggle selection of annotation tracks
+        observeEvent(input$toggle.select.anno, {
+          #if(input$select.groups.button == 0) return()
+          updateCheckboxGroupInput(inputId = 'select.anno', session = session,
+                                   selected = setdiff(unique(global.param$cdesc.selection), input$select.anno)
+                                   #selected = setdiff( global.param$grp.comp.all, unique(global.param$grp.comp.selection))
+          )
+        })
+        
+        
         # ##################################################
         # reset group selection if the type of test changed
         observeEvent( input$which.test, {
@@ -1482,6 +1503,13 @@ shinyServer(
           
           ## extract groups selected in the modal window
           grp.unique <- unique( unlist( strsplit( sub('\\.vs\\.', ' ', input$select.groups), ' ')))
+          
+          ####################################
+          ## make sure at least one group 
+          ## has been selected
+          if(length(grp.unique) == 0){
+            shinyalert("No data selected!", "Please slect at least one group.", type = "error")
+          }
           
           ## update selection
           grp.selection <- grp.selection[ grep(paste('^', paste(grp.unique, collapse='|'), '$', sep=''), grp.selection) ]
@@ -3241,7 +3269,10 @@ cat('id: ', global.param$id.col.value, '\n')
               #cat('test2\n')
 
               if(class(gct) == 'try-error'){
-                error$msg <- paste('<p>Error importing GCT 1.3 file:<br>', gct[1],'<p>') 
+                #error$msg <- paste('<p>Error importing GCT 1.3 file:<br>', gct[1],'<p>')
+                error$title <- "Error importing GCT 1.3 file"
+                error$msg <- gct[1]
+                
                 validate(need(class(gct) != 'try-error', 'Error importing GCT 1.3 file.'))
               }
               
@@ -3261,7 +3292,8 @@ cat('id: ', global.param$id.col.value, '\n')
               
               ## error checking for column meta data
               if(nrow(gct@cdesc) == 0){
-                error$msg <- paste('<p>Error in GCT 1.3 file: No column meta data tracks defined! Need at least one column meta data track to use as class vector.<br><p>') 
+                error$title <- "Error parsing GCT 1.3 column meta data"
+                error$msg <- paste('No column meta data tracks defined! Need at least one column meta data track to use as class vector.') 
                 validate( need(nrow(gct@cdesc) > 0, 'Error parsing GCT 1.3 column meta data.'))
               }
               
@@ -3547,17 +3579,20 @@ cat('id: ', global.param$id.col.value, '\n')
 
             ## names in the exp design file do not match to the table
             if( sum( Column.Name != colnames(global.input$table)) > 0 ){
-                error$msg <- 'Experimental design files does not match the table you have uploaded!'
+                error$title <- "Problem parsing experimental design file."
+                error$msg <- 'Experimental design file does not match the table you have uploaded!'
                 return()
             }
 
             ## not an experimental design file
             if( sum( colnames(grp.file) %in% c('Column.Name', 'Experiment'), na.rm=T) != 2 )  {
-                error$msg <- 'This is not an experimental desgin file!\n\nThe file should contain two columns (Column.Name, Experiment)!'
+                error$title <- "Problem parsing experimental design file."
+                error$msg <- 'This is not an experimental desgin file! The file should contain two columns (Column.Name, Experiment)!'
                 return()
             }
             ## 'empty' file
             if( sum( nchar(Experiment) > 0, na.rm=T ) == 0 | sum(!is.na( Experiment) == 0) ){
+                error$title <- "Problem parsing experimental design file."
                 error$msg <- 'No experiments defined!'
                 return()
             }
@@ -3835,7 +3870,8 @@ cat('id: ', global.param$id.col.value, '\n')
                     tab <- normalize.data(tab, id.col, norm.data)
                     if(is.null(dim(tab)) | unlist(tab)[1] == 'No_success'){
 
-                        error$msg <- paste('Error in Two-component normalization:<br><br>Could not fit mixture model for data column:<br><br>', tab, '<br><br>Giving up...')
+                      error$title <- "'Error applying two-component normalization."
+                      error$msg <- paste('Could not fit mixture model for data column: ', tab, ' Giving up...')
 
                         ## if not successful skip the rest
                         test='none'

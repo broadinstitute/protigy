@@ -540,10 +540,10 @@ getTextAreaText<-function(keggdataListObject, pathwayName, organismCode=defaultK
     colnames(datasubsets[[n]])[3]<-paste0("direction.",n);
   }
   
-  datamerge<-datasubsets[[1]];
+  datamerge<-unique(datasubsets[[1]]);
   if (nConditions > 1) {
     for (n in 2:nConditions) {
-      datamerge<-merge(datamerge,datasubsets[[n]],by='keggNumber',all=TRUE)
+      datamerge<-merge(datamerge,unique(datasubsets[[n]]),by='keggNumber',all=TRUE)
     }
   }
   

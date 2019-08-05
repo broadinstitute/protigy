@@ -32,9 +32,9 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.5.2"
+VER <- "0.8.5.3"
 ## maximal filesize for upload
-MAXSIZEMB <<- 500
+MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
 NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!")
 ## speparator tested in the uploaded file
@@ -699,8 +699,9 @@ sd.filter <- function(tab, grp.vec, id.col, sd.perc){
     ## ##########################################
     ## get expression data
     ids=tab[, id.col]
-    ##tab=tab[, names(grp.vec)]
-
+    tab=data.matrix(tab[, names(grp.vec)])
+    #tab=tab[, names(grp.vec)]
+    
     ## #########################################
     ## calculate sd across all measurements
     sd.tab <- apply(tab, 1, sd, na.rm=T)
@@ -714,6 +715,7 @@ sd.filter <- function(tab, grp.vec, id.col, sd.perc){
     filt.idx <- which(sd.tab < sd.perc.val)
     not.filt.idx <- which(sd.tab >= sd.perc.val)
 
+    ## set filtered values to NA
     tab[filt.idx, ] <- NA
 
     tab <- data.frame(ids, tab)

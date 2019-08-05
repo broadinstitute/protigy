@@ -16,6 +16,7 @@
 ##
 #################################################################################
 plotHM <- function(res,
+                   hm.rownames=NULL,
                    grp,
                    grp.col,
                    grp.col.legend,
@@ -47,6 +48,16 @@ plotHM <- function(res,
   if(verbose)
     cat('\n-- plotHM --\n')
   
+  
+  #res <- global.results$
+  
+  
+  #########################################
+  if(is.null(hm.rownames))
+   #hm.rownames <- chopString(res[, 'id.concat'], STRLENGTH)
+   hm.rownames <- chopString(rownames(res), STRLENGTH)
+  
+  #########################################
   ## convert to data matrix
   res <- data.matrix(res)
   res <- res[, names(grp[order(grp)])]
@@ -130,8 +141,8 @@ plotHM <- function(res,
   ## indicate scaling in the title
   hm.title <- paste(hm.title, '\nscaling: ',hm.scale, sep='')
   
-  hm.rownames <- chopString(rownames(res), STRLENGTH)
   
+ ## save(res, anno.col, anno.col.color, file='debug.RData')
   
   ############################################
   ## plot the heatmap
@@ -149,12 +160,7 @@ plotHM <- function(res,
     
     #save(anno.col.color, anno.col, res, grp, file='tmp.RData')
     
-    # heatmaply
-    #names(anno.col.color) <- NULL
-    #anno.col.color <- unlist(anno.col.color)
-    #cat(anno.col.color)
-    #anno.col.color <- anno.col.color[grp]
-    
+   
     anno.col.color <-unlist(lapply(colnames(anno.col), function(x) unlist(anno.col.color[[x]])))
     ##View(anno.col.color)
     show.rownames=F

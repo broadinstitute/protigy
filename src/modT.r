@@ -101,7 +101,7 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
   #   addition to: plot.col, subset.col, hist.col, hist.breaks,
   #                prefix (for correlation), cex.cor
 
-     cat('\n-- modT.test --/n')
+     cat('\n-- modT.test --\n')
   id <- d[, id.col]
   ##if ( any (duplicated (id)) ) stop ('IDs are not unique. Use fix.id=TRUE option')
 

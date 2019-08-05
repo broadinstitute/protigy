@@ -33,11 +33,16 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.5.3 June 11, 2019</b>
+<ul>
+<li>Heatmap: accession and gene name are shown as row annotation.</li>
+<li>SD filter: number of remaining features is reported correctly on the summary page.</li>
+</ul>
 <b>v0.8.5.2 June 10, 2019</b>
 <ul>
 <li>Misc: added <i>toggle all</i> buttons in group selection dialog.</li>
 <li>Misc: draggable modal windows using the <i>shinyjqui</i> R package.</li>
-<li>Misc: improved error reproting using the <i>shinyalert</i> R package.</li>
+<li>Misc: improved error reporting using the <i>shinyalert</i> R package.</li>
 </ul>
 <b>v0.8.5.1 June 06, 2019</b>
 <ul>

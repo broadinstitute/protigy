@@ -19,8 +19,7 @@ p_load(shiny)
 shinyUI(
 
     dashboardPage( skin='blue',
-                   #includeJqueryUI(),
-                  
+                   
                   ## ##########################################
                   ## header
                   dashboardHeader( title=paste(APPNAME, " (v",VER,")", sep=""),
@@ -159,7 +158,7 @@ shinyUI(
 
                          manageSessionsUI('manageSessions'),
                          
-                         htmlOutput('error'),
+                         #htmlOutput('error'),
 
                          printHTMLUI('getting.started'),
                          printHTMLUI('change.log'),

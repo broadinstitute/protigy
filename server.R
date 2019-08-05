@@ -102,6 +102,8 @@ shinyServer(
             repro.filt.val=0.001,
             ##sd.filt='no',              ## sd filter
             sd.filt.val=10,              ## remove lower 10 percent of features with lowest sd
+            
+            na.filt.val=100,            ## max. % missin  values
 
             
             filter.type='adj.p',         ## default filter
@@ -168,33 +170,6 @@ shinyServer(
         volc <- reactiveValues()
         volc.brush <- reactiveValues()
 
-        ## ###################################################
-        ##
-        ##               RAM usage indicator
-        ##
-        ## ###################################################
-        ## if(OS != 'Windows'){
-
-        ##     getFreeMem <- function(){
-        ##          return( as.numeric(system("awk '/MemFree/ {print $2}' /proc/meminfo",  intern=TRUE)) )
-        ##     }
-        ##     getUsedMemPerc <- function(){
-        ##         free= as.numeric(system("awk '/MemFree/ {print $2}' /proc/meminfo",  intern=TRUE))
-        ##         tot= as.numeric(system("awk '/MemTotal/ {print $2}' /proc/meminfo",  intern=TRUE))
-
-        ##         return( (tot-free)/tot)
-        ##     }
-        ##    ## getCPUutil <- function()
-        ##    ##     ##return(as.numeric(system("mpstat -P ALL | awk '/all/ {print $4}'", intern=T)))
-        ##    ##     return(as.numeric(system( "mpstat 1 1 | grep '[A|P]M.*all' | awk '{print $4}'", intern=T )))
-
-
-        ##     ## update every 1 seconds
-        ##     RAMused <- reactivePoll(10000, session, getFreeMem, getUsedMemPerc)
-        ##     ##CPUused <- reactivePoll(2000, session, getCPUutil, getCPUutil)
-
-        ## }
-
         ################################################################################
         ##
         ##                                instructions / help pages
@@ -248,20 +223,6 @@ shinyServer(
 
         })
 
-        ## ########################################################
-        ##  Memory usage
-        ## ########################################################
-        ## output$memfree <- renderMenu({
-
-        ##     if(is.null(session$user)) return()
-        ##     if(OS == 'Windows') return()
-
-        ##     RAM <- round(RAMused()*100,1)
-        ##     status=ifelse(RAM < 70, 'success', 'danger' )
-
-        ##     notificationItem( paste( RAM,'% RAM'), shiny::icon("alert", "fa-1x", lib='glyphicon'), status=status)
-
-        ## })
 
         ## ########################################################
         ## session name
@@ -343,7 +304,6 @@ shinyServer(
                                                       HTML('Save the current state of your session (SSPro).')
                                                     ),
                                                     fluidRow(
-                                                      #checkboxInput('export.save.session', 'Save as session', value=F)
                                                       actionButton('export.save.session', 'Save session')
                                                     )
                                                   ),
@@ -687,13 +647,20 @@ shinyServer(
             ##  MORPHEUS widget
             ##
             ## ##############################################
-            #morph.tab <- tabPanel('Morpheus',
+            # morph.tab <- tabPanel('Morpheus',
+            #                       box(title='Morpheus', status = 'primary', solidHeader = T, width="100%", height="100%",
             #                        fluidRow(
-            #                          column(12, morpheusOutput("HM.morpheus",height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ), width=dynamicWidthHM(length(global.param$grp))))
+            #                          
+            #                          column(12, morpheusOutput(outputId = "HM.morpheus"#,
+            #                                                    #height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ), 
+            #                                                    #width=dynamicWidthHM(length(global.param$grp)) 
+            #                                                     )
+            #                                 )
             #                        )
-            #)
-            
-            
+            #                        )
+            # )
+            # 
+            # 
 
             #############################################
             ##
@@ -736,15 +703,7 @@ shinyServer(
                                             box( title='3D', status = 'primary', solidHeader = T, width = 800, height = 900,
                                                  column(12, align='center', plotlyOutput("pcaxyz.plotly", width=800, height=800))
                                             )
-                                          )##,
-
-
-                                          ##fluidRow(
-                                          ##  box(title='Figure to download', status = 'primary', solidHeader = T, width = 1200, height = 400,
-                                          ##      column(12, align='center', plotOutput("pca", width=900, height=300))
-                                          ##  )
-                                          ##)
-
+                                          )
 
                                       )
                                       )
@@ -926,17 +885,18 @@ shinyServer(
                         navbarMenu('Clustering', clust.tab[[1]], clust.tab[[2]], clust.tab[[3]]),
                         
                         ##do.call(navbarMenu, hm.tab),
-                        #morph.tab,
                         
                         #######################################
                         ##              insert volcanos
                         #######################################
                         #if( !(global.param$which.test %in% c('mod F', 'none'))){
-                           do.call(navbarMenu, volc.tabs),
+                        do.call(navbarMenu, volc.tabs),
                       #  } else {
                       #       list()
                       #     },
                        
+                       #morph.tab,
+                      
                        ## ####################################
                        ##          insert scatterplots
                        ## ####################################
@@ -1111,10 +1071,10 @@ shinyServer(
             ## upload form
             list(
               br(),
-              HTML('<font size=\"3\"><b>Upload file (txt, csv, gct):</b></font>'),
+              HTML('<font size=\"3\"><b>Upload file (txt, csv, gct, gctx):</b></font>'),
               fileInput("file", "", accept=c('text/csv',
                        'text/comma-separated-values,text/plain',
-                       '.csv', '.txt', '.tsv', '.gct')),
+                       '.csv', '.txt', '.tsv', '.gct', '.gctx')),
               HTML('<hr border-width:\"10px\">')
             )
         })
@@ -1249,11 +1209,7 @@ shinyServer(
           
 
           global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  input$grp.gct3)
-          
-          # data frame
-         #cat( Column.Name, '\n')
-        #cat(Experiment,'\n')
-          
+        
           grp.file=data.frame(
             Column.Name,
             Experiment,
@@ -1551,19 +1507,16 @@ shinyServer(
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
 
-                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected=global.param$filt.data),
-
-                     ##radioButtons('sd.filt', 'SD filter (NOT WORKING)', choices=c('yes', 'no'), selected=global.param$sd.filt),
+                     #radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'MissingValues', 'none'), selected=global.param$filt.data ),
+                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected=global.param$filt.data ),
+                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
 
                      actionButton('run.test', 'Run analysis!'),
                      br(),
                      hr(),
                      actionButton('select.groups.button', 'Selected groups')
-                     #fluidRow(
-                    #  column(6, actionButton('select.groups.button', 'Select Groups')),
-                    #  column(6, actionButton('select.anno.button', 'Select Annotation Tracks'))
-                    # )
+      
                 )
             }
             ## ###################################################
@@ -1576,7 +1529,9 @@ shinyServer(
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
 
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='none'),
-
+                     
+                   #  sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+                     
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
 
                      actionButton('run.test', 'Run analysis!'),
@@ -1601,7 +1556,7 @@ shinyServer(
 
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='Reproducibility'),
                      selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
-
+                    # sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
 
                      actionButton('run.test', 'Run analysis!'),
@@ -1623,6 +1578,8 @@ shinyServer(
                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='StdDev'),
                     sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
 
+                    #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+                    
                     radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
                     actionButton('run.test', 'Run analysis!'),
                     br(),
@@ -1721,6 +1678,9 @@ shinyServer(
           res = global.results$filtered
           grp <- global.param$grp
           
+          ## ids to show in heatmap
+          hm.rownames <- res[, 'id.concat']
+          
           ## groups to compare
           grp.comp <- unique( global.param$grp.comp )
           
@@ -1790,7 +1750,7 @@ shinyServer(
                   \ntab <- data.frame(global.input$table.org)
                   \ngrp <- global.param$grp
                   \nN.grp <- global.param$N.grp
-                  \nsum.tab <- t(data.frame(global.input$N.feat, length(grp), N.grp, ncol(global.input$table.anno)))
+                  \nsum.tab <- t(data.frame(global.results$N.feat, length(grp), N.grp, ncol(global.input$table.anno)))
                   \nsum.tab <- data.frame(id=c("No. rows", "No. expression columns", "No. expression groups", "No. annotation columns"), sum.tab)
                   \ncolnames(sum.tab) <- c("Data", "Number")
                   \nkable(sum.tab, row.names=F)
@@ -1928,9 +1888,9 @@ shinyServer(
                            \n  anno.col.color=list(Group=global.param$grp.colors.legend)
                            \n}
                            \nif(global.plotparam$hm.max){
-                           \n  plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$cexRow, fontsize_col= global.plotparam$cexCol, max.val=global.plotparam$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=global.plotparam$hm.show.rownames, show.colnames=global.plotparam$hm.show.colnames)
+                           \n  plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$cexRow, fontsize_col= global.plotparam$cexCol, max.val=global.plotparam$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=global.plotparam$hm.show.rownames, show.colnames=global.plotparam$hm.show.colnames)
                            \n} else {
-                           \n  plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$cexRow, fontsize_col= global.plotparam$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=global.plotparam$hm.show.rownames, show.colnames=global.plotparam$hm.show.colnames)
+                           \n  plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$cexRow, fontsize_col= global.plotparam$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=global.plotparam$hm.show.rownames, show.colnames=global.plotparam$hm.show.colnames)
                            \n}
                            \n}) # end withProgress
                            \n```   
@@ -2466,6 +2426,10 @@ shinyServer(
             ## apply filter
             res = global.results$filtered
 
+            ################################
+            ## ids to show in heatmap
+            hm.rownames <- res[, 'id.concat']
+            
             #######################################
             ## extract expression values
             res = res[, names(global.param$grp)]
@@ -2567,6 +2531,7 @@ shinyServer(
                     if(input$hm.max){
                      pdf(fn.hm)
                       plotHM(res=res, 
+                             hm.rownames=hm.rownames,
                              grp=global.param$grp, 
                              grp.col=global.param$grp.colors, 
                              grp.col.legend=global.param$grp.colors.legend,  
@@ -2587,6 +2552,7 @@ shinyServer(
                     } else {
                      pdf(fn.hm)
                       plotHM(res=res,
+                             hm.rownames=hm.rownames,
                              grp=global.param$grp,
                              grp.col=global.param$grp.colors,
                              grp.col.legend=global.param$grp.colors.legend,
@@ -2922,7 +2888,7 @@ shinyServer(
                   g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
                   colnames.tmp <- gsub(g, g.new, colnames.tmp)
                   
-                  grp.comp.pval.gct[g] <- g.new
+                 # grp.comp.pval.gct[g] <- g.new
                   logp.colnames[g] <- paste0('Log.P.Value.', g.new)
                   logfc.colnames[g] <- paste0('logFC.', g.new)
                 }
@@ -3243,9 +3209,17 @@ cat('id: ', global.param$id.col.value, '\n')
             ########################################################
             # file import
             
+            ## ##############################################
+            ##                      GCTX
+            if(grepl('\\.gctx$', fn)){
+              
+                gct <- try( parse.gctx(fn) )
+
             # ###############################################
             #                     GCT 1.2
-            if( length( grep( '^\\#1\\.2', readLines(fn,n=1))) > 0){
+            } else if( length( grep( '^\\#1\\.2', readLines(fn,n=1))) > 0){
+            
+
                   tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS, skip=2)
                   
                   ## shorten column names and store together with the original names
@@ -4101,8 +4075,8 @@ cat('id: ', global.param$id.col.value, '\n')
             ## store the results
             global.results$data$output <- res.comb
             
-            ## number of features withat least one non-missing vlaue
-            global.input$N.feat <- sum(apply( tab, 1, function(x) sum(is.na(x)/length(x))) < 1)
+            ## number of features with at least one non-missing value
+            global.results$N.feat <- sum(apply( tab[, names(groups)], 1, function(x) sum(is.na(x)/length(x))) < 1)
 
             ##cat(dim(global.results$data$output))
 
@@ -4326,6 +4300,10 @@ cat('id: ', global.param$id.col.value, '\n')
             global.results$filtered <- res
             ##View(res)
             global.results$filtered.groups <- res.groups
+            
+            N.feat.filt <- sum( apply(res[, names(groups)], 1, function(x) sum(is.na(x))/length(x) ) < 1, na.rm=T)
+            
+            global.results$N.feat.filtered <- N.feat.filt
 
 
             ## #####################################################
@@ -4428,7 +4406,7 @@ cat('id: ', global.param$id.col.value, '\n')
             sum.tab <- t(data.frame(
                 ##id=c('Rows', 'Expression columns', 'Groups'),
                 #N.rows=nrow(tab),
-                 global.input$N.feat,
+                global.results$N.feat,
                 N.columns=length(grp),
                 N.groups=N.grp
             ))
@@ -4841,8 +4819,14 @@ cat('id: ', global.param$id.col.value, '\n')
 
   
             tab <- global.results$filtered
+            
+            ## remove all NA features
+            keep.idx <- which(apply(tab[, names(global.param$grp)], 1, function(x) sum(is.na(x))/length(x) ) < 1)
+            tab <- tab[keep.idx, ]
+            
+            ## column names
             colnames(tab) <- sub('^X','',colnames(tab))
-           
+            
             ## append annotation columns
             table.anno <- global.input$table.anno
 
@@ -6247,28 +6231,28 @@ cat('id: ', global.param$id.col.value, '\n')
         ##
         ## #################################################################################
         # output$HM.morpheus <- renderMorpheus({
-        #   
+        # 
         #   if(!is.null(error$msg)) return()
-        #   
+        # 
         #   ## extract results
         #   res = global.results$filtered
-        #   
+        # 
         # 
         #   ## require at least three significant hits
         #   validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
-        #   
-        #   
+        # 
+        # 
         #   ## extract expression values
         #   res <- res[, names(global.param$grp)]
         #   res <- data.matrix(res)
-        #   
+        # 
         #   ## morpheus
         #   withProgress({
         #     setProgress(message = 'Creating morpheus widget...', detail= 'hold on')
-        #     morpheus(res, Rowv = F, Colv = F)
+        #     morpheus(res, Rowv = F, Colv = F, labCol = chopString(colnames(res), nChar = 20))
         #   })
-        #   
-        # })
+        # 
+        # } )
 
         ####################################################################################
         ##
@@ -6293,8 +6277,13 @@ cat('id: ', global.param$id.col.value, '\n')
             #######################################
             ## heatmap title
             hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
-            hm.title = paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
-
+            #hm.title = paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
+            hm.title = paste(hm.title, '\nsig / total: ', global.results$N.feat.filtered, ' / ',  global.results$N.feat, sep='')
+            
+            ###################################
+            ## ids to show in heatmap
+            hm.rownames <- res[, 'id.concat']
+            
             #######################################
             ## extract expression values
             res = res[, names(global.param$grp)]
@@ -6316,24 +6305,16 @@ cat('id: ', global.param$id.col.value, '\n')
             ## plot
             if(input$hm.max){
                 withProgress({
-                     setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                     #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
-                  plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
+                    setProgress(message = 'Processing...', detail= 'Generating Heatmap')
+                    #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
+                    plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
                   
                   })
             } else {
                  withProgress({
-                    setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                   #grp=global.param$grp
-                   #grp.col=global.param$grp.colors
-                   #grp.col.legend=global.param$grp.colors.legend
-                   #hm.clust=input$hm.clust
-                   #hm.title=hm.title
-                   #hm.scale=input$hm.scale
-                   #save(res, grp, grp.col, grp.col.legend,  hm.clust, hm.title, hm.scale, anno.col, anno.col.color, file='hm.RData')
+                   setProgress(message = 'Processing...', detail= 'Generating Heatmap')
                    
-                    #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
-                   plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
+                   plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
                    })
             }
         },
@@ -6369,6 +6350,10 @@ cat('id: ', global.param$id.col.value, '\n')
           hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
           hm.title <- paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
           
+          ###################################
+          ## ids to show in heatmap
+          hm.rownames <- res[, 'id.concat']
+          
           #######################################
           ## extract expression values
           res = res[, names(global.param$grp)]
@@ -6398,13 +6383,13 @@ cat('id: ', global.param$id.col.value, '\n')
             withProgress({
               setProgress(message = 'Processing...', detail= 'Generating Heatmap')
               #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, max.val=input$hm.int.max.val, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3, plotly = T)
-              plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, max.val=input$hm.int.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, plotly = T)
+              plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, max.val=input$hm.int.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, plotly = T)
             })
           } else {
             withProgress({
               setProgress(message = 'Processing...', detail= 'Generating Heatmap')
               #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3, plotly = T)
-              plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, plotly = T)
+              plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, plotly = T)
               
             })
           }

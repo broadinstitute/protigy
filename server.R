@@ -2252,7 +2252,8 @@ shinyServer(
             for(g in grp.comp){
               g.new <- strsplit(g, '\\.vs\\.') %>% unlist
               g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
-              colnames.tmp <- gsub(g, g.new, colnames.tmp)
+              colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
+              #colnames.tmp <- gsub(g, g.new, colnames.tmp)
             }
             colnames(res.comb) <- colnames.tmp
           }
@@ -2357,10 +2358,12 @@ shinyServer(
               colnames.tmp <- colnames(res.comb)
               grp.comp <- unique(global.param$grp.comp)
               
+              #save( grp.comp, colnames.tmp, file='debug.RData')
+              
               for(g in grp.comp){
                 g.new <- strsplit(g, '\\.vs\\.') %>% unlist
                 g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
-                colnames.tmp <- gsub(g, g.new, colnames.tmp)
+                colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
               }
               colnames(res.comb) <- colnames.tmp
             }
@@ -2389,7 +2392,7 @@ shinyServer(
             showModal(modalDialog(
               size='m',
               title = "Problem generating Excel sheet",
-              #render.xlsx[[1]],
+              HTML(render.xlsx[[1]]),
               HTML('Perl required to generate xlsx files. For Windows OS please install Strawberry Perl (<a href="http://strawberryperl.com/" target="_blank_">http://strawberryperl.com/</a><br>R needs to be restarted after installing Perl.)')
             ))
           } else {
@@ -2814,7 +2817,8 @@ shinyServer(
                       for(g in grp.comp){
                         g.new <- strsplit(g, '\\.vs\\.') %>% unlist
                         g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
-                        colnames.tmp <- gsub(g, g.new, colnames.tmp)
+                        colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
+                        #colnames.tmp <- gsub(g, g.new, colnames.tmp)
                       }
                       colnames(res.comb) <- colnames.tmp
                     }
@@ -2886,7 +2890,8 @@ shinyServer(
                 for(g in grp.comp){
                   g.new <- strsplit(g, '\\.vs\\.') %>% unlist
                   g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
-                  colnames.tmp <- gsub(g, g.new, colnames.tmp)
+                  colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
+                 # colnames.tmp <- gsub(g, g.new, colnames.tmp)
                   
                  # grp.comp.pval.gct[g] <- g.new
                   logp.colnames[g] <- paste0('Log.P.Value.', g.new)
@@ -3394,6 +3399,9 @@ cat('id: ', global.param$id.col.value, '\n')
         ## ###############################################################
         observeEvent(input$session.browse.import, {
 
+            ## if nothing has been selected...
+            if( input$session.browse == '' ) return()
+          
             ## ###############################
             ## import workspace
             ## identify selected session file
@@ -4406,20 +4414,26 @@ cat('id: ', global.param$id.col.value, '\n')
             sum.tab <- t(data.frame(
                 ##id=c('Rows', 'Expression columns', 'Groups'),
                 #N.rows=nrow(tab),
-                global.results$N.feat,
+                ifelse(is.null(global.results$N.feat), nrow(tab), N.feat),
                 N.columns=length(grp),
                 N.groups=N.grp
             ))
             
-            if(!is.null(global.input$NA.row)){
-              sum.tab[1,1] <- paste(sum.tab[1,1], '(no quant: ',global.input$NA.row,')')
-            }
             
             ##View(sum.tab)
             sum.tab <- data.frame(id=c('No. features', 'No. expression columns', 'No. groups'), sum.tab)
             colnames(sum.tab) <- c('', 'Number')
             ##rownames(sum.tab) <- c('Rows', 'Expression columns', 'Groups')
-
+            
+            if(!is.null(global.input$NA.rows)){
+              row.tmp <-  c('No. features w/o quant', global.input$NA.rows)
+              names(row.tmp) <- c('', 'Number')
+              #sum.tab <- add_row(sum.tab, row.tmp, .after=1)
+              sum.tab <- rbind(sum.tab[1,], row.tmp, sum.tab[2:nrow(sum.tab),])
+              #sum.tab <- add_column(sum.tab, `No. features w/o quant`=global.input$NA.rows, .after=1)
+              #sum.tab[1,1] <- paste(sum.tab[1,1], '(no quant: ', global.input$NA.rows,')')
+            }
+            
             sum.tab
         })
         #####################################################################################

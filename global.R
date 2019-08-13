@@ -32,7 +32,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.5.3"
+VER <- "0.8.5.4"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -84,6 +84,7 @@ if(RVERSION >= 3.5)
 
 #p_load(cmapR)
 p_load(magrittr)
+p_load(tibble)
 
 ## colors
 

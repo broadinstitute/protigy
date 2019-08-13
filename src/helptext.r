@@ -33,6 +33,12 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.5.4 August 13, 2019</b>
+<ul>
+<li>Excel sheet/GCT export: fixed a bug that that occasionally would mess up the header in the Excel/GCT file. Only happened in <b>Two-sample test</b> and if very similar names for experiments were used (e.g. one experiment name is a substring of another experiment name).</li>
+<li>Summary tab: Number of features w/o any quant is now correctly reported in previously saved sessions.</li>
+</ul>
+<font size=\"3\">
 <b>v0.8.5.3 June 11, 2019</b>
 <ul>
 <li>Heatmap: accession and gene name are shown as row annotation.</li>

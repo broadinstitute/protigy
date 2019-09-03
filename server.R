@@ -217,7 +217,7 @@ shinyServer(
             updateCheckboxInput(session, 'export.pca.loadings', 'PCA loadings (xls)', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.ms', 'Multiscatter', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.excel', 'Excel sheet', value=!input$export.toggle.all)
-            updateCheckboxInput(session, 'export.gct.file', 'GCT files: 1) original data and 2) singed log P-values', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.gct.file', 'GCT files: 1) original data and 2) signed log P-values', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.cm', 'Correlation matrix', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.profile', 'Profile plot', value=!input$export.toggle.all)
 
@@ -4406,8 +4406,8 @@ cat('id: ', global.param$id.col.value, '\n')
             grp <- global.param$grp
             N.grp <- global.param$N.grp
 
-           # N.feat <- sum(apply(tab, 1, function(x) sum(is.na(x)/length(x))) < 1)
-          #  global.input$N.feat <- N.feat
+            N.feat <- sum(apply(tab, 1, function(x) sum(is.na(x)/length(x))) < 1)
+            global.results$N.feat <- N.feat
             
             ##cat(nrow(tab), ' - ', length(grp), ' - ', N.grp)
 

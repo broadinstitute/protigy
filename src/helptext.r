@@ -33,12 +33,15 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.5.5 September 3, 2019</b>
+<ul>
+<li>Summary tab: Fixed the bug that would cause an error in the \'Dataset:\'-widget.</li>
+</ul>
 <b>v0.8.5.4 August 13, 2019</b>
 <ul>
 <li>Excel sheet/GCT export: fixed a bug that that occasionally would mess up the header in the Excel/GCT file. Only happened in <b>Two-sample test</b> and if very similar names for experiments were used (e.g. one experiment name is a substring of another experiment name).</li>
 <li>Summary tab: Number of features w/o any quant is now correctly reported in previously saved sessions.</li>
 </ul>
-<font size=\"3\">
 <b>v0.8.5.3 June 11, 2019</b>
 <ul>
 <li>Heatmap: accession and gene name are shown as row annotation.</li>
@@ -50,7 +53,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 <li>Misc: draggable modal windows using the <i>shinyjqui</i> R package.</li>
 <li>Misc: improved error reporting using the <i>shinyalert</i> R package.</li>
 </ul>
-<b>v0.8.5.1 June 06, 2019</b>
+<b>v0.8.5.1 June 6, 2019</b>
 <ul>
 <li>GCT: added GCT file with singed log-p-values to output zip-archive which can be used as ranking input for ssGSEA/PTM-SEA.</li>
 <li>PPI: fixed bug that would show protein-protein interactions of the first protein in the list as default in volcano and scatterplots in R vesion >=3.5.</li>

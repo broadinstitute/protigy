@@ -1,7 +1,7 @@
 <img src="www/logo_v4.png" alt="Drawing" style="width: 200px;"/>
 
 
-This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interactive analysis of quantitative omics datasets. Primarily developed for mass spectrometry-based proteomics data ProTIGY supports any dataset that can be arranged as *p x n* matrix with *p* being features (e.g. proteins, transcripts, genes, ...) quantitativly measured across *n* samples (e.g. replicates of different experimental conditions, ... ). Examples of other datasets other than proteomics include datasets derived from *RNA-seq* or gene expression *microarrays*.
+This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interactive analysis of quantitative omics datasets. Primarily developed for mass spectrometry-based proteomics data ProTIGY supports any dataset that can be arranged as *p x n* matrix with *p* being features (e.g. proteins, transcripts, genes, ...) quantitatively measured across *n* samples (e.g. replicates of different experimental conditions, ... ). Examples of other datasets other than proteomics include datasets derived from *RNA-seq* or gene expression *microarrays*.
 
 ***
 
@@ -40,7 +40,7 @@ This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interac
 * Integration of protein-protein interaction databases (human only)
     + [InWeb](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5839635/) 
     + [BioGRID](https://thebiogrid.org/)
-    + [Reactome](https://reactome.org/) 
+    + [Reactome](https://reactome.org/) (please cite the following publication if you use Reactome in your work: Fabregat *et al.* 2018 [PMID: 29145629](https://www.ncbi.nlm.nih.gov/pubmed/29145629))
 
 #### Export of analysis results
 * Results comprise high-quality figures (pdf), Excel-sheets and the R-workspace itself.

@@ -185,9 +185,7 @@ shinyServer(
         #################################
         ## F5 hint
         output$F5hint <- renderText({
-
             HTML('<p align=\"center\"><font size=\"5\" color=\"red\">To analyze another data set or to start over hit the F5 button.</font></p>' )
-
         })
 
         #####################################
@@ -201,7 +199,6 @@ shinyServer(
               etitle <- error$title
             
             shinyalert(etitle, error$msg, type = "error")
-            #HTML(paste('<p align=\"center\"><font size=\"5\" color=\"red\">', error$msg,'</font></p>'))
         })
 
         ## #########################################################
@@ -258,7 +255,7 @@ shinyServer(
 
         ################################################################################
         ##
-        ##                      navbar -   render UI
+        ##                      navbar - render UI
         ##
         ################################################################################
         output$navbar <- renderUI({
@@ -383,7 +380,6 @@ shinyServer(
             ##
             ## ##########################################
             summary.tab <-  tabPanel('Summary',
-
 
                                      fluidRow(
                                         box(title="Dataset:", solidHeader = T, status = "primary", width = 4,
@@ -734,11 +730,9 @@ shinyServer(
             ## ###########################################
             table.tab <- tabPanel('Table',
                      fluidPage(
-                         #fluidRow(column(12, tags$h3(paste('Result table')))),
-                         #fluidRow(column(12, tags$br())),
                          fluidRow(column(12, dataTableOutput("tableprev")))
                      )
-                     )
+             )
             #############################################
             ## QC tabs
             ##
@@ -1510,8 +1504,9 @@ shinyServer(
                      #radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'MissingValues', 'none'), selected=global.param$filt.data ),
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected=global.param$filt.data ),
                      #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+                     #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
-
+                     
                      actionButton('run.test', 'Run analysis!'),
                      br(),
                      hr(),
@@ -1532,8 +1527,10 @@ shinyServer(
                      
                    #  sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      
-                     radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
-
+                     #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
+                      
+                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+                   
                      actionButton('run.test', 'Run analysis!'),
                      br(),
                      hr(),
@@ -1558,6 +1555,8 @@ shinyServer(
                      selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
                     # sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
+                    #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
+                    
 
                      actionButton('run.test', 'Run analysis!'),
                      br(),
@@ -1580,6 +1579,7 @@ shinyServer(
 
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                     
+                    #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
                     radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
                     actionButton('run.test', 'Run analysis!'),
                     br(),
@@ -1692,9 +1692,7 @@ shinyServer(
           export.pca <- input$export.pca
           export.box <- input$export.box
           
-          #n.chunks <- sum( )
-          
-          
+
           #######################################
           ##    extract expression values
           res = res[, names(grp)]
@@ -1717,7 +1715,7 @@ shinyServer(
           withProgress(message='Rmarkdown report', value=0, min = 0, max = 1, detail='hold on...',{
             
           rmd <- paste('<a name="top"></a>
-            \n#`r global.param$label` - analysis report
+            \n# `r global.param$label` - analysis report
             \n***
             \n')
           ## ##########################################################
@@ -1950,31 +1948,39 @@ shinyServer(
                       \n', sep='')
             
               ## pc plot
-              ## variance plot
               rmd <- paste(rmd, "\n
                          \n Scatterplot of ```r global.plotparam$pca.x``` and ```r global.plotparam$pca.y```.
                          \n```{r pca-scatter, echo=F}
-                         \ngrp.unique <- unique(grp)
-                         \ngrp.colors <- global.param$grp.colors[names(grp)]
-                         \n# selected PCs
-                         \npca.x <- as.numeric(sub('PC ','', input$pca.x))
-                         \npca.y <- as.numeric(sub('PC ','', input$pca.y))
-                         \n# build a data frame for plotly
-                         \npca.mat = data.frame(
-                         \n   PC1=pca$scores[, pca.x],
-                         \n   PC2=pca$scores[, pca.y]
-                         \n)
-                         \nrownames(pca.mat) <- rownames(pca$scores)
-                         \np <- plot_ly( pca.mat, type='scatter', mode='markers' )
-                         \nfor(g in grp.unique){
-                         \n   grp.tmp <- names(grp)[grp == g]
-                         \n   p <-  add_trace(p, x=pca.mat[grp.tmp , 'PC1'], y=pca.mat[grp.tmp, 'PC2'], type='scatter', mode='markers', marker=list(size=15, color=grp.colors[grp.tmp]), text=grp.tmp, name=g  )
-                         \n}
-                         \np <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, sep=''), xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)) )
-                         \np
-                          \n```
+                         \np <- plotlyPCA( reactiveValuesToList(global.param), reactiveValuesToList(global.results), input$pca.x, input$pca.y)
+                         \np$p 
+                         \n```
                          \n[Back to top](#top)     
                          \n", sep='')
+              # 
+              # rmd <- paste(rmd, "\n
+              #            \n Scatterplot of ```r global.plotparam$pca.x``` and ```r global.plotparam$pca.y```.
+              #            \n```{r pca-scatter, echo=F}
+              #            \ngrp.unique <- unique(grp)
+              #            \ngrp.colors <- global.param$grp.colors[names(grp)]
+              #            \n# selected PCs
+              #            \npca.x <- as.numeric(sub('PC ','', input$pca.x))
+              #            \npca.y <- as.numeric(sub('PC ','', input$pca.y))
+              #            \n# build a data frame for plotly
+              #            \npca.mat = data.frame(
+              #            \n   PC1=pca$scores[, pca.x],
+              #            \n   PC2=pca$scores[, pca.y]
+              #            \n)
+              #            \nrownames(pca.mat) <- rownames(pca$scores)
+              #            \np <- plot_ly( pca.mat, type='scatter', mode='markers' )
+              #            \nfor(g in grp.unique){
+              #            \n   grp.tmp <- names(grp)[grp == g]
+              #            \n   p <-  add_trace(p, x=pca.mat[grp.tmp , 'PC1'], y=pca.mat[grp.tmp, 'PC2'], type='scatter', mode='markers', marker=list(size=15, color=grp.colors[grp.tmp]), text=grp.tmp, name=g  )
+              #            \n}
+              #            \np <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, sep=''), xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)) )
+              #            \np
+              #             \n```
+              #            \n[Back to top](#top)     
+              #            \n", sep='')
             
             }
           } # end if export.pca
@@ -2190,9 +2196,6 @@ shinyServer(
             showModal(modalDialog(
               size='s',
               title = "Overwrite existing session?",
-              ##fluidPage(
-            ##    fluidRow(column(12, 'Overwrite session?'))
-            ##  ),
             footer = NULL,
             fluidRow(    
               column(6, actionButton(inputId = 'session.overwrite' , label='Yes')),
@@ -2323,81 +2326,38 @@ shinyServer(
         })
         
         
+        
+        
         ## ##########################################################################
         ## observer
         ##                      export Excel sheet
         ##
         ## ##########################################################################
         observeEvent(input$export.xls, {
-          ##cat('User:', session$user, '\n')
+          
           if(!is.null(error$msg)) return()
           
           ## update label
           global.param$label <- gsub('_| |,|;|\\:|\\+|\\*', '-', input$label)
           
-          
-          
           #########################################################
-          ##               Excel sheet
-          #########################################################
+          ## export
           withProgress(message='Exporting', detail='Excel sheet',{
-              
-            res.comb <- global.results$data$output
-            tmp <- sort(global.param$grp)
-              
-            ## append annotation columns
-            if(!is.null(global.input$table.anno))
-              res.comb <- left_join(res.comb,  global.input$table.anno, 'id')
             
-            ## #########################################################
-            ## Two sample moderated T- test:
-            ## adjust labels in the header of the Excel sheet
-            ## WT.vs.KO -> KO.over.WT
-            if(global.param$which.test == 'Two-sample mod T'){
-              
-              colnames.tmp <- colnames(res.comb)
-              grp.comp <- unique(global.param$grp.comp)
-              
-              #save( grp.comp, colnames.tmp, file='debug.RData')
-              
-              for(g in grp.comp){
-                g.new <- strsplit(g, '\\.vs\\.') %>% unlist
-                g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
-                colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
-              }
-              colnames(res.comb) <- colnames.tmp
-            }
-            
-            expDesign <- data.frame(Column=names(tmp), Experiment=tmp)
-              
             ## generate_filename
-            fn.tmp <- sub(' ','_',
-                            paste(
-                                global.param$label, '_',
-                                sub(' ', '_',global.param$which.test),
-                                ifelse(global.param$log.transform != 'none', paste( '_', global.param$log.transform, '_', sep=''), '_'),
-                                #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
-                                ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
-                                sub(' .*', '', Sys.time()),".xlsx", sep='') 
-                            )
-            global.param$xls.name <- fn.tmp
+            global.param$xls.name <- create.fn(global.param$label, global.param$which.test, global.param$log.transform, 
+                                               input$repro.filt, global.param$filt.data, suffix='xlsx')
               
             ## Excel
-            render.xlsx <- try(
-              WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
-            )
-          })
-          
-          if(class(render.xlsx) == 'try-error' | !render.xlsx){
-            showModal(modalDialog(
-              size='m',
-              title = "Problem generating Excel sheet",
-              HTML(render.xlsx[[1]]),
-              HTML('Perl required to generate xlsx files. For Windows OS please install Strawberry Perl (<a href="http://strawberryperl.com/" target="_blank_">http://strawberryperl.com/</a><br>R needs to be restarted after installing Perl.)')
-            ))
-          } else {
+            render.xlsx <- export2xlsx(res.comb=global.results$data$output, grp=global.param$grp, 
+                              grp.comp=unique(global.param$grp.comp), rdesc=global.input$table.anno, 
+                          which.test=global.param$which.test,  fn=global.param$xls.name, 
+                          session.dir=global.param$session.dir, headerDesc=headerDesc)
+              
+           }) ## end with.progress
+     
+          if(!(class(render.xlsx) == 'try-error' | !render.xlsx))
             global.results$export.xls <- TRUE
-          }
           
           ## trigger selectize update
           global.param$update.ppi.select <- TRUE
@@ -2406,6 +2366,8 @@ shinyServer(
           updateTabsetPanel(session, 'mainPage', selected='Export')
           
         })
+          
+          
         #############################################################################
         ## observer
         ##                  export all analysis results
@@ -2616,27 +2578,27 @@ shinyServer(
             ##                 PCA Loadings as excel sheet
             ############################################################
 
-            if(input$export.pca.loadings){
-                    withProgress(message='Exporting', detail='PCA loadings as Excel sheet',{
-                            if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
-                            if(!is.null(error$msg)) return()
-                            if(length(global.param$grp) < 3) return()
-
-                            pca <- global.results$pca
-                            pca.loadings <- as.data.frame(pca$loadings)
-
-                            ## generate_filename
-                            fn.tmp <- sub(' ','_', paste(global.param$session.dir, '/', 'pcaLoadings_', sub(' ', '_',global.param$which.test),  ifelse(global.param$log.transform != 'none', paste('_', global.param$log.transform, sep=''), '_'), ifelse(global.param$norm.data != 'none', paste('_', global.param$norm.data, sep=''), '_'), ifelse(input$repro.filt=='yes', paste('_reprofilt', sep=''), '_'), sub(' .*', '', Sys.time()),".xlsx", sep=''))
-                            global.param$pcaloadings.ExcelFileName <- fn.tmp
-                            ## Excel
-                            WriteXLS("pca.loadings", ExcelFileName= fn.tmp, SheetNames= "pcaLoadings", row.names=T, BoldHeaderRow=T, AutoFilter=T)
-
-                            cat("-- writing pca_loadings --")
-
-                    })
-
-            }
-            ############################################################
+            # if(input$export.pca.loadings){
+            #         withProgress(message='Exporting', detail='PCA loadings as Excel sheet',{
+            #                 if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+            #                 if(!is.null(error$msg)) return()
+            #                 if(length(global.param$grp) < 3) return()
+            # 
+            #                 pca <- global.results$pca
+            #                 pca.loadings <- as.data.frame(pca$loadings)
+            # 
+            #                 ## generate_filename
+            #                 fn.tmp <- sub(' ','_', paste(global.param$session.dir, '/', 'pcaLoadings_', sub(' ', '_',global.param$which.test),  ifelse(global.param$log.transform != 'none', paste('_', global.param$log.transform, sep=''), '_'), ifelse(global.param$norm.data != 'none', paste('_', global.param$norm.data, sep=''), '_'), ifelse(input$repro.filt=='yes', paste('_reprofilt', sep=''), '_'), sub(' .*', '', Sys.time()),".xlsx", sep=''))
+            #                 global.param$pcaloadings.ExcelFileName <- fn.tmp
+            #                 ## Excel
+            #                 WriteXLS("pca.loadings", ExcelFileName= fn.tmp, SheetNames= "pcaLoadings", row.names=T, BoldHeaderRow=T, AutoFilter=T)
+            # 
+            #                 cat("-- writing pca_loadings --")
+            # 
+            #         })
+            # 
+            # }
+            # ############################################################
             ##                    boxplots
             ############################################################
             if(input$export.box){
@@ -2795,52 +2757,65 @@ shinyServer(
             ##               Excel sheet
             #########################################################
             if(input$export.excel){
+              
                 withProgress(message='Exporting', detail='Excel sheet',{
 
-                    res.comb <- global.results$data$output
-                    grp.srt <- sort(global.param$grp)
-
-                    ## append annotation columns
-                    if(!is.null(global.input$table.anno))
-                        res.comb <- left_join(res.comb,  global.input$table.anno, 'id')
-                       
-
-                    ## #########################################################
-                    ## Two sample moderated T- test:
-                    ## adjust labels in the header of the Excel sheet
-                    ## WT.vs.KO -> KO.over.WT
-                    if(global.param$which.test == 'Two-sample mod T'){
-                      
-                      colnames.tmp <- colnames(res.comb)
-                      grp.comp <- unique(global.param$grp.comp)
-                      
-                      for(g in grp.comp){
-                        g.new <- strsplit(g, '\\.vs\\.') %>% unlist
-                        g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
-                        colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
-                        #colnames.tmp <- gsub(g, g.new, colnames.tmp)
-                      }
-                      colnames(res.comb) <- colnames.tmp
-                    }
-                    
-                    expDesign <- data.frame(Column=names(grp.srt), Experiment=grp.srt)
-
-                    fn.tmp <- sub(' ','_',
-                                  paste(
-                                    global.param$label, '_',
-                                    sub(' ', '_',global.param$which.test),
-                                    ifelse(global.param$log.transform != 'none', paste( '_', global.param$log.transform, '_', sep=''), '_'),
-                                    #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
-                                    ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
-                                    sub(' .*', '', Sys.time()),".xlsx", sep='') 
-                    )
-                    global.param$xls.name <- fn.tmp
-                    
-                    ## Excel
-                    render.xlsx <- try(
-                      WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
-                    )
+                  
+                  ## generate_filename
+                  global.param$xls.name <- create.fn(global.param$label, global.param$which.test, global.param$log.transform, 
+                                                     input$repro.filt, global.param$filt.data, suffix='xlsx')
+                  
+                  ## Excel
+                  render.xlsx <- export2xlsx(res.comb=global.results$data$output, grp=global.param$grp, 
+                                             grp.comp=unique(global.param$grp.comp), rdesc=global.input$table.anno, 
+                                             which.test=global.param$which.test, fn=global.param$xls.name, 
+                                             session.dir=global.param$session.dir, headerDesc=headerDesc)
                 })
+              
+                    # res.comb <- global.results$data$output
+                    # grp.srt <- sort(global.param$grp)
+                    # 
+                    # ## append annotation columns
+                    # if(!is.null(global.input$table.anno))
+                    #     res.comb <- left_join(res.comb,  global.input$table.anno, 'id')
+                    #    
+                    # 
+                    # ## #########################################################
+                    # ## Two sample moderated T- test:
+                    # ## adjust labels in the header of the Excel sheet
+                    # ## WT.vs.KO -> KO.over.WT
+                    # if(global.param$which.test == 'Two-sample mod T'){
+                    #   
+                    #   colnames.tmp <- colnames(res.comb)
+                    #   grp.comp <- unique(global.param$grp.comp)
+                    #   
+                    #   for(g in grp.comp){
+                    #     g.new <- strsplit(g, '\\.vs\\.') %>% unlist
+                    #     g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
+                    #     colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
+                    #     #colnames.tmp <- gsub(g, g.new, colnames.tmp)
+                    #   }
+                    #   colnames(res.comb) <- colnames.tmp
+                    # }
+                    # 
+                    # expDesign <- data.frame(Column=names(grp.srt), Experiment=grp.srt)
+                    # 
+                    # fn.tmp <- sub(' ','_',
+                    #               paste(
+                    #                 global.param$label, '_',
+                    #                 sub(' ', '_',global.param$which.test),
+                    #                 ifelse(global.param$log.transform != 'none', paste( '_', global.param$log.transform, '_', sep=''), '_'),
+                    #                 #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
+                    #                 ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
+                    #                 sub(' .*', '', Sys.time()),".xlsx", sep='') 
+                    # )
+                    # global.param$xls.name <- fn.tmp
+                    # 
+                    # ## Excel
+                    # render.xlsx <- try(
+                    #   WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
+                    # )
+                 ## })
             }
             
             
@@ -3125,7 +3100,7 @@ shinyServer(
 
             ## store name of id column
             global.param$id.col.value <- input$id.col.value
-cat('id: ', global.param$id.col.value, '\n')
+            cat('id: ', global.param$id.col.value, '\n')
             ## update 'input$id.col'
             global.input$id.col <- input$id.col
 
@@ -4049,6 +4024,83 @@ cat('id: ', global.param$id.col.value, '\n')
                 ## store the results
 ##                global.results$data$output <- res.comb
             }
+            
+            ##########################################################
+            ## two group linear model with repeated measurements
+            if(test == 'Two-sample LM'){
+                
+                withProgress(message='Two-sample LM', value=0, {
+                    
+                    count=0
+                    ## loop over groups
+                    for(g in unique(groups.comp)){
+                        
+                        ## extract current groups
+                        groups.tmp <- groups[ c(grep( paste('^',unlist( strsplit(g, '\\.vs\\.'))[1],'$', sep='') , groups), grep(paste('^',unlist( strsplit(g, '\\.vs\\.'))[2], '$', sep='') , groups)) ]
+                        
+                        ## extract table of current group
+                        tab.group <- cbind(tab[, id.col], tab[, names(groups.tmp)])
+                        colnames(tab.group)[1] <- id.col
+                        
+            
+                        groups.tmp <- groups.tmp %>% as.factor
+                        reps.tmp <- cdesc[, repeats] %>% as.factor %>% as.numeric
+                        
+                        #############################
+                        ## the actual test
+                        #############################
+                        
+                        ## ###############################################
+                        ## design matrix
+                        design <- model.matrix(~ 0 + groups.tmp + reps.tmp)
+                        colnames(design) <- make.names(colnames(design))
+                        
+                        
+                        ## ###############################################
+                        ## contrast matrix
+                        contrasts <- makeContrasts( contrasts=glue('group{group.levels[1]}-group{group.levels[2]}') , levels=design)
+                        
+                        ## ################################################
+                        ## run the model
+                        res.tmp <- lm.repeats(tab.group, design, contrasts, repeats='rep')
+                        
+                        #res.tmp <-  modT.test.2class( tab.group, groups=groups.tmp, id.col=id.col, label=g )$output
+                        
+                        if(count == 0){
+                            res.comb <- res.tmp
+                        } else {
+                            ## make sure the order is correct
+                            if(nrow(res.tmp ) != nrow(res.comb)) stop( "number of rows don't match!\n" )
+                            res.tmp <- res.tmp[rownames(res.comb), ]
+                            ##res.comb <- cbind(res.comb, res.tmp)
+                            res.comb <- data.frame(res.comb, res.tmp, stringsAsFactors=F)
+                        }
+                        ##################################################
+                        ## progress bar
+                        incProgress(count/length(unique(groups.comp)), detail=g)
+                        count=count + 1
+                        
+                    }
+                    
+                    ##################################
+                    ## reorder table
+                    #save(groups, res.comb, file='groups.RData')
+                    res.id <- res.comb$id ## id column
+                    res.exprs <- res.comb[, names(groups)] ## expression values
+                    res.test <- res.comb[, grep('^logFC|^AveExpr|^t\\.|^P\\.Value|^adj.P.Val|^Log\\.P\\.Value', colnames(res.comb))] ## test results
+                    res.test <- res.test[, order(colnames(res.test))]
+                    
+                    ## assemble new table
+                    res.comb <- data.frame(id=res.id, res.test, res.exprs)
+                    res.comb <- res.comb[rownames(tab),]
+                    
+                    ##global.results$data$output <- res.comb
+                    
+                    
+                })
+                
+            }
+            
 
             ###################################################################
             ##
@@ -5486,10 +5538,7 @@ cat('id: ', global.param$id.col.value, '\n')
 
             ## ##############################
             ## ids
-            #IDs <- global.results$id.map$id.concat
             IDs <- res[ , 'id.concat']
-            #View(head(res))
-            #cat(IDs[1:4])
             
             ## ###################################################
             ##             use IDs as vector names
@@ -5844,7 +5893,7 @@ cat('id: ', global.param$id.col.value, '\n')
 
                 leg <- c(paste(ppi.bait), leg)
                 leg.col <- c('green', leg.col)
-                legend('topleft', legend=leg, col=leg.col, pch=20, bty='n', cex=cex.leg, title=ifelse( length(ppi.int.idx) > 0 ,paste('interactors sig/det/tot') , ''), pt.cex=cex.vec[1])
+                legend('topleft', legend=leg, col=leg.col, pch=20, cex=cex.leg, title=ifelse( length(ppi.int.idx) > 0 ,paste('interactors sig/det/tot') , ''), pt.cex=cex.vec[1])
 
             }
 
@@ -6516,23 +6565,20 @@ cat('id: ', global.param$id.col.value, '\n')
         ##                                 PCA
         ##
         ######################################################################################
+        
+        ## shown under 'Explained variance'-tab
         output$run.pca <- renderText({
-          
+
             if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
-
-            #res <- global.results$filtered
-
-            #validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
-
             grp <- global.param$grp
 
-            
+
             if(is.null(global.results$pca) | global.param$update.pca == TRUE){
-              
+
               res <- global.results$filtered
-              
+
               validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
-              
+
               ## run PCA
               withProgress(message = 'PCA...',{
                 pca=my.prcomp2( res, grp )
@@ -6540,18 +6586,16 @@ cat('id: ', global.param$id.col.value, '\n')
               ## store results
               global.results$pca <- pca
               global.param$update.pca <- FALSE
-              
+
             } else {
               pca <- global.results$pca
             }
-            
+
             ## short summary, same as 'PCA' is generating
             txt = paste('<p><font size=\"5\">PCA model of a mean-centered and scaled matrix of ',length(grp), ' by ', nrow(pca$loadings), '.</font></p>')
             txt = paste(txt, '<p><font size=\"5\">Number of PCs to cover 90% of the variance:', min(which((cumsum(pca$var)/pca$totalvar) > .9)), '.</font></p>')
 
             HTML(txt)
-
-
         })
 
 
@@ -6568,176 +6612,95 @@ cat('id: ', global.param$id.col.value, '\n')
         })
 
         ## ###########################################################
-        ## PCA plotly 2D scatter
+        ##             PCA plotly 2D scatter
+        ##
+        ##
         output$pcaxy.plotly <- renderPlotly({
-          #if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
           
           if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
-          ##if(!is.null(error$msg)) return()
-
-          grp <- global.param$grp
-          grp.unique <- unique(grp)
-          grp.colors <- global.param$grp.colors[names(grp)]
           
-          if(is.null(global.results$pca) | global.param$update.pca == TRUE){
- 
-            res <- global.results$filtered
+          pca <- plotlyPCA( reactiveValuesToList(global.param), reactiveValuesToList(global.results), input$pca.x, input$pca.y)
           
-            validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
-            
-            ## run PCA
-            withProgress(message = 'PCA...',{
-              pca=my.prcomp2( res, grp )
-            })
-            ## store results
-            global.results$pca <- pca
+          ## update if PCA has been recalculated
+          if(!is.null(pca$pca)){
+            global.results$pca <- pca$pca
             global.param$update.pca <- FALSE
-            
-          } else {
-            pca <- global.results$pca
           }
           
+          ##plot
+          pca$p
           
-          
-         # pca <- global.results$pca
-          
-          # selected PCs
-          pca.x <- as.numeric(sub('PC ','', input$pca.x))
-          pca.y <- as.numeric(sub('PC ','', input$pca.y))
-
-          # build a data frame for plotly
-          pca.mat = data.frame(
-            PC1=pca$scores[, pca.x],
-            PC2=pca$scores[, pca.y]
-          )
-          rownames(pca.mat) <- rownames(pca$scores)
-
-          p <- plot_ly( pca.mat, type='scatter', mode='markers' )
-          
-          for(g in grp.unique){
-            grp.tmp <- names(grp)[grp == g]
-            p <-  add_trace(p, x=pca.mat[grp.tmp , 'PC1'], y=pca.mat[grp.tmp, 'PC2'], type='scatter', mode='markers', marker=list(size=15, color=grp.colors[grp.tmp]), text=grp.tmp, name=g  )
-            #p <- plot_ly( x=pca.mat$PC1, y=pca.mat$PC2, type='scatter', mode='markers', marker=list(size=20, color=grp.colors), text=rownames(pca.mat) )
-          }
-          
-          p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, sep=''), xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)) )
-
         })
-
+  
         ################################################
         ## PCA plotly 3D scatterplot
         output$pcaxyz.plotly <- renderPlotly({
             
           if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
-            
-            grp <- global.param$grp
-            grp.unique <- unique(grp)
-            grp.colors <- global.param$grp.colors[names(grp)]
-            
-            
-            
-            if(is.null(global.results$pca) | global.param$update.pca == TRUE){
-              
-              res <- global.results$filtered
-              
-              validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
-              
-              ## run PCA
-              withProgress(message = 'PCA...',{
-                pca=my.prcomp2( res, grp )
-              })
-              ## store results
-              global.results$pca <- pca
-              global.param$update.pca <- FALSE
-              
-            } else {
-              pca <- global.results$pca
-            }
-            
-            # selected PCs
-            pca.x <- as.numeric(sub('PC ','', input$pca.x))
-            pca.y <- as.numeric(sub('PC ','', input$pca.y))
-            pca.z <- as.numeric(sub('PC ','', input$pca.z))
-
-            pca.mat = data.frame(
-                PC1=pca$scores[, pca.x],
-                PC2=pca$scores[, pca.y],
-                PC3=pca$scores[, pca.z]
-            )
-            rownames(pca.mat) <- rownames(pca$scores)
-
-            ###########################
-            ## plot
-            p <- plot_ly( pca.mat, type='scatter3d', mode='markers' )
-            for(g in grp.unique){
-              grp.tmp <- names(grp)[grp == g]
-              p <- add_trace(p, x=pca.mat[grp.tmp, 'PC1'], y=pca.mat[grp.tmp,'PC2'], z=pca.mat[grp.tmp,'PC3'], type='scatter3d', mode='markers', marker=list(size=15, color=grp.colors[grp.tmp]), text=grp.tmp, name=g  )
-            }
-            #p <- plot_ly(  x=pca.mat$PC1, y=pca.mat$PC2, z=pca.mat$PC3, type='scatter3d', mode='markers', marker=list(size=15, color=grp.colors), text=rownames(pca.mat) )
-            p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, 'vs. PC', pca.z, sep=''), scene=list( xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)), zaxis=list(title=paste('PC', pca.z))) )
-
+          
+          pca <- plotlyPCA(reactiveValuesToList(global.param), reactiveValuesToList(global.results), input$pca.x, input$pca.y, input$pca.z)  
+         
+          ## update if PCA has been recalculated
+          if(!is.null(pca$pca)){
+            global.results$pca <- pca$pca
+            global.param$update.pca <- FALSE
+          }
+          ## plot
+          pca$p
+          
+           
         })
         
         ####################################################
         ## PCA loadings
-        output$pca.loadings <- renderPlot({
-
-          if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
-          if(!is.null(error$msg)) return()
-          if(length(global.param$grp) < 3) return()
-
-          pca <- global.results$pca
-
-          pca.x <- as.numeric(sub('PC ','', input$pca.x))
-          pca.y <- as.numeric(sub('PC ','', input$pca.y))
-          pca.z <- as.numeric(sub('PC ','', input$pca.z))
-
-
-          topn=input$pca.load.topn
-
-
-          plotPCAloadings( pca, topn, pca.x, pca.y, pca.z )
-
-       })
+       #  output$pca.loadings <- renderPlot({
+       # 
+       #    if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+       #    if(!is.null(error$msg)) return()
+       #    if(length(global.param$grp) < 3) return()
+       # 
+       #    pca <- global.results$pca
+       # 
+       #    pca.x <- as.numeric(sub('PC ','', input$pca.x))
+       #    pca.y <- as.numeric(sub('PC ','', input$pca.y))
+       #    pca.z <- as.numeric(sub('PC ','', input$pca.z))
+       # 
+       # 
+       #    topn=input$pca.load.topn
+       # 
+       # 
+       #    plotPCAloadings( pca, topn, pca.x, pca.y, pca.z )
+       # 
+       # })
 
         ####################################################
         ##  PCA loadings as a scatter
         ####################################################
-        output$scatter.pca.loadings <- renderPlot({
-
-                if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
-                if(!is.null(error$msg)) return()
-                if(length(global.param$grp) < 3) return()
-
-                pca <- global.results$pca
-                pca.x <- as.numeric(sub('PC ','', input$pca.x))
-                pca.y <- as.numeric(sub('PC ','', input$pca.y))
-                pca.z <- as.numeric(sub('PC ','', input$pca.z))
-                topn=input$pca.load.topn
-
-                scatterPlotPCAloadings( pca, topn, pca.x, pca.y, pca.z )
-
-        })
+        # output$scatter.pca.loadings <- renderPlot({
+        # 
+        #         if(is.null(global.results$data) | is.na(global.param$filter.value) | is.null(global.results$pca)) return()
+        #         if(!is.null(error$msg)) return()
+        #         if(length(global.param$grp) < 3) return()
+        # 
+        #         pca <- global.results$pca
+        #         pca.x <- as.numeric(sub('PC ','', input$pca.x))
+        #         pca.y <- as.numeric(sub('PC ','', input$pca.y))
+        #         pca.z <- as.numeric(sub('PC ','', input$pca.z))
+        #         topn=input$pca.load.topn
+        # 
+        #         scatterPlotPCAloadings( pca, topn, pca.x, pca.y, pca.z )
+        # 
+        # })
 
         ###############################################
         ## static PCA plot
         ###############################################
         plotPCA <- function(pca.x, pca.y, pca.z, plot=T){
 
-            ##filter.res()
-            ##tab.select <- input$mainPage
-            ##filter.res()#--
-            ##updateNavbarPage(session, 'mainPage', selected=tab.select)
-
             res <- global.results$filtered
-
-            ##View(res)
-
+          
             ## require at least three rows
-
             validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
-
-            ##if(nrow(res) < 3) return()
 
             ## get groups
             grp <- global.param$grp
@@ -6759,9 +6722,6 @@ cat('id: ', global.param$id.col.value, '\n')
             rm.idx <- which(rm.idx > 0)
             if(length(rm.idx)>0) res <- res[-rm.idx, ]
             if(nrow(res) < 3) return()
-
-            ##View(res[, names(grp)])
-            ##View(t(res[, names(grp)]))
 
             ## plot
             pca <- my.prcomp(t(res[, names(grp)]), col=grp.col, plot=plot, rgl=F, main='', cex.points=5, leg.vec=names(grp.col.leg), leg.col=grp.col.leg)

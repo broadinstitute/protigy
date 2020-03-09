@@ -887,6 +887,107 @@ my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5,
   multiplot( plotList, cols=N)
 }
 
+
+#################################################
+##  plotly PCA plots
+##
+plotlyPCA <- function(global.param,
+                      global.results,
+                      pca.x,
+                      pca.y,
+                      pca.z=NULL
+                      ){
+  
+  mode <- ifelse( is.null(pca.z), 'xy', 'xyz')
+  
+  grp <- global.param$grp
+  grp.unique <- unique(grp)
+  grp.colors <- global.param$grp.colors[names(grp)]
+  pca.out <- NULL
+  
+  ## check whether PCA has been run
+  if(is.null(global.results$pca) | global.param$update.pca == TRUE){
+    
+    res <- global.results$filtered
+    
+    validate(need(nrow(res) > 2, 'Need at least 3 features to perform PC.'))
+    
+    ## run PCA
+    withProgress(message = 'PCA...',{
+      pca=my.prcomp2( res, grp )
+    })
+    
+    ## store results
+    #global.results$pca <- pca
+    #global.param$update.pca <- FALSE
+    pca.out <- pca
+    
+  } else {
+    pca <- global.results$pca
+  }
+  
+  ###################
+  ## selected PCs
+  pca.x <- as.numeric(sub('PC ','', pca.x))
+  pca.y <- as.numeric(sub('PC ','', pca.y))
+  
+  pca.mat = data.frame(
+    PC1=pca$scores[, pca.x],
+    PC2=pca$scores[, pca.y]
+  )
+  rownames(pca.mat) <- rownames(pca$scores)
+  
+  ##View(pca.mat)
+  #save(pca.mat, grp.unique, grp, grp.colors, file='debug.RData')  
+  ## 3D
+  if(mode == 'xyz'){
+    pca.z <- as.numeric(sub('PC ','', pca.z))
+    pca.mat = data.frame( pca.mat,
+                          PC3=pca$scores[, pca.z]
+    )
+  }
+  
+  #############################
+  ## 2D plot
+  if(mode == 'xy'){
+    p <- plot_ly( pca.mat, type='scatter', mode='markers' )
+    
+    for(g in grp.unique){
+      grp.tmp <- names(grp)[grp == g]
+      p <-  add_trace(p, x=pca.mat[grp.tmp , 'PC1'], y=pca.mat[grp.tmp, 'PC2'], type='scatter', mode='markers', 
+                      marker=list(size=15, color=grp.colors[grp.tmp]), 
+                      text=grp.tmp, name=g) 
+    }
+    ## title and axis
+    p <- layout(p, 
+                title=paste0('PC', pca.x,' vs. PC', pca.y, '\n(',  nrow(pca$loadings),' features)'), 
+                xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)) )
+  }
+  ###########################
+  ## 3D plot
+  if(mode == 'xyz'){
+    p <- plot_ly( pca.mat, type='scatter3d', mode='markers' )
+    for(g in grp.unique){
+      grp.tmp <- names(grp)[grp == g]
+      p <- add_trace(p, x=pca.mat[grp.tmp, 'PC1'], y=pca.mat[grp.tmp,'PC2'], z=pca.mat[grp.tmp,'PC3'], type='scatter3d', mode='markers', marker=list(size=15, color=grp.colors[grp.tmp]), text=grp.tmp, name=g  )
+    }
+    p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, 'vs. PC', pca.z, '\n(',  nrow(pca$loadings), ' features)'), 
+                scene=list( xaxis=list(title=paste('PC', pca.x)), 
+                            yaxis=list(title=paste('PC', pca.y)), 
+                            zaxis=list(title=paste('PC', pca.z))) )
+  }
+  
+  #return(p)
+  #p <- p %>% plotly_build()
+  #print(plotly_build(p))
+  ## return plot and pca
+  out <- list(p=p,
+              pca=pca.out)
+  return(out)
+  ##return(pca.out)
+} ## end plotlyPCA
+
+
 #####################################################
 ## visualize variances explained by PCA
 ##

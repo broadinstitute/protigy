@@ -33,6 +33,13 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.6 March 9, 2020</b>
+<ul>
+<li>Excel Sheet: added column descriptions of Protigy and Spectrum Mill-specific columns.</li>
+<li>Volcano plots: added box around legend for highlighted proteins/PTM-sites.</li>
+<li>PCA plots: number of features used for PCA shown in  title.</li>
+<li>PCA plots: central function in src/plots.r</li>
+</ul>
 <b>v0.8.5.5 September 3, 2019</b>
 <ul>
 <li>Summary tab: Fixed the bug that would cause an error in the \'Dataset:\'-widget.</li>

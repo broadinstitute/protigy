@@ -32,7 +32,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.5.5"
+VER <- "0.8.6"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -122,6 +122,8 @@ p_load(scatterplot3d)
 p_load(plotly)
 ## export
 p_load(WriteXLS)
+## import
+p_load(readxl)
 ## reproducibility filter
 p_load(reshape)
 p_load(nlme)
@@ -138,6 +140,7 @@ p_load(DT)
 p_load(maptools)
 p_load(ggrepel)
 p_load(dplyr)
+
 
 p_load(UpSetR)
 p_load(gridExtra)
@@ -161,14 +164,19 @@ p_load(org.Dr.eg.db)
 #p_load (rhdf5) 
 
 
-
 source('src/modT.r')
-#source('src/pheatmap.r')
 source('src/helptext.r')
 source('src/my_io.r')
 source('src/gct-io.r')
 source('src/plots.r')
 source('src/manage_sessions.R')
+source('src/linear_model.R')
+
+
+##################################################
+##    import header descriptions
+headerDesc <- read_excel('docs/description-column-headers.xlsx')
+
 
 ## #####################################
 ## CSS for loading animantion
@@ -195,7 +203,6 @@ ppi.db.col <- c('InWeb'='deepskyblue',
                 'Reactome'='magenta',
                 'Shared'='orange'
                 )
-
 ## ##################################################################
 ##
 ##                    import PPi databases
@@ -235,8 +242,10 @@ import.ppi.db <- function(){
   }
   return(ppi)
 }
+
 # run the function to import 
 ppi <- import.ppi.db()
+
 
 ## ###############################################
 ##
@@ -1260,9 +1269,7 @@ get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), p
       )
       
     }
-    
     return(out)
-
 }
 
 # ##########################################################
@@ -1282,3 +1289,146 @@ color.bar <- function(lut, min, max=-min, nticks=11, ticks=seq(min, max, len=nti
     rect(0,y,10,y+1/scale, col=lut[i], border=NA)
   }
 }
+
+#############################################################
+## create and export xlsx file
+##
+export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=NULL, fn, session.dir){
+
+  grp.sorted <- sort(grp)
+  
+  ## append annotation columns
+  if(!is.null(rdesc)){
+    res.comb <- left_join(res.comb,  rdesc, 'id')
+  }
+  
+  ## #########################################################
+  ## Two sample moderated T- test:
+  ## adjust labels in the header of the Excel sheet
+  ## WT.vs.KO -> KO.over.WT
+  if(which.test == 'Two-sample mod T'){
+    
+    colnames.tmp <- colnames(res.comb)
+    grp.comp <- unique(grp.comp)
+    
+    for(g in grp.comp){
+      g.new <- strsplit(g, '\\.vs\\.') %>% unlist
+      g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
+      colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
+    }
+    colnames(res.comb) <- colnames.tmp
+  }
+  
+  ############################################################
+  ## experimental design
+  expDesign <- data.frame(Column=names(grp.sorted), Experiment=grp.sorted)
+  
+  ##########################################################
+  ## add column descriptions
+  if(!is.null(headerDesc )){
+    
+    ## descriptions in the file
+    ColumnHeaderLibrary <- headerDesc$ColumnHeader
+    DescriptionLibrary <- headerDesc$Description
+    SourceLibrary <- headerDesc$Source
+    names(ColumnHeaderLibrary) <- names(DescriptionLibrary) <- names(SourceLibrary) <- headerDesc$ColumnHeader
+    
+    ## result table to annotate
+    ColumnHeader <- colnames(res.comb)
+    Description <- Source <- rep(NA, length(ColumnHeader))
+    names(Description) <- names(Source) <- names(ColumnHeader) <- ColumnHeader
+    
+    ############################    
+    ## loop over terms in description file
+    for(cc in  ColumnHeaderLibrary){
+
+      ## exact match
+      match.idx <- which( ColumnHeader == cc)
+      
+      if(length(match.idx) == 1){
+
+        if(SourceLibrary[cc] == 'limma'){
+          Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "', which.test, '"')
+        } else {
+          Description[ match.idx ] <- paste0(DescriptionLibrary[cc])
+        }
+        
+        Source[ match.idx ] <- SourceLibrary[ cc ]
+        
+      }
+      ## no exact match
+      if(length(match.idx) == 0) {
+
+        ## test prefix: protigy/limma columns
+        match.idx <- grep( paste0('^',cc,'.*'), ColumnHeader)
+        if(length(match.idx) > 0){
+         
+          if(SourceLibrary[cc] == 'limma'){
+            Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "', which.test, '" in group "',   sub(paste0('^', cc, '.'), '', ColumnHeader[match.idx]), '"')
+         } else {
+            Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "',sub(paste0('^', cc, '.'), '', ColumnHeader[match.idx]), '"')
+         }
+          Source[ match.idx ] <- SourceLibrary[ cc ]
+          
+        } else { ## end test prefix
+          
+          ## text suffix
+          match.idx <- grep( paste0('.*', cc,'$'), ColumnHeader)
+          if(length(match.idx) > 0){
+            
+            if(SourceLibrary[cc] == 'SM'){
+              Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' in folder "',   sub(paste0('.', cc, '$'), '', ColumnHeader[match.idx]), '"')
+            } else {
+              Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "',sub(paste0('^', cc, '.'), '', ColumnHeader[match.idx]), '"')
+            }
+            Source[ match.idx ] <- SourceLibrary[ cc ]
+          }
+        } ## end test suffix 
+      } ## end no extact match
+      
+    } ## end loop over ColumnHeaderLibrary
+    
+    allColumnsInTable <- data.frame(ColumnHeader, Description, Source)
+  }
+  #############################
+  ## export
+  render.xlsx <- try(
+     WriteXLS(c('res.comb', 'expDesign', 'allColumnsInTable'), ExcelFileName=paste(session.dir, fn, sep='/'), 
+              FreezeRow=1, FreezeCol=1, 
+              SheetNames=c(which.test, 'Class vector', 'Description of table header'), 
+              row.names=F, BoldHeaderRow=T, AutoFilter=T)
+  )
+  
+  ## error checking
+  if(class(render.xlsx) == 'try-error' | !render.xlsx){
+    showModal(modalDialog(
+      size='m',
+      title = "Problem generating Excel sheet",
+      HTML(render.xlsx[[1]]),
+      HTML('Possible reason: missing Perl. For Windows OS please install Strawberry Perl (<a href="http://strawberryperl.com/" target="_blank_">http://strawberryperl.com/</a><br>R needs to be restarted after installing Perl.)')
+    ))
+    }
+    return(render.xlsx)
+}
+
+
+###############################################################
+## filename for result tables
+## .xlsx
+## .gct
+##
+create.fn <- function(label, which.test, log.transform, repro.filt, filt.data, suffix=c('xlsx', 'gct')){
+  suffix <- match.arg(suffix)
+  fn <- sub(' ', '_',
+                paste0(
+                  label, '_',
+                  sub(' ', '_', which.test),
+                  ifelse(log.transform != 'none', paste( '_', log.transform, '_', sep=''), '_'),
+                  ifelse(repro.filt=='yes', paste(filt.data, sep=''), '_'),
+                  sub(' .*', '', Sys.time()), 
+                ".", suffix) 
+  )
+  return(fn)
+}
+
+

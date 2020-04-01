@@ -6,12 +6,9 @@ printHTMLUI <- function(id) {
     htmlOutput(ns("html"))
 }
 
-
 #############################
 ## server part
 printHTML <- function(input, output, session, what, error=NULL, global.input=NULL, global.param=NULL){
-
-  ##cat('test: ',error$msg, '\nend\n')
 
     txt=''
 
@@ -33,9 +30,21 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.6.2 March 27, 2020</b>
+<ul>
+<li>Misc: improved handling on redundant ids.</li>
+</ul>
+      
+<b>v0.8.6.1 March 18, 2020</b>
+<ul>
+<li>Heatmap: Fixed number of significant features.</li>
+<li>Heatmap: Interactive heatmap working again.</li>
+<li>Correlation boxplots: included in exports (.zip) and Rmarkdown reports.</li>
+</ul>
 <b>v0.8.6 March 9, 2020</b>
 <ul>
 <li>Excel Sheet: added column descriptions of Protigy and Spectrum Mill-specific columns.</li>
+<li>Experimental design: robustified handling of special characters in experiment names.</li>
 <li>Volcano plots: added box around legend for highlighted proteins/PTM-sites.</li>
 <li>PCA plots: number of features used for PCA shown in  title.</li>
 <li>PCA plots: central function in src/plots.r</li>

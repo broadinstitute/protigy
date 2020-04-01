@@ -216,6 +216,7 @@ shinyServer(
             updateCheckboxInput(session, 'export.excel', 'Excel sheet', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.gct.file', 'GCT files: 1) original data and 2) signed log P-values', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.cm', 'Correlation matrix', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.cb', 'Correlation boxplot', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.profile', 'Profile plot', value=!input$export.toggle.all)
 
         })
@@ -360,6 +361,7 @@ shinyServer(
                                                   checkboxInput('export.excel', 'Excel sheet',value=T),
                                                   checkboxInput('export.gct.file', 'GCT files: 1) original data and 2) singed log P-values',value=T),
                                                   checkboxInput('export.cm', 'Correlation matrix',value=T),
+                                                  checkboxInput('export.cb', 'Correlation boxplot',value=T),
                                                   checkboxInput('export.profile', 'Profile plot',value=T),
                                                   
                                                   status = "primary",
@@ -1688,6 +1690,7 @@ shinyServer(
           ##         what to export
           export.volc <- input$export.volc & !(global.param$which.test %in% c('mod F', 'none'))
           export.cm <- input$export.cm
+          export.cb <- input$export.cb
           export.hm <- input$export.hm
           export.pca <- input$export.pca
           export.box <- input$export.box
@@ -1733,9 +1736,10 @@ shinyServer(
                       \n',ifelse(export.pca, '\n* [Principle Components Analysis](#pca)','' ),'
                       \n* [QC-metrics](#qc)
                       ',ifelse(export.cm, '\n     - [Correlation matrix](#corrmat)','' ),'
+                      ',ifelse(export.cb, '\n     - [Correlation boxplot](#corrbox)','' ),'
                       ',ifelse(export.box, '\n    - [Box-and-whisker plots](#boxplot)','' ),'
                        ', sep='')
-          #setProgress(value=0.1)
+          
           ## ##########################################################
           ##                   data set
           ## ##########################################################
@@ -1761,6 +1765,7 @@ shinyServer(
           ## ##########################################################
           rmd <- paste(rmd, "\n***
                        \n####  Workflow <a name='workflow'></a>
+                       \n Summary about the processing steps specifified in Protigy.
                        \n```{r workflow, echo=F}
                        \nwf.tab.ids <- c('Log scale', 'Normalization', 'Filter data', 'Test', 'Filter results')
                        \n## Reproducibility filter
@@ -1804,6 +1809,7 @@ shinyServer(
           rmd <- paste(rmd, "
                       \n***
                       \n#### Quantified features <a name='quantifiedfeatures'></a>
+                      \nThe barchart shows the number of non-missing data points in each data column, colored bu sample groups.
                       \n```{r quantfeatures, echo=F, fig.width=10, fig.height=3}
                       \nif(global.param$log.transform == 'none'){
                       \n   tab <- data.frame(global.input$table.org)
@@ -1956,32 +1962,6 @@ shinyServer(
                          \n```
                          \n[Back to top](#top)     
                          \n", sep='')
-              # 
-              # rmd <- paste(rmd, "\n
-              #            \n Scatterplot of ```r global.plotparam$pca.x``` and ```r global.plotparam$pca.y```.
-              #            \n```{r pca-scatter, echo=F}
-              #            \ngrp.unique <- unique(grp)
-              #            \ngrp.colors <- global.param$grp.colors[names(grp)]
-              #            \n# selected PCs
-              #            \npca.x <- as.numeric(sub('PC ','', input$pca.x))
-              #            \npca.y <- as.numeric(sub('PC ','', input$pca.y))
-              #            \n# build a data frame for plotly
-              #            \npca.mat = data.frame(
-              #            \n   PC1=pca$scores[, pca.x],
-              #            \n   PC2=pca$scores[, pca.y]
-              #            \n)
-              #            \nrownames(pca.mat) <- rownames(pca$scores)
-              #            \np <- plot_ly( pca.mat, type='scatter', mode='markers' )
-              #            \nfor(g in grp.unique){
-              #            \n   grp.tmp <- names(grp)[grp == g]
-              #            \n   p <-  add_trace(p, x=pca.mat[grp.tmp , 'PC1'], y=pca.mat[grp.tmp, 'PC2'], type='scatter', mode='markers', marker=list(size=15, color=grp.colors[grp.tmp]), text=grp.tmp, name=g  )
-              #            \n}
-              #            \np <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, sep=''), xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)) )
-              #            \np
-              #             \n```
-              #            \n[Back to top](#top)     
-              #            \n", sep='')
-            
             }
           } # end if export.pca
           #setProgress(0.7)
@@ -1995,12 +1975,11 @@ shinyServer(
           ##                correlation matrix
           ## ##########################################################
           if(export.cm){
-            
-
+          
             rmd <- paste(rmd, 
                  '\n***
-              \n<a name="corrmat">
-              \n#### Correlation matrix</a>
+              \n<a name="corrmat"></a>
+              \n#### Correlation matrix
               \n<br>
               \n```{r corrmat, echo=F, warning=F, message=F, fig.width=8, fig.height=8}
               \nwithProgress(message="Exporting", detail="correlation matrix",{
@@ -2021,7 +2000,7 @@ shinyServer(
 
               \n## get correlation matrix
               \nif(is.null(global.results$cm) | global.param$update.cm == TRUE){
-                   \n## calculate correlatio matrix
+                   \n## calculate correlation matrix
                    \nwithProgress(message = "Correlation matrix...",{
                    \ncm=calculateCorrMat( tab=tab,
                                          \ngrp=grp,
@@ -2051,7 +2030,64 @@ shinyServer(
                            , sep='\n')
            
           } # end if export.cm
-          #setProgress(0.8)
+          
+          ## ##########################################################
+          ##                correlation boxplots
+          ## ##########################################################
+          if(export.cm){
+            
+            rmd <- paste(rmd, 
+                         '\n***
+              \n<a name="corrbox"></a>
+              \n#### Correlation boxplots
+              \nThe boxplots depict the distribution of correlation coefficients within a sample group.
+              \n<br>
+              \n```{r corrbox, echo=F, warning=F, message=F, fig.width=8, fig.height=8}
+              \nwithProgress(message="Exporting", detail="correlation matrix",{
+              \nif(is.null(global.results$table.log)){
+              \n  tab <- data.frame(global.input$table)
+              \n} else{
+              \n  tab <- data.frame(global.results$table.log)
+              \n}
+              \nid.col.value <- global.param$id.col.value
+              \ngrp <- global.param$grp
+              \n## group colors
+              \ngrp.col <- global.param$grp.colors
+              \ngrp.col.leg <- global.param$grp.colors.legend
+              \n## update selection
+              \ntab <- tab[, c(id.col.value, names(grp))]
+              \ngrp.col <- grp.col[names(grp)]
+              \ngrp.col.leg <- grp.col.leg[unique(grp)]
+
+              \n## get correlation matrix
+              \nif(is.null(global.results$cm) | global.param$update.cm == TRUE){
+                   \n## calculate correlation matrix
+                   \nwithProgress(message = "Correlation matrix...",{
+                   \ncm=calculateCorrMat( tab=tab,
+                                         \ngrp=grp,
+                                         \nlower= global.plotparam$cm.lower, upper= global.plotparam$cm.upper
+                  \n)
+                  \n})
+                  
+                  \n## store results
+                  \nglobal.results$cm <- cm
+                  \nglobal.param$update.cm <- FALSE
+                  
+                \n} else {
+                \n  cm <- global.results$cm
+                \n}
+                \nplotCorrBox(cm, grp, grp.col.leg, global.plotparam$cm.upper)
+              \n}) # end with progress
+              \n```\n
+              \n 
+              \n[Back to top](#top)'          
+                         , sep='\n')
+            
+          } # end if export.cm
+          
+          
+          
+          
           ## ##########################################################
           ##                Boxplots
           ## ##########################################################
@@ -2261,14 +2297,12 @@ shinyServer(
             colnames(res.comb) <- colnames.tmp
           }
           
-          ##expDesign <- data.frame(Column=names(grp.srt), Experiment=grp.srt)
-          
+          ## filename 
           fn.tmp <- sub(' ','_',
                         paste(
                           global.param$label, '_',
                           sub(' ', '_',global.param$which.test),
                           ifelse(global.param$log.transform != 'none', paste( '_', global.param$log.transform, '_', sep=''), '_'),
-                          #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
                           ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
                           sub(' .*', '', Sys.time()), sep='') 
           )
@@ -2416,13 +2450,9 @@ shinyServer(
                 else
                   tab <- data.frame(global.results$table.log)
                 
-                ## dataset
-                #tab <- data.frame(global.results$table.log)
-                
                 ## id column
                 id.col.value <- global.param$id.col.value
                 
-                #tab[, c(id.col.value, names(grp))]
                 ## group vector
                 grp <- global.param$grp
                 ## group colors
@@ -2468,6 +2498,60 @@ shinyServer(
 
                 })
             }
+            #############################################################
+            ##                correlation boxplot
+            #############################################################
+            if(input$export.cb){
+              withProgress(message='Exporting', detail='correlation boxplot',{
+                
+                fn.cm <- paste0(global.param$session.dir, '/correlation_boxplot.pdf')
+                
+                if(is.null(global.results$table.log))
+                  tab <- data.frame(global.input$table)
+                else
+                  tab <- data.frame(global.results$table.log)
+                
+                ## id column
+                id.col.value <- global.param$id.col.value
+                
+                ## group vector
+                grp <- global.param$grp
+                ## group colors
+                grp.col <- global.param$grp.colors
+                grp.col.legend <- global.param$grp.colors.legend
+                
+                
+                ## update selection
+                tab <- tab[, c(id.col.value, names(grp))]
+                grp.col <- grp.col[names(grp)]
+                grp.col.legend <- grp.col.legend[unique(grp)]
+                
+                ## get correlation matrix
+                if(is.null(global.results$cm) | global.param$update.cm == TRUE){
+                  
+                  ## calculate correlation matrix
+                  withProgress(message = 'Correlation matrix...',{
+                    cm=calculateCorrMat( tab=tab,
+                                         grp=grp,
+                                         #id.col=id.col.value,
+                                         lower= global.plotparam$cm.lower, upper= global.plotparam$cm.upper
+                    )
+                  })
+                  
+                  ## store results
+                  global.results$cm <- cm
+                  global.param$update.cm <- FALSE
+                  
+                } else {
+                  cm <- global.results$cm
+                }
+                ## plot
+                pdf(fn.cm,  max(2*(length(unique(grp))), 4), 6)
+                plotCorrBox(cm, grp, grp.col.legend, global.plotparam$cm.upper)
+                dev.off()
+              })
+            }
+            
             ############################################################
             ##                   heatmap
             ## require at least three significant hits
@@ -3219,11 +3303,7 @@ shinyServer(
               # parse gct file
               #gct <- parse.gctx(fn)
               gct <- try( parse.gctx2(fn) )
-              #gct <- try( parse.gctx(fn) )
-              #cat('test2\n')
-
               if(class(gct) == 'try-error'){
-                #error$msg <- paste('<p>Error importing GCT 1.3 file:<br>', gct[1],'<p>')
                 error$title <- "Error importing GCT 1.3 file"
                 error$msg <- gct[1]
                 
@@ -3232,7 +3312,6 @@ shinyServer(
               
               ## #################################################
               ## robustify ids
-              #gct@rid <- make.unique(make.names(gct@rid))
               gct@rid <- make.unique( gct@rid )
               rownames(gct@mat) <- gct@rid
               if(nrow(gct@rdesc) > 0){
@@ -3255,7 +3334,6 @@ shinyServer(
               if('id' %in% colnames(gct@cdesc)){
                 cn.tmp <- colnames(gct@cdesc)
                 rm.idx <- which(colnames(gct@cdesc) == 'id')
-                #gct@cdesc <- data.frame(gct@cdesc[ ,-which(colnames(gct@cdesc) == 'id') ] )
                 gct@cdesc <- data.frame(gct@cdesc[ ,-rm.idx] )
                 cn.tmp <- cn.tmp[-rm.idx]
                 colnames(gct@cdesc) <- cn.tmp
@@ -3263,9 +3341,7 @@ shinyServer(
               if(ncol(gct@cdesc) == 1)
                 rownames(gct@cdesc) <- gct@cid
               
-              
-              
-              
+              #####################
               # expression table
               if(nrow(gct@rdesc) > 0 ){
                 tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
@@ -3302,20 +3378,9 @@ shinyServer(
               global.input$file <- input$file
               global.input$table.colnames <- colnames.tmp
               
-              # meta data
-              #rdesc <- data.frame(gct@rdesc)
-              #if(ncol(rdesc) == 1){
-              # if(length(rdesc) > 0)
-              #   rownames(rdesc) <- gct@rid
-              #}
-              #cdesc <- data.frame(gct@cdesc)
-              
               global.input$rdesc <- gct@rdesc
               global.input$cdesc <- gct@cdesc
 
-              
-              #rownames(global.input$cdesc) <- make.names(make.unique( rownames(global.input$cdesc))) # convert to proper names
-              
               global.param$cdesc.all <- global.param$cdesc.selection <- colnames(global.input$cdesc)
               
                
@@ -3503,7 +3568,6 @@ shinyServer(
 
             ## ##########################
             ## read the experimental design file
-            ##grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
             grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
             Column.Name <- grp.file$Column.Name
             Experiment <- as.character(grp.file$Experiment)
@@ -3526,7 +3590,6 @@ shinyServer(
                 global.param$label <- paste(global.param$label, label, sep='-')
             }
 
-           #cat('\n',nchar(Experiment),'\n')
             ###############################################################
             ##
             ## - do some sanity checks
@@ -3561,10 +3624,10 @@ shinyServer(
            ## }
             ## check whether there are at least 2 replicates per group
             num.rep=table(Experiment[exprs.idx])
-            ##if(min(num.rep) == 1){
-            ##    error$msg <- paste('No replicate measurements defined!')
+            if(min(num.rep) == 1){
+            ##    error$msg <- paste('Warning! Not all groups have repicate measurments defined!!')
             ##    return()
-            ##}
+            }
 
             ## ################################
             ## ANNOTATION: extract empty cells
@@ -3586,8 +3649,12 @@ shinyServer(
 
             ## class vector
             grp=grp.exprs$Experiment
+            ## robustify experiment names
+            grp <- gsub('^ {1,10}', '', grp)
+            grp <- gsub(' {1,10}$', '', grp)
+            grp <- make.names(grp)
             names(grp)=grp.exprs$Column.Name
-
+            
             ## update input table, keep id and expression columns
             tab <- global.input$table[ , c(global.param$id.col.value, names(grp))]
             
@@ -3600,7 +3667,6 @@ shinyServer(
               global.input$NA.rows <- length(na.row.idx)
             }
             
-            #global.input$table <- global.input$table[ , c(global.param$id.col.value, names(grp))]
             global.input$table <- tab
             
             ################################
@@ -3943,8 +4009,8 @@ shinyServer(
             ##################################
             ## one sample
             if(test == 'One-sample mod T'){
-               ## cat('test...')
-                withProgress(message='One-sample test', value=0, {
+               
+                withProgress(message='One-sample T test', value=0, {
 
                     count=0
                     ## loop over groups
@@ -3971,9 +4037,7 @@ shinyServer(
                         }
 
                         #############################################
-                        ## progress bar
-                        ##incProgress(1/length(unique(groups.comp)))
-                        ##incProgress( count/length(unique(groups.comp) ), detail=g)
+                        ## update progress bar
                         incProgress( 1/length(unique(groups.comp) ), detail=g)
                         count=count + 1
                     }
@@ -4129,7 +4193,7 @@ shinyServer(
               
             }
 
-            rownames(res.comb) <- make.names(res.comb$id)
+            rownames(res.comb) <- make.names(res.comb$id, unique = T)
 
             ## #########################################
             ## store the results
@@ -4190,7 +4254,8 @@ shinyServer(
             ## get the current tab
             tab.select <- input$mainPage
 
-            groups.comp=unique(global.param$grp.comp)
+            groups.comp <- unique(global.param$grp.comp)
+            groups <- global.param$grp
 
             ## test results
             res <- data.frame(global.results$data$output, stringsAsFactors=F )
@@ -4304,10 +4369,7 @@ shinyServer(
                     ## one/two sample tests
                     if(global.param$which.test != 'mod F'){
 
-                        #res <- res[ which( unlist(apply( res[, grep('^adj.P.Val', colnames(res) )], 1, function(x) sum(as.numeric(x) < input$filter.value.adj.p ))) > 0), ]
                       res <- res[ which( unlist(apply( res[, grep('^adj.P.Val', colnames(res) )], 1, 
-                                                       #function(x) sum(as.numeric(x) < input$filter.value.adj.p, na.rm=T ))
-                                                       #function(x) sum(as.numeric(x) < input$filter.value.adj.p, na.rm=T ))
                                                        function(x) sum( x < input$filter.value.adj.p, na.rm=T ))
                                                 ) > 0), ]
                       
@@ -4355,16 +4417,17 @@ shinyServer(
             
             ###################################################
             ## global filter accross all experiments
-            ##rownames(res) <- res[, 'id.concat']
-
             global.results$filtered <- res
-            ##View(res)
             global.results$filtered.groups <- res.groups
             
-            N.feat.filt <- sum( apply(res[, names(groups)], 1, function(x) sum(is.na(x))/length(x) ) < 1, na.rm=T)
+            #save(res, groups, res.groups, file='debug.RData')
             
+            ## number of features after filtering
+            #N.feat.filt <- nrow(res)
+            N.feat.filt <- sum( apply(res[, names(groups)], 1, function(x) sum(is.na(x))/length(x) ) < 1, na.rm=T)
             global.results$N.feat.filtered <- N.feat.filt
-
+          
+            #save(res, groups, res.groups, groups.comp, file='debug.RData')
 
             ## #####################################################
             ## suppress switching to the first tab
@@ -6229,14 +6292,11 @@ shinyServer(
             grp <- sort(global.param$grp)
             grp.col.legend <- global.param$grp.colors.legend
 
-            
             ## update selection
             tab <- tab[, c(id.col, names(grp))]
-            #grp.col <- grp.col[names(grp)]
             grp.col.legend <- grp.col.legend[unique(grp)]
             
             ## table
-            #tab <- tab[, setdiff(colnames(tab), id.col)]
             tab <- tab[, names(grp)]
 
             ## ############################################
@@ -6248,7 +6308,6 @@ shinyServer(
               withProgress(message = 'Correlation matrix...',{
                 cm=calculateCorrMat( tab=tab,
                                      grp=grp,
-                                    #id.col=id.col,
                                      lower= global.plotparam$cm.lower, upper= global.plotparam$cm.upper
                 )
               })
@@ -6260,32 +6319,10 @@ shinyServer(
             } else {
               cm <- global.results$cm
             }
-           
-            ## #############################################
-            ## extract correlations for each group
-            cor.group <- lapply(names(grp.col.legend), function(x){
-              cm.grp=cm[ names(grp) [grp == x], names(grp) [grp == x]]
-              cm.grp[upper.tri(cm.grp, diag = FALSE)]
-              }  )
-            #save(cor.group, file='cor.group.RData')
-            
-            #ylim <- c(min(unlist(cor.group))-0.1*min(unlist(cor.group)), max( unlist(cor.group))+0.1*max(unlist(cor.group)) )
-            ylim <- c(min(unlist(cor.group))-0.1*min(unlist(cor.group)), 1)
-            
-            # plot
-            #debug(fancyBoxplot)
-            par(mar=c(8, 5, 2, 1))
-            fancyBoxplot(cor.group, col='white', box.border=unlist(grp.col.legend), vio.alpha = 0, lwd=2.5,
-                         names=names(grp.col.legend), grid=F,
-                         show.numb = 'median', numb.col='black', 
-                         main=paste('Pairwise intra-group correlations (', global.plotparam$cm.upper,')'),
-                         ylab='Correlation coeffient',
-                         ylim=ylim,
-                         numb.cex=1,
-                         las=2)
-            
-            legend('topright', legend=names(grp.col.legend), fill=grp.col.legend, bty='n', ncol = ifelse(length(grp.col.legend) > 4, 2, 1))
-            
+            #########################################
+            ## plot
+            plotCorrBox(cm, grp, grp.col.legend, global.plotparam$cm.upper)
+   
         })
 
         ## #################################################################################
@@ -6369,15 +6406,20 @@ shinyServer(
             if(input$hm.max){
                 withProgress({
                     setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                    #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3)
-                    plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
-                  
+                    #plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
+                    plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
+                           height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
+                           width=dynamicWidthHM(length(global.param$grp)))
+                    
                   })
             } else {
                  withProgress({
                    setProgress(message = 'Processing...', detail= 'Generating Heatmap')
+                   #plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
+                   plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
+                          height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
+                          width=dynamicWidthHM(length(global.param$grp)))
                    
-                   plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
                    })
             }
         },

@@ -32,7 +32,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.6"
+VER <- "0.8.6.2"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -91,6 +91,7 @@ p_load(tibble)
 ## heatmap
 p_load(pheatmap)
 p_load(heatmaply)
+#p_load(ComplexHeatmap)
 
 # clustering
 p_load(ape)
@@ -164,13 +165,13 @@ p_load(org.Dr.eg.db)
 #p_load (rhdf5) 
 
 
-source('src/modT.r')
-source('src/helptext.r')
-source('src/my_io.r')
-source('src/gct-io.r')
-source('src/plots.r')
+source('src/modT.R')
+source('src/helptext.R')
+source('src/my_io.R')
+source('src/gct-io.R')
+source('src/plots.R')
 source('src/manage_sessions.R')
-source('src/linear_model.R')
+#source('src/linear_model.R')
 
 
 ##################################################

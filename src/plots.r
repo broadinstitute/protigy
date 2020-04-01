@@ -1,5 +1,5 @@
 ################################################################################################################
-## Filename: plots.r
+## Filename: plots.R
 ## Created: February 06, 2015
 ## Author(s): Karsten Krug
 ##
@@ -48,21 +48,23 @@ plotHM <- function(res,
   if(verbose)
     cat('\n-- plotHM --\n')
   
-  
-  #res <- global.results$
-  
-  
-  #########################################
-  if(is.null(hm.rownames))
-   #hm.rownames <- chopString(res[, 'id.concat'], STRLENGTH)
-   hm.rownames <- chopString(rownames(res), STRLENGTH)
-  
   #########################################
   ## convert to data matrix
   res <- data.matrix(res)
   res <- res[, names(grp[order(grp)])]
+ 
   
+  #########################################
+  ## rownames
+  if(is.null(hm.rownames)){
+    hm.rownames <- chopString(rownames(res), STRLENGTH)
+  } 
+  names(hm.rownames) <- rownames(res)
   
+  ############################################ 
+  ## column names
+  hm.colnames <- chopString(colnames(res),STRLENGTH)
+  names(hm.colnames) <- colnames(res)
   
   #########################################
   ## different 'styles' for different tests
@@ -91,8 +93,6 @@ plotHM <- function(res,
   hc.tmp <- HCluster(res, hm.clust = hm.clust, hc.method=hc.method, hc.dist=hc.dist)
   Rowv <- hc.tmp$Rowv
   Colv <- hc.tmp$Colv
-  #rowv.dist <- hc.tmp$rowv.dist
-  #colv.dist <- hc.tmp$colv.dist
   na.idx.row <- hc.tmp$na.idx.row
   na.idx.col <- hc.tmp$na.idx.col
   
@@ -142,42 +142,94 @@ plotHM <- function(res,
   hm.title <- paste(hm.title, '\nscaling: ',hm.scale, sep='')
   
   
- ## save(res, anno.col, anno.col.color, file='debug.RData')
+ # save(res, anno.col, anno.col.color, file='debug.RData')
   
   ############################################
   ## plot the heatmap
   if(!plotly){
+    
+    
+    ## remove NA from color names
+    #anno.col.color <- lapply(anno.col.color, function(x)x[!is.na(names(x))])
+    
+    ## ComplexHeatmap
+    # cdesc.ha <- HeatmapAnnotation(df=anno.col, col=anno.col.color,
+    #                               
+    #                               show_legend = T, show_annotation_name = T, 
+    #                               annotation_name_side = 'left',
+    #                               annotation_legend_param=list(
+    #                                 direction='horizontal'#,
+    #                                 # vt_gap = unit(0.6, 'cm')
+    #                                 #title_position = "leftcenter"
+    #                               )
+    # )
+    # hm <- Heatmap(res, col=color.hm,
+    #               
+    #               cluster_columns = Colv,
+    #               cluster_rows = Rowv,
+    #               
+    #               top_annotation = cdesc.ha,
+    #               
+    #               row_title_rot=0,
+    #               ##column_split=grp,
+    #               
+    #               name='Abundance',
+    #               show_row_names = show.rownames,
+    #               show_column_names = show.colnames,
+    #               height=height,
+    #               width=width,
+    #               column_title = hm.title,
+    #               
+    #               row_names_gp=gpar(fontsize = fontsize_row),
+    #               column_names_gp=gpar(fontsize = fontsize_col),
+    #               
+    #               column_labels=hm.colnames[colnames(res)],
+    #               row_labels=hm.rownames[rownames(res)]
+    #              
+    #               )
+    # ## plot
+    # draw(hm, annotation_legend_side='right')
+
+    
     # pheatmap
-    #View(res)
     pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
-             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm,  main=hm.title, 
-             annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH), 
-             breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col, 
-             labels_row=hm.rownames, na_col='black', scale='none', 
+             cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm,  main=hm.title,
+             annotation_col=anno.col, annotation_colors=anno.col.color, labels_col=chopString(colnames(res), STRLENGTH),
+             breaks=color.breaks,  cellwidth=cellwidth, cellheight=cellheight, gaps_col=gaps_col, gapsize_col=gapsize_col,
+             labels_row=hm.rownames, na_col='black', scale='none',
              annotation_names_col = F, height=height, width=width,
              show_rownames = show.rownames, show_colnames = show.colnames, ...)
   } else {
     
-    #save(anno.col.color, anno.col, res, grp, file='tmp.RData')
+      
+    anno.col.color <- unlist(lapply(colnames(anno.col), function(x) unlist(anno.col.color[[x]])))
+  # save(anno.col.color, anno.col, res, grp, Colv, Rowv,color.hm, hm.title,file='debug.RData')
     
-   
-    anno.col.color <-unlist(lapply(colnames(anno.col), function(x) unlist(anno.col.color[[x]])))
-    ##View(anno.col.color)
-    show.rownames=F
+    show.rownames=T
     if(show.rownames)
-      heatmaply(res, labCol = NA, margins = margins, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
-              limits=c(min.val, max.val), col_side_colors = anno.col, col_side_palette = anno.col.color,
-              colorbar_xanchor = 'right', colorbar_yanchor = 'bottom', row_dend_left = TRUE,
-              plot_method = "ggplot", seriate = 'mean', key=FALSE, hide_colorbar = T) 
+      heatmaply(res, margins = margins, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
+                limits=c(min.val, max.val), col_side_colors = anno.col, col_side_palette = anno.col.color,
+                colorbar_xanchor = 'right', colorbar_yanchor = 'bottom', row_dend_left = TRUE,
+                plot_method = "ggplot", seriate = 'mean', key=FALSE, hide_colorbar = TRUE) 
+    
+      # heatmaply(res, labCol = NA, margins = margins, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
+      #         limits=c(min.val, max.val), col_side_colors = anno.col, col_side_palette = anno.col.color,
+      #         colorbar_xanchor = 'right', colorbar_yanchor = 'bottom', row_dend_left = TRUE,
+      #         plot_method = "ggplot", seriate = 'mean', key=FALSE, hide_colorbar = T) 
     if(!show.rownames)
-      heatmaply(res, labCol = NA, labRow = NA, margins = margins, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
+      heatmaply(res, labRow = rep('', nrow(res)), margins = margins, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
                 limits=c(min.val, max.val), col_side_colors = anno.col, col_side_palette = anno.col.color,
                 colorbar_xanchor = 'right', colorbar_yanchor = 'bottom', row_dend_left = TRUE,
                 plot_method = "ggplot", seriate = 'mean', key=FALSE, hide_colorbar = T) 
+      # 
+      # heatmaply(res, labCol = NA, labRow = NA, margins = margins, Colv = Colv, Rowv = Rowv, colors = color.hm, na.value = 'black', main=hm.title,
+      #           limits=c(min.val, max.val), col_side_colors = anno.col, col_side_palette = anno.col.color,
+      #           colorbar_xanchor = 'right', colorbar_yanchor = 'bottom', row_dend_left = TRUE,
+      #           plot_method = "ggplot", seriate = 'mean', key=FALSE, hide_colorbar = T) 
   }
 
-  #if(verbose)
-  #  cat('\n-- plotHM exit--\n')
+  if(verbose)
+    cat('\n-- plotHM exit--\n')
   }
 
 ## #####################################################################
@@ -332,7 +384,7 @@ HCluster <- function(res, hm.clust, hc.method='ward.D2', hc.dist=c('euclidean', 
 
 
 #######################################################
-##
+## helper function
 ##
 ## changelog: 20140722 implementation
 ##            20141104 fixed names for x-axis
@@ -499,7 +551,9 @@ fancyBoxplot <- function(x,
 
 
 ###################################################
-## correlation matrix
+##
+##           calculate correlation matrix
+##
 ###################################################
 calculateCorrMat <- function(tab,
                             # id.col,
@@ -533,10 +587,12 @@ calculateCorrMat <- function(tab,
   return(cm)
   
 }
-
-plotCorrMat <- function(#tab,
-                        #id.col,
-                        cm,
+#########################################################
+##
+##                 plot correlation matrix
+##
+#########################################################
+plotCorrMat <- function(cm,
                         grp,
                         grp.col.legend,
                         filename=NA, 
@@ -550,29 +606,6 @@ plotCorrMat <- function(#tab,
                       ){
   if(verbose)
     cat('\n-- plotCorrMat --\n')
-  
-  ## table
-  #tab <- tab[, setdiff(colnames(tab), id.col)]
-  #tab <- tab[, names(grp)]
-  
-  ## transpose
-  #if(trans)
-  #  tab=t(tab)
-  
-  ###########################
-  ## calculate correlations
-  ## withProgress({
-  ##     setProgress(message = 'Processing...', detail= 'Calculation correlations')
-  #cm.upper <- cor(tab, use='pairwise', method=match.arg(upper))
-  #cm.lower <- cor(tab, use='pairwise', method=match.arg(lower))
-  ##})
-  ###########################
-  ## initialize correlation matrix
-  #cm <- matrix(NA, ncol=ncol(cm.upper),nrow=nrow(cm.upper), dimnames=dimnames(cm.upper))
-  #cm[ lower.tri(cm, diag=T) ] <- cm.lower[lower.tri(cm.lower, diag=T)]
-  #cm[ upper.tri(cm, diag=F) ] <- cm.upper[upper.tri(cm.upper, diag=F)]
-  
-  
   
   ## colors
   color.breaks = seq(-1, 1, length.out=20)
@@ -590,32 +623,15 @@ plotCorrMat <- function(#tab,
   Colv=F
   
   cm <- cm %>% data.matrix()
-  #head(cm)
-  #heatmaply_cor(cm, labRow = NA, labCol = NA, 
-  #              col_side_colors = anno, 
-  #              row_side_colors = anno, 
-  #              Rowv=Rowv, Colv=Colv, 
-  #              col_side_palette=grp.col.legend, 
-  #              row_side_palette=grp.col.legend, 
-  #              color=color.hm,
-  #              draw_cellnote=display_numbers,
-  #              cellnote_textposition='middle center',
-  #              file=filename)
-  
-  ##setHook("grid.newpage", function() pushViewport(viewport(x=1,y=1,width=0.9, height=0.9, name="vp", just=c("right","top"))), action="prepend")
+ 
   setHook("grid.newpage", function() pushViewport(viewport(x=1,y=1,width=0.9, height=0.9, name="vp", just=c("right","top"))))
-  #if(trans)
-  #  pheatmap(cm, fontsize_row=10, fontsize_col=10,
-  #           cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, width=width, height=height)
-  #else
   pheatmap(cm, fontsize_row=10, fontsize_col=10,
              cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm, filename=filename, labels_col=chopString(colnames(cm), STRLENGTH), labels_row=chopString(rownames(cm), STRLENGTH), main='', annotation_col=anno, annotation_colors=anno.color,  annotation_row=anno, display_numbers=display_numbers, fontsize_number=100/ncol(cm)+10, breaks=color.breaks, gaps_col=gaps.column, gaps_row=gaps.row, width=width, height=height)
   setHook("grid.newpage", NULL, "replace")
   
   ## add corr coeff
-  grid.text(paste(match.arg(upper)), y=.995, x=.4, gp=gpar(fontsize=25))
-  grid.text(paste(match.arg(lower)), x=-0.01, rot=90, gp=gpar(fontsize=25))
-
+  grid.text(paste(match.arg(upper)), y=.995, x=.4, gp=gpar(fontsize=20))
+  grid.text(paste(match.arg(lower)), x=-0.01, rot=90, gp=gpar(fontsize=20))
 
   if(verbose)
       cat('\n-- plotCorrMat exit--\n')
@@ -640,7 +656,6 @@ plotFAN <-function(res, grp, grp.col, grp.col.legend, show.tip.label=T, tip.cex=
   ## cluster 
   hc.tmp <- HCluster(res, hm.clust = 'column')
   
-  #dist <- hc.tmp$colv.dist
   hc <- hc.tmp$Colv
   dend <- as.dendrogram(hc)
   phyl <- as.phylo(dend)
@@ -724,7 +739,6 @@ makeBoxplotly <- function(tab, id.col, grp, grp.col, verbose=T, title='boxplot')
   
   ##########################################
   ## plot
-  #p <-  plot_ly(tab, y=tab[, 1],  type='box', name=colnames(tab)[1], marker = list(color = grp.col[1]))
   p <-  plot_ly(tab, x=tab[, 1],  type='box', name=colnames(tab)[1], marker = list(color = grp.col[1]), line=list( color=grp.col[1]), hoverinfo='name+x', hoverlabel=list(namelength=STRLENGTH)  )
   for(i in 2:ncol(tab))
     p <- p %>% add_trace(x=tab[, i], name=colnames(tab)[i], marker=list(color = grp.col[i] ), line=list( color=grp.col[i]))
@@ -891,9 +905,9 @@ my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5,
 #################################################
 ##  plotly PCA plots
 ##
-plotlyPCA <- function(global.param,
-                      global.results,
-                      pca.x,
+plotlyPCA <- function(global.param,     ## reactiveValue converted to list
+                      global.results,   ## reactiveValue converted to list
+                      pca.x,            ## input$pca.x
                       pca.y,
                       pca.z=NULL
                       ){
@@ -977,16 +991,43 @@ plotlyPCA <- function(global.param,
                             zaxis=list(title=paste('PC', pca.z))) )
   }
   
-  #return(p)
-  #p <- p %>% plotly_build()
-  #print(plotly_build(p))
-  ## return plot and pca
   out <- list(p=p,
               pca=pca.out)
   return(out)
-  ##return(pca.out)
 } ## end plotlyPCA
 
+#####################################################
+##
+##         correlation boxplots
+##
+###################################################### 
+plotCorrBox <- function(cm,              ## correlation matrix 
+                        grp,             ## class vector   
+                        grp.col.legend,  ## group colors
+                        cor.method=''){
+
+  ## #############################################
+  ## extract correlations for each group
+  cor.group <- lapply(names(grp.col.legend), function(x){
+    cm.grp=cm[ names(grp) [grp == x], names(grp) [grp == x]]
+    cm.grp[upper.tri(cm.grp, diag = FALSE)]
+  }  )
+  ylim <- c(min(unlist(cor.group))-0.1*min(unlist(cor.group)), 1)
+  
+  # plot
+  par(mar=c(8, 5, 2, 1))
+  fancyBoxplot(cor.group, col='white', box.border=unlist(grp.col.legend), vio.alpha = 0, lwd=2.5,
+               names=names(grp.col.legend), grid=F,
+               show.numb = 'median', numb.col='black', 
+               main=paste('Pairwise intra-group correlations (', cor.method,')'),
+               ylab='Correlation coeffient',
+               ylim=ylim,
+               numb.cex=1,
+               las=2)
+  
+  legend('topright', legend=names(grp.col.legend), fill=grp.col.legend, bty='n', ncol = ifelse(length(grp.col.legend) > 4, 2, 1))
+
+}
 
 #####################################################
 ## visualize variances explained by PCA

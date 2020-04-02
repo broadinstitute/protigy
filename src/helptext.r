@@ -30,11 +30,17 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.6.3 April 01, 2020</b>
+<ul>
+<li>Heatmap: Disabled interactive heatmap due to incompatibility with newer verions of the heatmaply package.</li>
+<li>Excel Sheet: fixed broken column desciptions that occured when testing for prefix/suffix adn the column the respective column had been annotated already.</li>
+<li>Scatterplots: columns from other experiments can now be selected.</li>
+<li>Misc: improved error handling and error messages when uploading the experimental desing file.</li>
+</ul>
 <b>v0.8.6.2 March 27, 2020</b>
 <ul>
 <li>Misc: improved handling on redundant ids.</li>
 </ul>
-      
 <b>v0.8.6.1 March 18, 2020</b>
 <ul>
 <li>Heatmap: Fixed number of significant features.</li>
@@ -43,7 +49,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.6 March 9, 2020</b>
 <ul>
-<li>Excel Sheet: added column descriptions of Protigy and Spectrum Mill-specific columns.</li>
+<li>Excel Sheet: added column descriptions for Protigy and Spectrum Mill-specific columns.</li>
 <li>Experimental design: robustified handling of special characters in experiment names.</li>
 <li>Volcano plots: added box around legend for highlighted proteins/PTM-sites.</li>
 <li>PCA plots: number of features used for PCA shown in  title.</li>
@@ -519,7 +525,6 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
     ## gct v3
     if(what == 'gct3'){
       
-      #txt <- paste('<br><br><p><font size=\"4\">Found GCT v1.3 file with', ncol(global.input$cdesc),'annotation columns. Choose one column as class vector for marker selection.</p></font></p>')
       txt <- paste('<br><p><font size=\"4\"><b>Found GCT v1.3 file</b><br>Choose the annotation column to use as class vector for marker selection.</p></font></p>')
       
       ## render HTML

@@ -154,7 +154,7 @@ shinyServer(
             pca.x='PC 1',
             pca.y='PC 2',
             pca.z='PC 3',
-            pca.load.topn=20,
+          #  pca.load.topn=20,
 
             ## correlation matrix
             cm.upper='pearson',
@@ -191,6 +191,7 @@ shinyServer(
         #####################################
         ## Error messages
         output$error <- renderText({
+         
             if( is.null(error$msg) ) return()
           
             if(is.null(error$title))
@@ -429,9 +430,25 @@ shinyServer(
             for(i in 1:length( grp.unique )){
 
                 ## extract data columns of current experiment
-                scat.x <- names(grp)[which(grp == grp.unique[i])]
-                scat.y <- names(grp)[which(grp == grp.unique[i])]
+                grp.idx <- which(grp == grp.unique[i])
+                
+                ## index of other experiments
+                other.idx <- setdiff(1:length(grp), grp.idx)
+                # if(!is.null(input$scat.showall)){
+                #   if(input$scat.showall)
+                    grp.idx <- c(grp.idx, other.idx)
+                # }
+                scat.x <- names(grp)[grp.idx]
+                scat.y <- names(grp)[grp.idx]
 
+                ##
+                # scat.x.html <- c(
+                #   "<option value='none'></option>",                 # add default opt
+                #   sapply(scat.x, function(x){   # turn choices into html
+                #     paste0("<option value='",x,"'>", x, "<option>")
+                #   })
+                # )
+                   
                 scat.tabs[[i+1]]=tabPanel(paste0( grp.unique[ i ] ),
                                           fluidPage(
 
@@ -441,8 +458,9 @@ shinyServer(
 
                                                   fluidRow(
                                                       column(1),
-                                                      column(5, selectInput( paste0('scat.x.', grp.unique[i]), 'x-axis', scat.x, selected=scat.x[1], multiple=FALSE, selectize=TRUE)),
-                                                      column(5, selectInput( paste0('scat.y.', grp.unique[i]), 'y-axis', scat.y, selected=scat.y[2], multiple=FALSE, selectize=TRUE)),
+                                                      #column(1, checkboxInput(paste0('scat.showall'), label='Show all columns', value=FALSE)),
+                                                      column(5, selectInput( paste0('scat.x.', grp.unique[i]), 'x-axis', choices=scat.x, selected=scat.x[1], multiple=FALSE, selectize=TRUE)),
+                                                      column(5, selectInput( paste0('scat.y.', grp.unique[i]), 'y-axis', choices=scat.y, selected=scat.y[2], multiple=FALSE, selectize=TRUE)),
                                                       column(1)
                                                   )
 
@@ -606,20 +624,20 @@ shinyServer(
             ## ###########################################
             ##   HEATMAPPLY
             ## ###########################################
-            hm.int.tab <-  tabPanel('Interactive heatmap',
-                                box(title='Interactive Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
-                                    fluidRow(
-                                      column(2, selectInput( "hm.int.scale", "Scale", c("row","column","none"), selected=global.plotparam$hm.scale)),
-                                      column(2, selectInput( "hm.int.clust", "Cluster", c("column","row","both","none"), selected=ifelse(global.param$which.test != "mod F", "none" ,"both"))),
-                                      column(2, checkboxInput('hm.int.max', 'Cap values', value=global.plotparam$hm.max)),
-                                      column(2, numericInput( "hm.int.max.val", "Max. value", value=global.plotparam$hm.max.val, step=1, min=2))
-                                    ),
-                                    fluidRow(
-                                      column(12, align='center', plotlyOutput("HM.int", height=1000, width=1000 ))
-                                    )
-                                )
-            )
-            
+            # hm.int.tab <-  tabPanel('Interactive heatmap',
+            #                     box(title='Interactive Heatmap', status = 'primary', solidHeader = T, width="100%", height="100%",
+            #                         fluidRow(
+            #                           column(2, selectInput( "hm.int.scale", "Scale", c("row","column","none"), selected=global.plotparam$hm.scale)),
+            #                           column(2, selectInput( "hm.int.clust", "Cluster", c("column","row","both","none"), selected=ifelse(global.param$which.test != "mod F", "none" ,"both"))),
+            #                           column(2, checkboxInput('hm.int.max', 'Cap values', value=global.plotparam$hm.max)),
+            #                           column(2, numericInput( "hm.int.max.val", "Max. value", value=global.plotparam$hm.max.val, step=1, min=2))
+            #                         ),
+            #                         fluidRow(
+            #                           column(12, align='center', plotlyOutput("HM.int", height=1000, width=1000 ))
+            #                         )
+            #                     )
+            # )
+            # 
             ## #############################################
             ##   FANPLOT
             ## #############################################
@@ -636,10 +654,11 @@ shinyServer(
                                     )
             )
             
-            clust.tab <- vector('list', 3)
+            clust.tab <- vector('list', 2)
             clust.tab[[1]] <- hm.tab
-            clust.tab[[2]] <- hm.int.tab
-            clust.tab[[3]] <- hc.fanplot
+            #clust.tab[[2]] <- hm.int.tab
+            #clust.tab[[3]] <- hc.fanplot
+            clust.tab[[2]] <- hc.fanplot
             
             ## ##############################################
             ##  MORPHEUS widget
@@ -878,8 +897,9 @@ shinyServer(
                         ##              insert heatmap
                         #######################################
                         ##hm.tab,
-                        navbarMenu('Clustering', clust.tab[[1]], clust.tab[[2]], clust.tab[[3]]),
-                        
+                       # navbarMenu('Clustering', clust.tab[[1]], clust.tab[[2]], clust.tab[[3]]),
+                       navbarMenu('Clustering', clust.tab[[1]], clust.tab[[2]]),
+                       
                         ##do.call(navbarMenu, hm.tab),
                         
                         #######################################
@@ -932,8 +952,10 @@ shinyServer(
                       ##              insert heatmap
                       #######################################
                       ##hm.tab,
-                      navbarMenu('Clustering', clust.tab[[1]], clust.tab[[2]], clust.tab[[3]]),
-                      ##do.call(navbarMenu, hm.tab),
+                      #navbarMenu('Clustering', clust.tab[[1]], clust.tab[[2]], clust.tab[[3]]),
+                      navbarMenu('Clustering', clust.tab[[1]], clust.tab[[2]]),
+                      
+                      #do.call(navbarMenu, hm.tab),
                       #morph.tab,
                       
                       ## ####################################
@@ -3597,6 +3619,14 @@ shinyServer(
             ##
             ###############################################################
 
+            ## Number of rows in exp design file does not match number of columns in data file
+            if( length( Column.Name) != ncol(global.input$table)  ){
+             
+              error$title <- "Problem parsing experimental design file."
+              error$msg <- 'Experimental design file does not match the table you have uploaded (different number of rows/columns)!'
+              return()
+            }
+            
             ## names in the exp design file do not match to the table
             if( sum( Column.Name != colnames(global.input$table)) > 0 ){
                 error$title <- "Problem parsing experimental design file."

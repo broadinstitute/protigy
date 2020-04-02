@@ -158,7 +158,7 @@ shinyUI(
 
                          manageSessionsUI('manageSessions'),
                          
-                         #htmlOutput('error'),
+                         htmlOutput('error'),
 
                          printHTMLUI('getting.started'),
                          printHTMLUI('change.log'),

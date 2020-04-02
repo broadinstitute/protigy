@@ -32,7 +32,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.6.2"
+VER <- "0.8.6.3"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -1304,7 +1304,7 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
   }
   
   ## #########################################################
-  ## Two sample moderated T- test:
+  ## Two sample moderated T-test:
   ## adjust labels in the header of the Excel sheet
   ## WT.vs.KO -> KO.over.WT
   if(which.test == 'Two-sample mod T'){
@@ -1326,9 +1326,11 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
   
   ##########################################################
   ## add column descriptions
+  ## 
   if(!is.null(headerDesc )){
     
-    ## descriptions in the file
+  
+    ## descriptions available in the in the "library" file
     ColumnHeaderLibrary <- headerDesc$ColumnHeader
     DescriptionLibrary <- headerDesc$Description
     SourceLibrary <- headerDesc$Source
@@ -1339,8 +1341,21 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
     Description <- Source <- rep(NA, length(ColumnHeader))
     names(Description) <- names(Source) <- names(ColumnHeader) <- ColumnHeader
     
+    ## to store indicies of already matched column names
+    matched <- c()
+    
+    ## expression columns used
+    for(cc in 1:nrow(expDesign)) {
+      match.idx <- which(ColumnHeader == expDesign[cc, 'Column'])
+      
+      Description[ match.idx ] <- paste0('Abundance in group "', expDesign[cc, 'Experiment'],'"') 
+      Source[ match.idx ] <- 'Protigy'
+      
+      matched <- c( matched, match.idx)
+    }
+    
     ############################    
-    ## loop over terms in description file
+    ## loop over terms in the 'library' file
     for(cc in  ColumnHeaderLibrary){
 
       ## exact match
@@ -1348,49 +1363,63 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
       
       if(length(match.idx) == 1){
 
-        if(SourceLibrary[cc] == 'limma'){
-          Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "', which.test, '"')
-        } else {
-          Description[ match.idx ] <- paste0(DescriptionLibrary[cc])
-        }
+        ## if hasn't been matched ...
+        if( !(match.idx %in% matched) ){
+          if(SourceLibrary[cc] == 'limma'){
+            Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "', which.test, '"')
+          } else {
+            Description[ match.idx ] <- paste0(DescriptionLibrary[cc])
+          }
         
-        Source[ match.idx ] <- SourceLibrary[ cc ]
+          Source[ match.idx ] <- SourceLibrary[ cc ]
         
-      }
+          matched <- c( matched, match.idx)
+        } ## end if already matched
+        
+      } ##else { 
+      
       ## no exact match
-      if(length(match.idx) == 0) {
+     else if(length(match.idx) == 0) {
 
         ## test prefix: protigy/limma columns
-        match.idx <- grep( paste0('^',cc,'.*'), ColumnHeader)
-        if(length(match.idx) > 0){
-         
-          if(SourceLibrary[cc] == 'limma'){
-            Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "', which.test, '" in group "',   sub(paste0('^', cc, '.'), '', ColumnHeader[match.idx]), '"')
-         } else {
-            Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "',sub(paste0('^', cc, '.'), '', ColumnHeader[match.idx]), '"')
-         }
-          Source[ match.idx ] <- SourceLibrary[ cc ]
+        match.idx <- grep( paste0('^',cc,'\\..*'), ColumnHeader)
+        
+        if(length(match.idx) > 0 ){
+        
+          ## if hasn't been matched ...
+          if( !(match.idx %in% matched) ) {
+              if(SourceLibrary[cc] == 'limma'){
+                Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "', which.test, '" in group "',   sub(paste0('^', cc, '.'), '', ColumnHeader[match.idx]), '"')
+             } else {
+                Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "',sub(paste0('^', cc, '.'), '', ColumnHeader[match.idx]), '"')
+             }
+              Source[ match.idx ] <- SourceLibrary[ cc ]
+              matched <- c( matched, match.idx)
+          }  ## end if already matched
           
         } else { ## end test prefix
           
           ## text suffix
-          match.idx <- grep( paste0('.*', cc,'$'), ColumnHeader)
-          if(length(match.idx) > 0){
+          match.idx <- grep( paste0('.*\\.', cc,'$'), ColumnHeader)
+          if(length(match.idx) > 0 ){
             
-            if(SourceLibrary[cc] == 'SM'){
-              Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' in folder "',   sub(paste0('.', cc, '$'), '', ColumnHeader[match.idx]), '"')
-            } else {
-              Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "',sub(paste0('^', cc, '.'), '', ColumnHeader[match.idx]), '"')
-            }
-            Source[ match.idx ] <- SourceLibrary[ cc ]
+            ## if hasn't been matched ...
+            if( !(match.idx %in% matched) ){
+                if(SourceLibrary[cc] == 'SM'){
+                  Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' in directory "',   sub(paste0('.', cc, '$'), '', ColumnHeader[match.idx]), '"')
+                } else {
+                  Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "',sub(paste0('^', cc, '.'), '', ColumnHeader[match.idx]), '"')
+                }
+                Source[ match.idx ] <- SourceLibrary[ cc ]
+                matched <- c( matched, match.idx)
+            }  ## end if already matched
           }
         } ## end test suffix 
       } ## end no extact match
-      
     } ## end loop over ColumnHeaderLibrary
     
     allColumnsInTable <- data.frame(ColumnHeader, Description, Source)
-  }
+  } 
   #############################
   ## export
   render.xlsx <- try(

@@ -32,7 +32,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.6.3"
+VER <- "0.8.7"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -53,11 +53,9 @@ APPNAME <<- 'Protigy'
 ## app folder
 APPDIR <<- getwd()
 ## directory to store data files
-##DATADIR <<- ifelse(OS=='Windows', ".", "/local/shiny-data/")
-DATADIR <<- ifelse(OS=='Linux', "/local/shiny-data/", '.')
+DATADIR <<- ifelse(OS=='Linux', "/local/shiny-data/", tempdir())
 ## R version
 RVERSION <- as.numeric(paste(R.version$major, sub('\\..*','',R.version$minor), sep='.')) 
-
 ## email for trouble shooting
 MAIL <<- 'karsten@broadinstitute.org'
 ## URL to configuration app (SSP only)
@@ -154,6 +152,7 @@ p_load(org.Mm.eg.db)
 p_load(org.Rn.eg.db)
 p_load(org.Dr.eg.db)
 
+p_load(gprofiler2)
 
 ## morpheus
 #p_load_gh('morpheus')
@@ -1460,5 +1459,53 @@ create.fn <- function(label, which.test, log.transform, repro.filt, filt.data, s
   )
   return(fn)
 }
+
+
+#######################################################
+##
+## returns the index of significant features in "group" in the 
+## UNFILTERED dataset
+##
+get_sig_features <- function(global.results, global.param, group){
+  
+  ## unfiltered data set
+  res = as.data.frame( global.results$data$output )
+  
+  ## #############################
+  ## one-sample T or two sample T
+  if(global.param$which.test %in% c('One-sample mod T', 'Two-sample mod T')){
+    
+    if(global.param$filter.type == 'adj.p')
+      pval <- res[, paste('adj.P.Val.', group, sep='')]
+    else if(global.param$filter.type == 'nom.p')
+      pval <- res[, paste('P.Value.', group, sep='')]
+    else
+      pval <- rep(1, nrow(res))
+  }
+  ## ###############################
+  ## p-values mod F
+  if(global.param$which.test == 'mod F') {
+    
+    if(global.param$filter.type == 'adj.p')
+      pval <- res[, paste('adj.P.Val', sep='')]
+    else if(global.param$filter.type == 'nom.p')
+      pval <- res[, paste('P.Value', sep='')]
+    else
+      pval <- rep(1, nrow(res))
+  }
+ 
+  ## ###############################
+  ## p-values no test
+  if(global.param$which.test == 'none') {
+    pval <- rep(1, nrow(res))
+  }
+  
+  ##################################
+  ## indices of significnat features
+  sig.idx <- which(pval < as.numeric(global.param$filter.value ))
+  
+  return(sig.idx)
+}
+
 
 

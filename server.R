@@ -54,6 +54,7 @@ shinyServer(
             
             pca=NULL,
             cm=NULL,
+            gprof=NULL,
             
             repro.filt=NULL,
 
@@ -116,7 +117,9 @@ shinyServer(
             collapse.ppi=TRUE,             ## should PPI query panel be collapsed?
             
             update.pca=FALSE,
-            update.cm=FALSE
+            update.cm=FALSE,
+            update.gprof.up=TRUE,
+            update.gprof.dn=TRUE
 
         )
 
@@ -161,6 +164,11 @@ shinyServer(
             cm.lower='spearman',
             cm.numb=FALSE,
             
+            ## gprofiler
+            gprof.source.all=c('GO:BP', 'GO:MF', 'GO:CC', 'KEGG', 'WP'),
+            gprof.source.selected=c('GP:BP', 'KEGG'),
+            gprof.fdr=0.01,
+          
             ## fanplot
             HC.fan.show.tip.label=T,
             HC.fan.tip.cex=1
@@ -418,7 +426,37 @@ shinyServer(
                                     
                           ) ## end tab panel
 
-
+            ############################################
+            ## gProfiler
+            gprof.tabs <- list()
+            gprof.tabs[[1]] <- 'Functional enrichment analysis'
+            for(i in 1:length( grp.unique )){
+              
+              gprof.tabs[[i+1]] <- tabPanel(paste0( grp.unique[ i ] ),
+                                            fluidPage(
+                                              ## ###############################
+                                              ## plot
+                                              box( title=grp.unique[i], status = 'primary', solidHeader = T, width=12,
+                                                   fluidRow(column(2, selectInput(paste0('gprof.src.', grp.unique[i]), label='Source' , 
+                                                                                  choices=unlist(global.plotparam$gprof.source.all), 
+                                                                                  multiple = T, 
+                                                                                  selected = unlist(global.plotparam$gprof.source.selected )) ),
+                                                            column(2, numericInput(paste0('gprof.fdr.', grp.unique[i]), label='FDR', value = global.plotparam$gprof.fdr, min = 0, max=1, step = 0.01)),
+                                                            column(8)
+                                                            ),
+                                                   fluidRow(
+                                                     column(12, align='center', plotlyOutput(  paste0('gprof.up.', grp.unique[i]) , width=800, height=600) )
+                                                   ), ## end fluiRow
+                                                   fluidRow(
+                                                     column(12, align='center', plotlyOutput(  paste0('gprof.dn.', grp.unique[i]) , width=800, height=600) )
+                                                   )
+                                                   
+                                              ) ## end box
+                                            )
+                                            
+                                            )
+            }
+            
             ## ##########################################
             ## SCATTERPLOTS plotly
             ## - for each group comparison
@@ -918,6 +956,11 @@ shinyServer(
                        ## ####################################
                        do.call(navbarMenu, scat.tabs),
 
+                       ## ####################################
+                       ##          insert gprofiler plots
+                       ## ####################################
+                       #do.call(navbarMenu, gprof.tabs),
+                      
                        #######################################
                        ##              insert PCA
                        #######################################
@@ -1218,6 +1261,14 @@ shinyServer(
           #View(head(cdesc))
           # store grp coloum
           global.param$grp.gct3 <- input$grp.gct3
+          
+          if(!input$grp.gct3 %in% colnames(cdesc)){
+              
+              error$title <- paste("Parsing error")
+              error$msg <- paste("Can't find column'",input$grp.gct3, "'in the sample meta data. Does it contain special characters (e.g. blanks)?")
+              return()
+             
+          }
           
           # initialize grp file
           Column.Name <- colnames(tab)
@@ -2346,7 +2397,8 @@ shinyServer(
             
             #View(rdesc)
             
-            rid <- rdesc[, global.param$id.col.value] #rownames(mat)
+            #rid <- rdesc[, global.param$id.col.value] #rownames(mat)
+            rid <- rdesc[, 'id'] #rownames(mat)
             
             #cat('test\n')
             
@@ -3351,6 +3403,8 @@ shinyServer(
                 error$msg <- paste('No column meta data tracks defined! Need at least one column meta data track to use as class vector.') 
                 validate( need(nrow(gct@cdesc) > 0, 'Error parsing GCT 1.3 column meta data.'))
               }
+              ## robustify cdesc column names
+              colnames(gct@cdesc) <- make.names(colnames(gct@cdesc))
               
               ## remove 'id'
               if('id' %in% colnames(gct@cdesc)){
@@ -3551,6 +3605,11 @@ shinyServer(
             ###################################################################
             ins.scat()
 
+            ###################################################################
+            ##            insert the panels for the gprofiler plots
+            ###################################################################
+            #ins.gprof()
+            
             ## #####################################
             ## generate id.map for compatibility with < v0.7.0
             if(is.null(global.results$id.map)){
@@ -4255,6 +4314,9 @@ shinyServer(
             ## #################################################################
             ins.scat()
 
+            ###################################################################
+            ##            insert panels fo grprofiler
+            #ins.gprof()
 
             ## #################################################################
             ## increment counter: will invoke the filter
@@ -4472,6 +4534,9 @@ shinyServer(
             ## flag to update correlation matrix
             global.param$update.cm <- TRUE
             
+            ## flag to update gprofiler
+            global.param$update.gprof.up <- TRUE
+            global.param$update.gprof.dn <- TRUE
         })
 
 
@@ -5066,6 +5131,7 @@ shinyServer(
             }
             global.param$update.ppi.select <- FALSE
         })
+        
         ## ##################################################################
         ## obserever to trigger  'updateSelectizeInput' for SCATTER plots
         ## - server side rendering of selectizeInput
@@ -5089,6 +5155,80 @@ shinyServer(
             global.param$update.ppi.select.scat <- FALSE
         })
 
+        ## ##############################################################
+        ##
+        ##            insert gprofile plots
+        ##
+        ## ##############################################################
+        ins.gprof <- reactive({
+          cat('gprof test...\n')
+          withProgress({
+            
+            setProgress( message='Preparing gprofile plots...')
+            
+            grp.comp <- unique( global.param$grp )
+            
+            ## #########################################
+            ## loop over group comparsions
+            for(i in 1:length(grp.comp)){
+              local({
+                
+                my_i <- i
+                
+                ## ########################
+                ## the actual plots
+                
+                ## up regulated
+                output[[ paste("gprof.up", grp.comp[my_i], sep='.') ]] <- renderPlotly({
+                 ## cat('\ntes1...\n')
+                   ## run gprofiler
+              #if(is.null( global.results$gprof[[ paste("gprof.up", grp.comp[my_i], sep='.') ]]) | global.param$update.gprof.up ){
+               ##cat('tesssttt:',global.param$update.gprof.up, '\n')
+            #  if(global.param$update.gprof.up ){
+                     cat('\ntes2...\n')         
+                      gp <- run_gProfileR(reactiveValuesToList(global.results),
+                                 reactiveValuesToList(global.param),
+                                 direction='up',
+                                 group=grp.comp[my_i],
+                                 src=input[[paste0('gprof.src.', grp.comp[my_i])]],
+                                 fdr=input[[paste0('gprof.fdr.', grp.comp[my_i])]])
+                   
+                      #if(class(gp) != 'try-error'){
+                        global.results$gprof[[paste("gprof.up", grp.comp[my_i], sep='.')]] <- gp
+                      #}
+                     global.param$update.gprof.up <- FALSE
+                      gostplot(gp$gp, interactive = T ) %>% layout(title=paste0('up-regulated (n=', length(gp$genes),')'))
+                      
+                   #} # else {
+                   #  gp <- global.results$gprof[[ paste("gprof.up", grp.comp[my_i], sep='.') ]]  
+                    ##cat('\ntest3...\n')
+                    #save(gp, file='debug.RData')
+                   #}
+                   #validate(need(!is.null(gp), message = 'gp test'))
+                   ## plot
+                   #gostplot(gp$gp, interactive = T ) %>% layout(title=paste0('up-regulated (n=', length(gp$genes),')'))
+                
+                 })
+                ## down regulated
+                output[[ paste("gprof.dn", grp.comp[my_i], sep='.') ]] <- renderPlotly({
+                  # gp <- run_gProfileR(reactiveValuesToList(global.results),
+                  #                     reactiveValuesToList(global.param),
+                  #                     direction='down',
+                  #                     group=grp.comp[my_i],
+                  #                     src=input[[paste0('gprof.src.', grp.comp[my_i])]],
+                  #                     fdr=input[[paste0('gprof.fdr.', grp.comp[my_i])]])
+                  # 
+                  # validate(need(!is.null(gp), message = 'gp test'))
+                  # 
+                  # #gostplot(gp$gp, interactive = T ) %>% layout(title=paste0('down-regulated (n=', length(gp$genes),')'))
+                  
+                     })
+              })
+            }})
+          
+        }) ## end reactive
+        
+        
 
 
         ## ##############################################################
@@ -5354,7 +5494,7 @@ shinyServer(
             ## unfiltered data set
             res = as.data.frame( global.results$data$output )
 
-                  ## #############################
+            ## #############################
             ## p-values one-sample T
             if(global.param$which.test == 'One-sample mod T'){
 

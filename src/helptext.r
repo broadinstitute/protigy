@@ -30,6 +30,14 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.7 August 05, 2020</b>
+<ul>
+<li>GCT v1.3 import: Error message when name of group variable contains special characters.</li>
+<li>GCT v1.3 import: Robustified column names of cdesc object.</li>
+<li>Misc: fixed inconsistent capitilzation of file extentions (.r vs. .R)</li>
+<li>Misc: data folder set to <code>tempdir()</code> when running locally</li>
+</ul>
+
 <b>v0.8.6.3 April 01, 2020</b>
 <ul>
 <li>Heatmap: Disabled interactive heatmap due to incompatibility with newer verions of the heatmaply package.</li>
@@ -39,7 +47,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.6.2 March 27, 2020</b>
 <ul>
-<li>Misc: improved handling on redundant ids.</li>
+<li>Misc: improved handling of redundant ids.</li>
 </ul>
 <b>v0.8.6.1 March 18, 2020</b>
 <ul>

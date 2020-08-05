@@ -587,6 +587,8 @@ calculateCorrMat <- function(tab,
   return(cm)
   
 }
+
+
 #########################################################
 ##
 ##                 plot correlation matrix
@@ -1086,3 +1088,139 @@ myColorRamp <- function(colors, values, opac=1, range=NULL) {
 
   rgb(x[,1], x[,2], x[,3], alpha=opac*255, maxColorValue = 255)
 }
+
+
+# ##########################################################
+# ## gprofiler
+# plot_pProfileR <- function(global.results, global.param, group, direction=c('up', 'down'), src, fdr=0.01, bg.genes=c('all', 'detected')){
+#   
+#   #org <- try(switch(global.results$orgtype, 'HSA'='hsapiens', 'RNO'='rnorvegicus', 'MMU'='mmusculus'))
+#   #if(class(org) == 'try-error') return(NULL)
+#   
+#   cat('\n-- plot_pProfileR --\n')
+#   #if(!is.null(error$msg)) return()
+#   
+#   direction <- match.arg(direction)
+#   bg.genes <- match.arg(bg.genes)
+#   
+#   ## #############################
+#   ## filtered data set
+#   res = as.data.frame( global.results$filtered )
+#   
+#   ## extract log FC
+#   logFC <- res[, paste('logFC.', group, sep='')]
+#   genes.all <- res[, 'id.mapped']
+#   
+#   if(bg.genes == 'all'){
+#     bg.genes <- NULL
+#   } else {
+#     bg.genes <- genes.all[!is.na(genes.all)]
+#   }
+#   
+#   ## signififcant features
+#   keep.idx <- get_sig_features(global.results, global.param, group)
+#   
+#   ## separate up from down
+#   if(direction == 'up')
+#     idx <- which(logFC > 0)
+#   if(direction == 'down')
+#     idx <- which(logFC < 0)
+#   
+#   if(length(keep.idx) > 4){
+#     
+#     genes <- res[idx , 'id.mapped'] %>% unique %>% na.omit()
+#     ##genes.up <- res[up.idx , 'id.mapped'] %>% unique
+#     cat('direction: ', direction, '\nngenes:', length(genes),'\n')
+#     
+#     ## run gprofiler
+#     gp <- gost(genes, organism = "hsapiens", ordered_query = TRUE,
+#                multi_query = FALSE, significant = TRUE, exclude_iea = TRUE,
+#                measure_underrepresentation = FALSE, evcodes = FALSE,
+#                user_threshold = fdr, 
+#                correction_method = c("fdr"),
+#                domain_scope = c("annotated"),
+#                custom_bg = bg.genes,
+#                numeric_ns = "", 
+#                sources=src
+#                #sources = c('GO:BP', 'GO:MF', 'GO:CC')
+#     )
+#     ## plot    
+#     p <- try(gostplot(gp, interactive = T ) %>% layout(title=paste0(direction,'-regulated (n=', length(genes),')')))
+#     
+#     
+#     #p
+#   } else { ## if if significant features
+#     p <- NULL
+#   }
+#   
+#   cat('\n-- end: plot_pProfileR --\n')
+#   
+#   p
+# }
+##########################################################
+## gprofiler
+run_gProfileR <- function(global.results, global.param, group, direction=c('up', 'down'), src, fdr=0.01, bg.genes=c('all', 'detected')){
+  
+  #org <- try(switch(global.results$orgtype, 'HSA'='hsapiens', 'RNO'='rnorvegicus', 'MMU'='mmusculus'))
+  #if(class(org) == 'try-error') return(NULL)
+  
+  cat('\n-- run_gProfileR --\n')
+  #if(!is.null(error$msg)) return()
+  
+  direction <- match.arg(direction)
+  bg.genes <- match.arg(bg.genes)
+  
+  ## #############################
+  ## filtered data set
+  res = as.data.frame( global.results$filtered )
+  
+  ## extract log FC
+  logFC <- res[, paste('logFC.', group, sep='')]
+  genes.all <- res[, 'id.mapped']
+  
+  if(bg.genes == 'all'){
+    bg.genes <- NULL
+  } else {
+    bg.genes <- genes.all[!is.na(genes.all)]
+  }
+  
+  ## signififcant features
+  keep.idx <- get_sig_features(global.results, global.param, group)
+  
+  ## separate up from down
+  if(direction == 'up')
+    idx <- which(logFC > 0)
+  if(direction == 'down')
+    idx <- which(logFC < 0)
+  
+  
+  genes <- NULL
+  
+  if(length(keep.idx) > 4){
+    
+    genes <- res[idx , 'id.mapped'] %>% unique %>% na.omit()
+    ##genes.up <- res[up.idx , 'id.mapped'] %>% unique
+    ## cat('direction: ', direction, '\nngenes:', length(genes),'\n')
+    
+    ## run gprofiler
+    gp <- gost(genes, organism = "hsapiens", ordered_query = TRUE,
+               multi_query = FALSE, significant = TRUE, exclude_iea = TRUE,
+               measure_underrepresentation = FALSE, evcodes = FALSE,
+               user_threshold = fdr, 
+               correction_method = c("fdr"),
+               domain_scope = c("annotated"),
+               custom_bg = bg.genes,
+               numeric_ns = "", 
+               sources=src
+               #sources = c('GO:BP', 'GO:MF', 'GO:CC')
+    )
+  
+  } else { ## end if significant features
+    gp <- NULL
+  }
+  
+  cat('\n-- end: run_gProfileR --\n')
+  
+  return(list(gp=gp, genes=genes))
+}
+

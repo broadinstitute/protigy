@@ -141,7 +141,6 @@ shinyServer(
             volc.hyper.fc=1,    ## min. FC for hyperbolic curve
             volc.hyper.curv=3,  ## curvation parameter for hyperbol. curve
             
-            #volc.reset=F,    ## flag to trigger reset of annotated points
             volc.init=T,
             
             ## heatmap
@@ -157,8 +156,7 @@ shinyServer(
             pca.x='PC 1',
             pca.y='PC 2',
             pca.z='PC 3',
-          #  pca.load.topn=20,
-
+         
             ## correlation matrix
             cm.upper='pearson',
             cm.lower='spearman',

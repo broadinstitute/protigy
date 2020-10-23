@@ -205,7 +205,7 @@ shinyServer(
             else
               etitle <- error$title
             
-            shinyalert(etitle, error$msg, type = "error")
+            shinyalert(etitle, error$msg, type = "error", html=TRUE)
         })
 
         ## #########################################################
@@ -366,7 +366,7 @@ shinyServer(
                                                   checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
                                                   checkboxInput('export.ms', 'Multiscatter',value=T),
                                                   checkboxInput('export.excel', 'Excel sheet',value=T),
-                                                  checkboxInput('export.gct.file', 'GCT files: 1) original data and 2) singed log P-values',value=T),
+                                                  checkboxInput('export.gct.file', 'GCT files: 1) original data and 2) signed log P-values',value=T),
                                                   checkboxInput('export.cm', 'Correlation matrix',value=T),
                                                   checkboxInput('export.cb', 'Correlation boxplot',value=T),
                                                   checkboxInput('export.profile', 'Profile plot',value=T),
@@ -1367,7 +1367,7 @@ shinyServer(
             }
             tab.colnames.names <- names(tab.colnames)
             names(tab.colnames) <- NULL
-           # cat(tab.colnames[1:4], '\n')
+           
             ## radio button to pick id column
             list(
                 ## experimental design
@@ -1378,7 +1378,6 @@ shinyServer(
                 actionButton("id.col", 'Next', width='100'),
                 HTML('<hr size=\"5\">'),
                 radioButtons( inputId = "id.col.value", label = "Choose ID column", choiceValues = tab.colnames.names, choiceNames = tab.colnames )
-                
             )
 
         })
@@ -1572,7 +1571,7 @@ shinyServer(
                 list(
                     
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
 
                      #radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'MissingValues', 'none'), selected=global.param$filt.data ),
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected=global.param$filt.data ),
@@ -1594,7 +1593,7 @@ shinyServer(
                 list(
                   
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
 
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='none'),
                      
@@ -1622,7 +1621,7 @@ shinyServer(
                 list(
                   
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
 
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='Reproducibility'),
                      selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
@@ -1645,7 +1644,7 @@ shinyServer(
                 list(
                   
                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
 
                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='StdDev'),
                     sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
@@ -3054,37 +3053,30 @@ shinyServer(
               ## GCT file with transformed p-values as data
               if( !global.param$which.test == 'mod F'){
                     withProgress(message='Exporting', detail='GCT file (transformed P-values)',{
-                      ##rdesc <- global.results$data$output
                       rdesc <- res.comb
+                      global.param.list <- reactiveValuesToList(global.param)
                       
-                      #if(global.param$which.test == 'Two-sample mod T'){
-                        logp <- rdesc[, logp.colnames] %>% data.matrix
-                        fc <- rdesc[, logfc.colnames ] %>% data.matrix
-                      #} else {
-                      #  logp <- rdesc[, paste0('Log.P.Value.', ) ] %>% data.matrix
-                      #  fc <- rdesc[, paste0('logFC.', grp.comp) ] %>% data.matrix
-                      #} 
+                      logp <- rdesc[, logp.colnames] %>% data.matrix
+                      fc <- rdesc[, logfc.colnames ] %>% data.matrix
                       
                       ## transformed and signed p-values
                       mat <- logp*sign(fc)
-                      colnames(mat) <- paste0('signed.',colnames(logp))
+                      #if(is.null)
+                      colnames(mat) <- paste0('signed.', colnames(logp))
                       
-                      #mat <- rdesc[, names(grp.srt)] %>% data.matrix
                       
                       rdesc <- rdesc[ ,-which(colnames(rdesc) %in% names(grp.srt))]
-                      #if(global.param$file.gct3){
-                      #  cdesc <- global.input$cdesc[ names(grp.srt),]
-                      #} else {
-                      #  cdesc <- data.frame(experiment=grp.srt)
-                      #}
+                      
                       cid <- colnames(mat)
-                      rid <- rdesc[, global.param$id.col.value] #rownames(mat)
+                      #rid <- rdesc[, global.param$id.col.value] ## 20200928
+                      rid <- rdesc[, 'id']
+                      
                       res.gct <- new('GCT')
                       res.gct@mat <- mat
                       res.gct@rid <- rid
                       res.gct@cid <- cid
                       res.gct@rdesc <- rdesc
-                      #res.gct@cdesc <- cdesc
+                      
                       write.gct(res.gct, ofile =  sub('\\.xlsx','-transformed-p-val', paste(global.param$session.dir, fn.tmp, sep='/')) )
                     })
               } ## end if not mod F
@@ -3095,7 +3087,7 @@ shinyServer(
               
               ## assemble gct file
               withProgress(message='Exporting', detail='GCT file',{
-                    ##rdesc <- global.results$data$output
+                    
                     rdesc <- res.comb
                     
                     mat <- rdesc[, paste(names(grp.srt) ) ] %>% data.matrix
@@ -3108,7 +3100,8 @@ shinyServer(
                       cdesc <- data.frame(experiment=grp.srt)
                     }
                     cid <- names(grp.srt)
-                    rid <- rdesc[, global.param$id.col.value] #rownames(mat)
+                    #rid <- rdesc[, global.param$id.col.value] ## 20200928
+                    rid <- rdesc[, 'id']
                     res.gct <- new('GCT')
                     res.gct@mat <- mat
                     res.gct@rid <- rid
@@ -3422,7 +3415,7 @@ shinyServer(
               } else {
                 tab <- data.frame(id=gct@rid, gct@mat, stringsAsFactors = F)
               }
-              rownames(tab) <-tab$id
+              rownames(tab) <- tab$id
               
               ## sample names
               colnames.tmp <- chopString(colnames(tab), STRLENGTH)
@@ -3862,7 +3855,6 @@ shinyServer(
 
             global.input$run.test <- input$run.test
 
-            ##Vie(global.input$table)
 
             ###########################################
             ## - store which test has been used
@@ -3885,15 +3877,14 @@ shinyServer(
             if(global.param$analysis.run){
                 tab <- data.frame(global.input$table.org)
             }
-            ##View(tab)
+            
             ## id column
             id.col = global.param$id.col.value
             
             ## all group labels
             groups=global.param$grp.selection
             global.param$grp <- groups
-            ##View(tab[, id.col])
-
+            
             ###############################################
             ## initialize values for normalized and filtered matrix
             global.results$table.log=NULL
@@ -3962,7 +3953,7 @@ shinyServer(
                 if(log.trans == 'log10'){
                     dat.tmp <- log(dat.tmp, 10)
                 }
-                ## putting a dataframe around here turns out to be ESSENTIAL!! DON'T USE CBIND HERE!
+                ## putting a data frame around here turns out to be ESSENTIAL!! DON'T USE CBIND HERE!
                 tab <- data.frame( ids.tmp, dat.tmp)
                 colnames(tab)[1] <- id.col
                 ## store
@@ -3975,21 +3966,53 @@ shinyServer(
             ##
             ## ###########################################
             if(norm.data != 'none'){
-                ##tab.org = tab
+               
                 withProgress(message='Applying normalization...', {
-                    tab <- normalize.data(tab, id.col, norm.data)
-                    if(is.null(dim(tab)) | unlist(tab)[1] == 'No_success'){
+                    #View(head(tab))
+                    tab.norm <- normalize.data(tab, id.col, norm.data)
 
+                    ## if two-component norm fails
+                    if(class(tab.norm) == 'try-error'){
+                        
+
+                                         
+                      ## modal window
+                      # showModal(modalDialog(
+                      #     size='m',
+                      #     title =  error$title,
+                      #     HTML('<alert>No normalization has bene applied!</alert>')
+                      # ))
+                      # 
+                      ############################################### 
+                      ## if not successful skip the rest
+                      
+                      ## reset data filter
+                      #global.results$table.repro.filt=NULL
+                      #global.results$table.sd.filt=NULL
+                      #repro.filt='no'
+                      
+                      ## reset test
+                      test='none'
+                      global.param$which.test <- 'none'
+                      updateRadioButtons('which.test', session=session, selected = 'none')
+                      
+                      ## reset normalization
+                      norm.data='none'
+                      global.param$norm.data <- 'none'
+                      updateRadioButtons('norm.data', session=session, selected = 'none')
+                      global.results$table.norm <- NULL
+                      
+                      ## reset significance filter
+                      global.param$filter.type <- 'none'
+                      updateSelectInput('filter.type', session=session, selected = 'none')
+                      
+                     
                       error$title <- "'Error applying two-component normalization."
-                      error$msg <- paste('Could not fit mixture model for data column: ', tab, ' Giving up...')
-
-                        ## if not successful skip the rest
-                        test='none'
-                        repro.filt='no'
-
+                      error$msg <- HTML('The two-component normalization failed to converge on at least one data column. Please note that this type of normalization expects <b>log-ratio</b> data that is approximately <b>centered around zero</b>. Please make sure this is the case by <b>inspecting the profile plots</b> under the QC tab.')
+                      
                     } else {
-                        global.results$table.norm <- tab
-                        ##View(tab)
+                        #View(head(tab.norm))
+                        global.results$table.norm <- tab.norm
                     }
                 })
             }
@@ -4088,9 +4111,6 @@ shinyServer(
                 res.comb <- data.frame(id=res.id, res.test, res.exprs)
                 res.comb <- res.comb[rownames(tab),]
 
-                ##global.results$data$output <- res.comb
-
-
                 })
             }
             ##################################
@@ -4102,8 +4122,6 @@ shinyServer(
                     count=0
                     ## loop over groups
                     for(g in unique(groups.comp)){
-
-                       ## setProgress(detail=g)
 
                         ## extract table of current group
                         tab.group <- cbind(tab[, id.col], tab[, names(groups)[which(groups == g)]])
@@ -4119,8 +4137,6 @@ shinyServer(
                             if(nrow(res.tmp ) != nrow(res.comb)) stop( "number of rows don't match!\n" )
                             res.tmp <- res.tmp[rownames(res.comb), ]
                             res.comb <- cbind(res.comb, res.tmp)
-                            ##res.comb <- merge(res.comb, res.tmp, sort=F)
-                            ##res.comb <- merge(res.comb, res.tmp, by='id')
                         }
 
                         #############################################
@@ -4245,9 +4261,6 @@ shinyServer(
                     res.comb <- data.frame(id=res.id, res.test, res.exprs)
                     res.comb <- res.comb[rownames(tab),]
                     
-                    ##global.results$data$output <- res.comb
-                    
-                    
                 })
                 
             }
@@ -4331,7 +4344,7 @@ shinyServer(
         ###################################################################################
         ## observer
         ##
-        ##                   filter the test results accross multiple groups
+        ##                   filter the test results across multiple groups
         ##
         ##
         ###################################################################################
@@ -4421,7 +4434,6 @@ shinyServer(
                       res <- res[ which( unlist(apply( res[, grep('^P.Value', colnames(res) )], 1, 
                                                        function(x) sum(x < input$filter.value.nom.p, na.rm=T))
                                                 ) > 0), ]
-                      #res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min, na.rm=T))  ), ]
                       
                       ## now separate for each group comparison
                       res.groups <- lapply(groups.comp, function(g){
@@ -4463,8 +4475,6 @@ shinyServer(
                                                        function(x) sum( x < input$filter.value.adj.p, na.rm=T ))
                                                 ) > 0), ]
                       
-                      #res <- res[order( unlist(apply( res[, grep('^logFC', colnames(res) )], 1, min,  na.rm=T))  ), ]
-                        
                         ## now separate for each group comparison
                         res.groups <- lapply(groups.comp, function(g){
                             res[ which( res[, paste('adj.P.Val.', g, sep='')] < input$filter.value.adj.p) , ]
@@ -4473,6 +4483,7 @@ shinyServer(
                     ###########################################
                     ## F-test
                     } else {
+                        #View(res)
                         res <- res[which( res[, 'adj.P.Val'] < input$filter.value.adj.p), ]
 
                         res.groups <- list(res)

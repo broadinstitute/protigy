@@ -10,17 +10,9 @@
 ## This file defines global parameters, loads all required R-packages and defines the actual functions to perform data filtering,
 ## data normalization, the moderated test statistics, and visualization. The code for moderated t-tests,
 ## two-component normalization and the reproducibility filter has been written by D. R. Mani and
-## adopted by me for intergration into a Shiny-Server environment.
+## adopted by me for integration into a Shiny-Server environment.
 ##
-##
-## required packages:
-##
-## cran.pckg <- c('pheatmap', 'RColorBrewer', 'hexbin', 'Hmisc', 'grid', 'scatterplot3d', 'plotly', 'WriteXLS', 'reshape','nlme', 'BlandAltmanLeh', 'mice','mixtools', 'mclust')
-## bioc.pgkg <- c( 'preprocessCore', 'limma')
-##
-## changelog: 20160614 - included 'na' to indicate missing values
-##                     - outsourced Mani's code to a separate file 'modT.r'
-################################################################################################################
+##################################################################################################################
 #options( stringsAsFactors = F )
 
 ## R package managing tool
@@ -32,7 +24,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.7"
+VER <- "0.8.8"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -391,7 +383,7 @@ link.db <- function(id, # vetcor of ids
 ##
 ## 20160235
 #############################################################################################
-normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-MAD', '2-component')){
+normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-MAD', '2-component', 'Upper-quartile')){
     cat('\n\n-- normalize data --\n\n')
 
     method = match.arg(method)
@@ -408,7 +400,6 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
         rownames(data.norm) <- rownames(data)
         colnames(data.norm) <- paste( colnames(data))
 
-
         ## shift median to zero
         ## data.norm <- apply(data.norm, 2, function(x) x - median(x, na.rm=T))
     }
@@ -424,25 +415,42 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
         ##rownames(data.norm) <- rownames(data)
         colnames(data.norm) <- paste( colnames(data), sep='.')
     }
+    
     ## 2-component normalization
     if(method == '2-component'){
-        data.norm.list = apply(data, 2, two.comp.normalize, type="unimodal")
-        ##cat('\n\n here 1\n\nlength list:', length(data.norm.list), '\n')
-        ##save(data.norm.list, file='test.RData')
-        ## check if successful
+        #data.norm.list = apply(data, 2, function(x) try(two.comp.normalize(x, type="unimodal")))
+      data.norm.list <- vector('list', ncol(data))
+      names(data.norm.list) <- colnames(data)
+      
+      for(x in colnames(data)){  
+      #data.norm.list = lapply(colnames(data),  function(x) {
+          res <- try(two.comp.normalize(data[, x], type="unimodal"))
+          data.norm.list[[x]] <- res
+          if(class(res) == 'try-error') break;
+          #res
+       }
+          
+        ## check if all runs were successful
+        ## return the 'try-error' object to 
+        ## catch the error in server.R
         for(i in 1:length(data.norm.list)){
-            ##cat('\ni=', i, '\n')
-            if(length(data.norm.list[[i]]) == 1){
-                if(data.norm.list[[i]] == 'No_success'){
-                    ##cat('\n\nno success\n\n')
-                    return(paste( colnames(data)[i] ))
-                }
+            if(class(data.norm.list[[i]]) == 'try-error'){
+                    msg <- data.norm.list[[i]]
+                   # msg <- paste0(msg, colnames(data)[i])
+                    return(msg)
             }
-            ##cat('\n length:', length(data.norm.list[[i]]), '\n')
         }
-        ##cat('\n\n here \n\n')
-        data.norm = matrix( unlist(lapply(data.norm.list, function(x)x$norm.sample)), ncol=length(data.norm.list), dimnames=list(rownames(data), names(data.norm.list)) )
+
+      ## if 2-comp was successful on all data column convert list to matrix 
+      data.norm = matrix( unlist(lapply(data.norm.list, function(x)x$norm.sample)), ncol=length(data.norm.list), dimnames=list(rownames(data), names(data.norm.list)) )
     }
+    ## Upper quartile
+    if(method == 'Upper-quartile'){
+      data.norm <- apply(data, 2, function(x) x - quantile(x, c(0.75),na.rm=T))
+      colnames(data.norm) <- paste( colnames(data), sep='.')
+    }
+    
+    
     ## add id column
     data.norm <- data.frame(ids, data.norm)
     colnames(data.norm)[1] <- id.col

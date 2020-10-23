@@ -1,5 +1,5 @@
 ###################################################################################################################
-## Filename: modT.r
+## Filename: modT.R
 ## Created: June 16, 2016
 ## Authors: Karsten Krug, DR Mani
 ##
@@ -27,10 +27,7 @@ modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NU
 
     ## store group names
     groups.org <- groups
-    ##groups <- as.numeric(as.factor(groups))
     groups <- as.numeric(factor(groups, levels=sort(unique(groups)))) ## kk 20170106
-
-    ##cat(groups.org, '\n', groups, '\n')
 
     id <- d[ , id.col]
 
@@ -51,11 +48,7 @@ modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NU
         colnames(mod.t.result) <- paste(colnames(mod.t.result), label, sep='.')
 
     mod.t <- data.frame ( cbind (data.frame (id=id), data, mod.t.result), stringsAsFactors=F )
-    ##mod.t <- data.frame ( cbind (data.frame (id),  mod.t.result, data) )
     rownames(mod.t) <- id ##make.unique(as.character(mod.t[, 1]), sep='_')
-    ##colnames(mod.t)[1] <- 'id'
-
-    ##write.csv (final.results, paste (output.prefix, ".csv", sep=''), row.names=FALSE)
 
     ## write out / return results
     final.results <- mod.t
@@ -135,12 +128,10 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
     if(!is.null(label))
         colnames(mod.t.result) <- paste(colnames(mod.t.result), label, sep='.')
 
-    ##mod.t <- data.frame ( cbind (data.frame (id), data, mod.t.result, change=change, significant=mod.sig) )
     mod.t <- data.frame ( cbind (data.frame (id=id), data, mod.t.result), stringsAsFactors=F )
     ##colnames (mod.t)[1] <- id.col   # retain id.col (if provided)
     ##rownames(mod.t) <- make.unique( as.character(mod.t[,1]), sep='_' )
     rownames(mod.t) <- id
-   ## colnames(mod.t)[1] <- 'id'
 
     final.results <- mod.t
     cat('\n-- modT.test exit --/n')
@@ -208,7 +199,6 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
 
     cat('\n-- modF.test exit --\n')
     return( list( input=d, output=final.results, groups=class.vector)  )
-  ##invisible (final.results)
 }
 
 ###########################################################################
@@ -348,7 +338,6 @@ reproducibility.filter <- function (data, id.col='id', alpha=0.05) {
     ## return rownames of data matrix
     cat('\n-- reproducibility.filter exit --\n')
     return(rep.all)
-    ##return( rownames(data)[ which(!rep.all) ] )
 }
 
 ###########################################################################################
@@ -418,7 +407,11 @@ two.comp.normalize <- function (sample, type='default', mode.lower.bound=-3) {
     model <- normalmixEM (data, k=2, mean.constr=mean.constr, maxit=10000)
     model.rep <- normalmixEM (data, k=2, mean.constr=mean.constr, maxit=10000)
     
-    if (n.try > 1000) stop (paste ("Can't fit mixture model ... giving up\n"))
+    ###############################
+    ## error handling
+    if (n.try > 1e3){
+      stop("No_success_2comp")
+    }
     n.try <- n.try + 1
   }
   
@@ -442,82 +435,5 @@ two.comp.normalize <- function (sample, type='default', mode.lower.bound=-3) {
   # return normalized data reorganized to original order
   sample [ !is.na (sample) ] <- data
   cat('\n-- two.comp.normalize exit --\n')
-  return ( list (norm.sample=sample, norm.mean=norm.mean, norm.sd=norm.sd, fit=unlist (c(model$mu, model$sigma))) )
-}
-
-## 20180417
-two.comp.normalize.old <- function (sample, type) {
-  #   1. For all sample types, fit a 2-component gaussian mixture model using normalmixEM.
-  #   2. For the bimodal samples, find the major mode M1 by kernel density estimation
-  #     2a. Fit the model with one component mean constrained to equal M1
-  #     2b. Normalize (standardize) samples using mean (M1) and resulting std. dev.
-  #   3. For unimodal samples, find the mode M using kernel density estimation
-  #     3a. Fit the model with mean for both components constrained to be equal to M
-  #     3b. Normalize (standardize) samples using mean M and smaller std. dev. from model fit
-
-  # WARNING:
-  # This code has a lot of hacks to fix the flakiness of normalmixEM, and the idiosyncracies
-  # of the actual data. Carefully re-examine code for new or altered input data
-    cat('\n-- two.comp.normalize --\n')
-
-  data <- sample [ !is.na (sample) ]
-  dens <- density (data, kernel='gaussian', bw='SJ')     # gaussian kernel with S-J bandwidth
-                                                         # (see Venalbles & Ripley, 2002, pg, 129)
-  # find major (highest) mode > -3 (to avoid problems with lower mode having higher density than higher mode)
-  x.range <- dens$x > -3
-  dens.x <- dens$x [x.range];  dens.y <- dens$y [x.range]
-  mode <- dens.x[which.max(dens.y)]
-  if (type=='bimodal') mean.constr <- c (NA, mode) else mean.constr <- c (mode, mode)
-  model <- normalmixEM (data, k=2, mean.constr=mean.constr)
-  model.rep <- normalmixEM (data, k=2, mean.constr=mean.constr)
-  model.alt <- Mclust (data, G=2, modelNames="V")
-  alt.mu <- model.alt$parameters$mean
-  alt.sd <- sqrt (model.alt$parameters$variance$sigmasq)
-  # find reproducible model fit that is close to Mclust fit
-  # if not, re-fit model -- without this condition
-  # normalmixEM produces one-off model fits
-  n.try <- 1
-  if (type=='unimodal') model.mode <- which(model$mu==mode)[which.min (model$sigma)]
-  else model.mode <- which(model$mu==mode)
-  model.other <- model.mode %% 2 + 1
-  alt.mode <- which.min(abs(model.alt$par$mean-mode)); alt.other <- alt.mode %% 2 + 1
-  while ( abs (model$mu[model.mode] - alt.mu[alt.mode]) > 3e-1 || abs (model$sigma[model.mode]-alt.sd[alt.mode]) > 3e-1 ||
-          model$sigma[model.mode] < 0.1 ||
-          (type=='bimodal' && (abs (model$mu[model.other] - alt.mu[alt.other]) > 1e1)) ||
-          !all (c (model$mu, model$sigma) - c (model.rep$mu, model.rep$sigma) < 1e-3) ) {
-    # if major mode (and SD of mode) is not within 0.3, or if the other mean (for bimodals only)
-    # is not within 1 of the Mclust result, try again
-    model <- normalmixEM (data, k=2, mean.constr=mean.constr)
-    model.rep <- normalmixEM (data, k=2, mean.constr=mean.constr)
-
-      if (n.try > 100){
-          return("No_success")
-          ##stop (paste ("Can't fit mixture model ... giving up\n"))
-      }
-    n.try <- n.try + 1
-  }
-
-
-  if (type=='bimodal') {
-    # sometimes (esp. in phosphoproteome) the minor (lower) mode can be larger than the major (higher) mode
-    # this situation is not possible in the unimodal samples
-    corrected.mode <- model$mu [which.max(model$mu)]
-    if (corrected.mode != mode) {
-      cat ('  Lower mode larger than higher mode\n')
-      mode <- corrected.mode
-    }
-  }
-  norm.mean <- mode
-  norm.sd <- ifelse (type=='bimodal', model$sigma[which(model$mu==mode)], min (model$sigma))
-
-  # normalize by standardizing
-  data <- data - norm.mean
-  data <- data / norm.sd
-
-  # return normalized data reorganized to original order
-    sample [ !is.na (sample) ] <- data
-
-    cat('\n-- two.comp.normalize exit --\n')
-
   return ( list (norm.sample=sample, norm.mean=norm.mean, norm.sd=norm.sd, fit=unlist (c(model$mu, model$sigma))) )
 }

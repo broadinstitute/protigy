@@ -3,7 +3,7 @@
 ## Created: February 06, 2015
 ## Author(s): Karsten Krug
 ##
-## Purpose: plot functions for Protigy app.
+## Purpose: plotting functions for Protigy app.
 ##
 ################################################################################################################
 

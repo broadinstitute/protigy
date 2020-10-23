@@ -13,6 +13,7 @@ This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interac
 * **Sample-wise Normalization**
     + Centering (median)
     + Centering and scaling (median-MAD)
+    + Upper quartile normalization
     + Quantile normalization
     + 2-component normalization
 * **Filtering**
@@ -28,7 +29,7 @@ This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interac
 * Heatmaps and cluster analysis
 * Volcano plots
 * Scatterplots
-* Principle component analysis
+* Principal component analysis
 * QC-plots
     + Pairs-plots
     + Correlation matrix

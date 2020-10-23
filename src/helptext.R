@@ -30,11 +30,19 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.8 October 23, 2020</b>
+<ul>
+<li>GCT export: Fixed bug that caused the export to fail if the column name for ids was not "id".</li>
+<li>Normalization: Improved error handling if 2-component normalization fails to converge.</li>
+<li>Normalization: Added upper quartile normalization (subtract 75th percentile).</li>
+<li>Misc: Some code cleanup.</li>
+</ul>
+
 <b>v0.8.7 August 05, 2020</b>
 <ul>
 <li>GCT v1.3 import: Error message when name of group variable contains special characters.</li>
 <li>GCT v1.3 import: Robustified column names of cdesc object.</li>
-<li>Misc: fixed inconsistent capitilzation of file extentions (.r vs. .R)</li>
+<li>Misc: fixed inconsistent capitalization of file extentions (.r vs. .R)</li>
 <li>Misc: data folder set to <code>tempdir()</code> when running locally</li>
 </ul>
 
@@ -562,6 +570,7 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 <ul>
 <li><b>Median</b>: Subtract the sample median from each value (centering).</li>
 <li><b>Median-MAD</b>: Subtract the sample median and divide by sample MAD (centering plus scaling).</li>
+<li><b>Upper quartile: Subtract the sample\'s 75th percentile from each value.</b></li>
 <li><b>2-component</b>: Use a mixture-model approach to separate non-changing from changing features and divide both populations by the median of the non-changing features.</li>
 <li><b>Quantile</b>: Transform the data such that the quantiles of all sample distributions are the equal.</li>
 <li><b>none</b>: The data will be taken as is. Should be used if the data has been already normalized.</li>

@@ -24,7 +24,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.8"
+VER <- "0.8.8.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -827,7 +827,8 @@ my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
 ##################################################################
 ## function to dynamically determine the height (in px) of the heatmap
 ## depending on the number of genes
-dynamicHeightHM <- function(n, unit=c('px', 'in')){
+dynamicHeightHM <- function(n, ## number of genes to plot in the heatmap 
+                            unit=c('px', 'in')){
 
     unit=match.arg(unit)
 

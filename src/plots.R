@@ -934,8 +934,6 @@ plotlyPCA <- function(global.param,     ## reactiveValue converted to list
     })
     
     ## store results
-    #global.results$pca <- pca
-    #global.param$update.pca <- FALSE
     pca.out <- pca
     
   } else {
@@ -976,7 +974,7 @@ plotlyPCA <- function(global.param,     ## reactiveValue converted to list
     }
     ## title and axis
     p <- layout(p, 
-                title=paste0('PC', pca.x,' vs. PC', pca.y, '\n(',  nrow(pca$loadings),' features)'), 
+                title=paste0('PC', pca.x,' vs. PC', pca.y, '\n(',  nrow(pca$loadings), ' / ', nrow(global.results$data$output),' features)'), 
                 xaxis=list(title=paste('PC', pca.x)), yaxis=list(title=paste('PC', pca.y)) )
   }
   ###########################
@@ -987,7 +985,7 @@ plotlyPCA <- function(global.param,     ## reactiveValue converted to list
       grp.tmp <- names(grp)[grp == g]
       p <- add_trace(p, x=pca.mat[grp.tmp, 'PC1'], y=pca.mat[grp.tmp,'PC2'], z=pca.mat[grp.tmp,'PC3'], type='scatter3d', mode='markers', marker=list(size=15, color=grp.colors[grp.tmp]), text=grp.tmp, name=g  )
     }
-    p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, 'vs. PC', pca.z, '\n(',  nrow(pca$loadings), ' features)'), 
+    p <- layout(p, title=paste('PC', pca.x,' vs. PC', pca.y, 'vs. PC', pca.z, '\n(',  nrow(pca$loadings), ' / ', nrow(global.results$data$output), ' features)'), 
                 scene=list( xaxis=list(title=paste('PC', pca.x)), 
                             yaxis=list(title=paste('PC', pca.y)), 
                             zaxis=list(title=paste('PC', pca.z))) )

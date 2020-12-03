@@ -700,71 +700,71 @@ write.gct <- function(ds, ofile, precision=4, appenddim=T, ver=3) {
 #' }
 #' @family GCTX parsing functions
 #' @export
-write.gctx <- function(ds, ofile, appenddim=T, compression_level=0, matrix_only=F,
-                       max_chunk_kb=1024) {
-  if (!class(ds)=="GCT") {
-    stop("ds must be a GCT object")
-  }
-  # make sure it's valid
-  ok <- methods::validObject(ds)
-  # add dimensions to filename if desired
-  if (appenddim) ofile <- append.dim(ofile, ds@mat, extension="gctx")
-  # check if the file already exists
-  if (file.exists(ofile)) {
-    message(paste(ofile, "exists, removing"))
-    file.remove(ofile)
-  }
-  message(paste("writing", ofile))
-  
-  # start the file object
-  rhdf5::h5createFile(ofile)
-  
-  # create all the necessary groups
-  rhdf5::h5createGroup(ofile, "0")
-  rhdf5::h5createGroup(ofile, "0/DATA")
-  rhdf5::h5createGroup(ofile, "0/DATA/0")
-  rhdf5::h5createGroup(ofile, "0/META")
-  rhdf5::h5createGroup(ofile, "0/META/COL")
-  rhdf5::h5createGroup(ofile, "0/META/ROW")
-  
-  # create and write matrix data, using chunking
-  bits_per_element <- switch(storage.mode(ds@mat),
-                             "double" = 64,
-                             "integer" = 32)
-  elem_per_kb <- max_chunk_kb * 8 / bits_per_element
-  # assume matrix is of dimensions row_dim x col_dim 
-  row_dim <- nrow(ds)
-  col_dim <- ncol(ds)
-  row_chunk_size <- min(row_dim, 1000)
-  # column chunk, such that row * col <= max_chunk_kb
-  col_chunk_size <- min(((max_chunk_kb * elem_per_kb) %/% row_chunk_size), col_dim)
-  chunking <- c(row_chunk_size, col_chunk_size) 
-  message(paste(c("chunk sizes:", chunking), collapse="\t"))
-  rhdf5::h5createDataset(ofile, "0/DATA/0/matrix", dim(ds@mat), chunk=chunking, level=compression_level)
-  rhdf5::h5write.default(ds@mat, ofile, "0/DATA/0/matrix")
-  
-  # write annotations
-  rhdf5::h5write.default(as.character(ds@rid), ofile, "0/META/ROW/id")
-  rhdf5::h5write.default(as.character(ds@cid), ofile, "0/META/COL/id")
-  
-  if (!matrix_only) {
-    write.gctx.meta(ofile, ds@cdesc, dimension="column")
-    write.gctx.meta(ofile, ds@rdesc, dimension="row")
-  }
-
-  # close any open handles
-  if(utils::packageVersion('rhdf5') < "2.23.0") {
-    rhdf5::H5close()
-  } else {
-    rhdf5::h5closeAll()
-  }
-
-  # add the version annotation and close
-  fid <- rhdf5::H5Fopen(ofile)
-  rhdf5::h5writeAttribute.character("GCTX1.0", fid, "version")
-  rhdf5::H5Fclose(fid)
-
-}
+# write.gctx <- function(ds, ofile, appenddim=T, compression_level=0, matrix_only=F,
+#                        max_chunk_kb=1024) {
+#   if (!class(ds)=="GCT") {
+#     stop("ds must be a GCT object")
+#   }
+#   # make sure it's valid
+#   ok <- methods::validObject(ds)
+#   # add dimensions to filename if desired
+#   if (appenddim) ofile <- append.dim(ofile, ds@mat, extension="gctx")
+#   # check if the file already exists
+#   if (file.exists(ofile)) {
+#     message(paste(ofile, "exists, removing"))
+#     file.remove(ofile)
+#   }
+#   message(paste("writing", ofile))
+#   
+#   # start the file object
+#   rhdf5::h5createFile(ofile)
+#   
+#   # create all the necessary groups
+#   rhdf5::h5createGroup(ofile, "0")
+#   rhdf5::h5createGroup(ofile, "0/DATA")
+#   rhdf5::h5createGroup(ofile, "0/DATA/0")
+#   rhdf5::h5createGroup(ofile, "0/META")
+#   rhdf5::h5createGroup(ofile, "0/META/COL")
+#   rhdf5::h5createGroup(ofile, "0/META/ROW")
+#   
+#   # create and write matrix data, using chunking
+#   bits_per_element <- switch(storage.mode(ds@mat),
+#                              "double" = 64,
+#                              "integer" = 32)
+#   elem_per_kb <- max_chunk_kb * 8 / bits_per_element
+#   # assume matrix is of dimensions row_dim x col_dim 
+#   row_dim <- nrow(ds)
+#   col_dim <- ncol(ds)
+#   row_chunk_size <- min(row_dim, 1000)
+#   # column chunk, such that row * col <= max_chunk_kb
+#   col_chunk_size <- min(((max_chunk_kb * elem_per_kb) %/% row_chunk_size), col_dim)
+#   chunking <- c(row_chunk_size, col_chunk_size) 
+#   message(paste(c("chunk sizes:", chunking), collapse="\t"))
+#   rhdf5::h5createDataset(ofile, "0/DATA/0/matrix", dim(ds@mat), chunk=chunking, level=compression_level)
+#   rhdf5::h5write.default(ds@mat, ofile, "0/DATA/0/matrix")
+#   
+#   # write annotations
+#   rhdf5::h5write.default(as.character(ds@rid), ofile, "0/META/ROW/id")
+#   rhdf5::h5write.default(as.character(ds@cid), ofile, "0/META/COL/id")
+#   
+#   if (!matrix_only) {
+#     write.gctx.meta(ofile, ds@cdesc, dimension="column")
+#     write.gctx.meta(ofile, ds@rdesc, dimension="row")
+#   }
+# 
+#   # close any open handles
+#   if(utils::packageVersion('rhdf5') < "2.23.0") {
+#     rhdf5::H5close()
+#   } else {
+#     rhdf5::h5closeAll()
+#   }
+# 
+#   # add the version annotation and close
+#   fid <- rhdf5::H5Fopen(ofile)
+#   rhdf5::h5writeAttribute.character("GCTX1.0", fid, "version")
+#   rhdf5::H5Fclose(fid)
+# 
+# }
 
 #' Update the matrix of an existing GCTX file
 #' 
@@ -792,79 +792,79 @@ write.gctx <- function(ds, ofile, appenddim=T, compression_level=0, matrix_only=
 #' update.gctx(m, ofile="my.gctx", rid=row_ids, cid=col_ids)
 #' }
 #' @export
-update.gctx <- function(x, ofile, rid=NULL, cid=NULL) {
-  # x must be numeric
-  stopifnot(is.numeric(x))
-  # must give us at least one of rid or cid
-  if (is.null(rid) && is.null(cid)) {
-    stop("one of rid or cid must not be NULL")
-  }
-  # make sure the dimensions of x agree with the 
-  # number of rid and cid supplied
-  if (is.matrix(x)) {
-    stopifnot(all(dim(x) == c(length(rid), length(cid))))
-  } else {
-    # x is a vector, so we must be updating in one dimension
-    if(!is.null(rid) & !is.null(cid)) {
-      stop(paste("x is a vector so you can only update in one dimension",
-                 "(only one of rid or cid can be non-NULL)", sep="\n"))
-    }
-    if (is.null(rid)) {
-      stopifnot(length(cid) == length(x))
-    }
-    if (is.null(cid)) {
-      stopifnot(length(rid) == length(x))
-    }
-  }
-  # get the dimensions of the file in question
-  info <- rhdf5::h5dump(ofile, load=F)
-  dims <- as.numeric(unlist(strsplit(info[["0"]][["DATA"]][["0"]][["matrix"]][["dim"]], " x ")))
-  # get the full space of row and column ids
-  all_rid <- cmapR::read.gctx.ids(ofile, dim="row")
-  all_cid <- cmapR::read.gctx.ids(ofile, dim="col")
-  # helper functions to validate integer and character ids
-  validate_integer_ids <- function(ids, maxdim, which_dim) {
-    stopifnot(all(ids > 0))
-    out_of_range <- setdiff(ids, seq_len(maxdim))
-    if (length(out_of_range) > 0) {
-      stop(paste("the following", which_dim, "indices are out of range\n",
-                 paste(out_of_range, collapse="\n")))
-    }
-  }
-  validate_character_ids <- function(ids, all_ids, which_dim) {
-    out_of_range <- setdiff(ids, all_ids)
-    if (length(out_of_range) > 0) {
-      stop(paste("the following", which_dim, "ids do not exist in the dataset\n",
-                 paste(out_of_range, collapse="\n")))
-    }
-  }
-  # given integer ids
-  if (is.integer(rid)) {
-    validate_integer_ids(rid, dims[1], "row")
-    ridx <- rid
-  }
-  if (is.integer(cid)) {
-    validate_integer_ids(cid, dims[2], "column")
-    cidx <- cid
-  }
-  # given character ids
-  if (is.character(rid)) {
-    validate_character_ids(rid, all_rid, "row")
-    ridx <- match(rid, all_rid)
-  }
-  if (is.character(cid)) {
-    validate_character_ids(cid, all_cid, "column")
-    cidx <- match(cid, all_cid)
-  }
-  # make the updates to the specified rows/columns
-  rhdf5::h5write.default(x, ofile, "0/DATA/0/matrix", index=list(ridx, cidx))
-  # close any open handles
-  if(utils::packageVersion('rhdf5') < "2.23.0") {
-    rhdf5::H5close()
-  } else {
-    rhdf5::h5closeAll()
-  }
-}
+# update.gctx <- function(x, ofile, rid=NULL, cid=NULL) {
+#   # x must be numeric
+#   stopifnot(is.numeric(x))
+#   # must give us at least one of rid or cid
+#   if (is.null(rid) && is.null(cid)) {
+#     stop("one of rid or cid must not be NULL")
+#   }
+#   # make sure the dimensions of x agree with the 
+#   # number of rid and cid supplied
+#   if (is.matrix(x)) {
+#     stopifnot(all(dim(x) == c(length(rid), length(cid))))
+#   } else {
+#     # x is a vector, so we must be updating in one dimension
+#     if(!is.null(rid) & !is.null(cid)) {
+#       stop(paste("x is a vector so you can only update in one dimension",
+#                  "(only one of rid or cid can be non-NULL)", sep="\n"))
+#     }
+#     if (is.null(rid)) {
+#       stopifnot(length(cid) == length(x))
+#     }
+#     if (is.null(cid)) {
+#       stopifnot(length(rid) == length(x))
+#     }
+#   }
+#   # get the dimensions of the file in question
+#   info <- rhdf5::h5dump(ofile, load=F)
+#   dims <- as.numeric(unlist(strsplit(info[["0"]][["DATA"]][["0"]][["matrix"]][["dim"]], " x ")))
+#   # get the full space of row and column ids
+#   all_rid <- cmapR::read.gctx.ids(ofile, dim="row")
+#   all_cid <- cmapR::read.gctx.ids(ofile, dim="col")
+#   # helper functions to validate integer and character ids
+#   validate_integer_ids <- function(ids, maxdim, which_dim) {
+#     stopifnot(all(ids > 0))
+#     out_of_range <- setdiff(ids, seq_len(maxdim))
+#     if (length(out_of_range) > 0) {
+#       stop(paste("the following", which_dim, "indices are out of range\n",
+#                  paste(out_of_range, collapse="\n")))
+#     }
+#   }
+#   validate_character_ids <- function(ids, all_ids, which_dim) {
+#     out_of_range <- setdiff(ids, all_ids)
+#     if (length(out_of_range) > 0) {
+#       stop(paste("the following", which_dim, "ids do not exist in the dataset\n",
+#                  paste(out_of_range, collapse="\n")))
+#     }
+#   }
+#   # given integer ids
+#   if (is.integer(rid)) {
+#     validate_integer_ids(rid, dims[1], "row")
+#     ridx <- rid
+#   }
+#   if (is.integer(cid)) {
+#     validate_integer_ids(cid, dims[2], "column")
+#     cidx <- cid
+#   }
+#   # given character ids
+#   if (is.character(rid)) {
+#     validate_character_ids(rid, all_rid, "row")
+#     ridx <- match(rid, all_rid)
+#   }
+#   if (is.character(cid)) {
+#     validate_character_ids(cid, all_cid, "column")
+#     cidx <- match(cid, all_cid)
+#   }
+#   # make the updates to the specified rows/columns
+#   rhdf5::h5write.default(x, ofile, "0/DATA/0/matrix", index=list(ridx, cidx))
+#   # close any open handles
+#   if(utils::packageVersion('rhdf5') < "2.23.0") {
+#     rhdf5::H5close()
+#   } else {
+#     rhdf5::h5closeAll()
+#   }
+# }
 
 #' Write a \code{data.frame} of meta data to GCTX file
 #' 
@@ -880,25 +880,25 @@ update.gctx <- function(x, ofile, rid=NULL, cid=NULL) {
 #' }
 #' @family GCTX parsing functions
 #' @keywords internal
-write.gctx.meta <- function(ofile, df, dimension="row") {
-  path <- if ((dimension=="row")) "0/META/ROW/" else "0/META/COL/"
-  # loop through all columns
-  fields <- names(df)
-  if (length(fields) > 0) {
-    for (i in 1:length(fields)) {
-      field <- fields[i]
-      # if this is the id field, skip b/c that field is special
-      # and is written as part of write.gctx
-      if (field == "id") next
-      v <- df[, i]
-      # convert factors to character
-      if(class(v) == "factor" || class(v) == "AsIs") {
-        v <- as.character(v)
-      }
-      rhdf5::h5write.default(v, ofile, paste(path, field, sep=""))
-    }
-  }
-}
+# write.gctx.meta <- function(ofile, df, dimension="row") {
+#   path <- if ((dimension=="row")) "0/META/ROW/" else "0/META/COL/"
+#   # loop through all columns
+#   fields <- names(df)
+#   if (length(fields) > 0) {
+#     for (i in 1:length(fields)) {
+#       field <- fields[i]
+#       # if this is the id field, skip b/c that field is special
+#       # and is written as part of write.gctx
+#       if (field == "id") next
+#       v <- df[, i]
+#       # convert factors to character
+#       if(class(v) == "factor" || class(v) == "AsIs") {
+#         v <- as.character(v)
+#       }
+#       rhdf5::h5write.default(v, ofile, paste(path, field, sep=""))
+#     }
+#   }
+# }
 
 
 ###########################################

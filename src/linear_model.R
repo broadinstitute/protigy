@@ -1,5 +1,5 @@
 library(pacman)
-p_load(cmapR)
+#p_load(cmapR)
 p_load(magrittr)
 p_load(limma)
 p_load(pheatmap)
@@ -13,7 +13,7 @@ p_load(pheatmap)
 #gct.in <- c( 
 # 
 #  Proteome='//flynn-cifs/prot_proteomics/LabMembers/Karsten/Projects/CPTAC3/PTRC/Westbrook/data/v2/Karsten_MultiOmics_analysis/proteome-ratio-norm-NArm-UP2_PTPN12status.gct'#,
-  #RNA='//flynn-cifs/prot_proteomics/LabMembers/Karsten/Projects/CPTAC3/PTRC/Westbrook/data/v2/Karsten_MultiOmics_analysis/mRNA_TPM_gct_row-median_2comp.gct',
+  #RNA='//flynn-cifs/prot_proteomics/LabMembers/Karsten/Projects/CPTAC3cmap/PTRC/Westbrook/data/v2/Karsten_MultiOmics_analysis/mRNA_TPM_gct_row-median_2comp.gct',
   #pSTY='//flynn-cifs/prot_proteomics/LabMembers/Karsten/Projects/CPTAC3/PTRC/Westbrook/data/v2/Karsten_MultiOmics_analysis/phosphoproteome-ratio-norm-NArm_PTPN12status.gct'
 #)
 
@@ -65,7 +65,7 @@ run.lm.repeats <- function(gct,                     ## path to gct file
                    ...                          ## passed to pheatmap
                    ){
   require(pacman)
-  p_load(cmapR)
+  #p_load(cmapR)
   p_load(glue)
   p_load(limma)
   p_load(magrittr)

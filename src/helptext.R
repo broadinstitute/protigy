@@ -20,7 +20,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
         output$html <- renderText({
             if(!is.null(global.input$file)) return()
             if(!is.null(error$msg)) return()
-            includeMarkdown('readme.md')
+            includeMarkdown('README.md')
 
         })
     }
@@ -30,9 +30,14 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.8.1 December 3, 2020</b>
+<ul>
+<li>PCA: Added the number of total features to the title of the plot.</li>
+</ul>
+
 <b>v0.8.8 October 23, 2020</b>
 <ul>
-<li>GCT export: Fixed bug that caused the export to fail if the column name for ids was not "id".</li>
+<li>GCT export: Fixed bug that caused the GCT export to fail if the column name for ids was not "id".</li>
 <li>Normalization: Improved error handling if 2-component normalization fails to converge.</li>
 <li>Normalization: Added upper quartile normalization (subtract 75th percentile).</li>
 <li>Misc: Some code cleanup.</li>

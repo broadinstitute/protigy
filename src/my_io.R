@@ -3,7 +3,6 @@
 ## Purpose:  - collection of functions for reading/writing various data formats
 
 library(pacman)
-##p_load_gh("cmap/cmapR")
 
 ## deal with non-unique rid
 parse.gctx2 <- function( fname, ... ){

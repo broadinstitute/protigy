@@ -1,0 +1,12 @@
+name: protigy4
+title: protigy
+username: karsten
+account: karsten
+server: shiny-proteomics.broadinstitute.org
+hostUrl: http://shiny-proteomics.broadinstitute.org:3939/__api__
+appId: 12
+bundleId: 40
+url: http://shiny-proteomics.broadinstitute.org:3939/content/12/
+when: 1604349803.05502
+asMultiple: FALSE
+asStatic: FALSE

@@ -30,6 +30,15 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.9 January 13, 2021</b>
+<ul>
+<li><mark>BUGFIX:</mark> Fixed normalization which was broken in v0.8.8 and v0.8.8.1 (unnormalized data was used in subsequent analyses).</li>
+<li>Misc: A column "id" will be used consistently throughout the different analysis steps (column will be created if not present already). This does not affect input data in GCT v1.3 format (id column in GCT 1.3 files is always "id").</li>
+<li>Misc: Warning if duplicated ids were found.</li>
+<li>Misc: Some code cleanup.</li>
+</ul>
+      
+<font size=\"3\">
 <b>v0.8.8.1 December 3, 2020</b>
 <ul>
 <li>PCA: Added the number of total features to the title of the plot.</li>

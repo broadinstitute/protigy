@@ -24,7 +24,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.8.1"
+VER <- "0.8.9"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -352,6 +352,58 @@ mapIDs <- function(ids,
     return(res)
 }
 
+#################################################################################
+##
+##   - deduplicate ids and show warning in a modal shiny window
+##
+#################################################################################
+de_duplicate_ids <- function(ids, global.param=NULL, show_modal = TRUE){
+  
+  if(is.null(global.param)) global.param$id.col.value <- 'id'
+  
+  ## dups
+  dup_idx <- which(duplicated(ids))
+  dup_n <- length(dup_idx)
+  dup_ids <- ids[ dup_idx ]
+  
+  ## make dups unique
+  ids <- make.unique(ids , sep='_')
+  
+  if(show_modal){  
+    
+      require(shiny)
+    
+      ## dups after making unique
+      dup_ids_fix <- ids[dup_idx]
+      
+      
+      ## show the first 3 dups in a table
+      html_tab <- paste0('<table border="1">
+                                       <th style="padding:10px">duplciated</th><th style="padding:10px">deduplicated</th>')
+      for(tr in 1:min(c(3, dup_n))){
+        html_tab <- paste0(html_tab, 
+                           '<tr><td style="padding:10px">', dup_ids[tr], '</td><td style="padding:10px">', dup_ids_fix[tr], '</td></tr>\n')  
+      }
+      html_tab <- paste0(html_tab, '</table>')
+      
+      #######################
+      ## give a warning about duplicated ids
+      showModal(modalDialog(
+        size='m',
+        title = paste("Warning: ids are not unique!"),
+        HTML(paste0('Found <b>', dup_n, '</b> duplicated entries in column <b>', 
+                    global.param$id.col.value,
+                    '</b> which will be made unique as shown below (first ', min(c(3, dup_n)), ' duplicated ids shown).<br><br>')),
+        HTML(html_tab),
+        HTML('<br><br>Click "Dismiss" to continue.')
+      
+        ))
+  } ## end if(show.modal)
+  
+  return(ids)
+}
+
+
 ## ##############################################################################
 ##
 ##            generate links to external databases
@@ -423,11 +475,9 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
       names(data.norm.list) <- colnames(data)
       
       for(x in colnames(data)){  
-      #data.norm.list = lapply(colnames(data),  function(x) {
           res <- try(two.comp.normalize(data[, x], type="unimodal"))
           data.norm.list[[x]] <- res
           if(class(res) == 'try-error') break;
-          #res
        }
           
         ## check if all runs were successful
@@ -436,7 +486,6 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
         for(i in 1:length(data.norm.list)){
             if(class(data.norm.list[[i]]) == 'try-error'){
                     msg <- data.norm.list[[i]]
-                   # msg <- paste0(msg, colnames(data)[i])
                     return(msg)
             }
         }
@@ -450,10 +499,10 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
       colnames(data.norm) <- paste( colnames(data), sep='.')
     }
     
-    
     ## add id column
     data.norm <- data.frame(ids, data.norm)
     colnames(data.norm)[1] <- id.col
+    
     return(data.norm)
 }
 
@@ -474,8 +523,6 @@ my.prcomp <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, sc
 
     cex.font = 1.8
 
-    ##View(x)
-
     ## number of data columns, N=2 -> 2D plot only
     N <- nrow(x)
 
@@ -484,8 +531,6 @@ my.prcomp <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, sc
 
     ## perform pca
     pca <- prcomp(x, scale=scale)
-
-    ##View(pca$x)
 
     ## calculate variance
     comp.var <- eigen(cov(pca$x))$values
@@ -1191,17 +1236,11 @@ get.interactors <- function(ppi.bait, IDs, sig.idx, db=c('iw', 'bg', 'react'), p
         ## - consider overlap as separate class
         ## - counts based on this vector are mutually axclusive, i.e. to count
         ##   number of interactions in InWeb one has to sum #InWeb + #Overlap
-        ##
         ppi.col <- rep('', length(IDs))
-        #names(ppi.col) <- IDs
         names(ppi.col) <- names(IDs)
         
         for( d in 1:length(ppi.int.detect.l))
           ppi.col[ which( IDs %in% ppi.int.detect.l[[d]] )] <- ppi.db.col[ names(ppi.int.detect.l)[d]  ]
-        
-          #ppi.col[ which(names(ppi.col) %in% ppi.int.detect.l[[d]] )] <- ppi.db.col[ names(ppi.int.detect.l)[d]  ]
-        
-          #ppi.col[ ppi.int.detect.l[[d]] ] <- ppi.db.col[ names(ppi.int.detect.l)[d]  ]
 
 
         ## #########################################
@@ -1510,7 +1549,7 @@ get_sig_features <- function(global.results, global.param, group){
   }
   
   ##################################
-  ## indices of significnat features
+  ## indices of significant features
   sig.idx <- which(pval < as.numeric(global.param$filter.value ))
   
   return(sig.idx)

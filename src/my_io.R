@@ -5,11 +5,11 @@
 library(pacman)
 
 ## deal with non-unique rid
-parse.gctx2 <- function( fname, ... ){
+parse.gctx2 <- function( fname, 
+                         show_modal=FALSE, ## if TRUE and rid contains duplicates, a modal whiny window with a warning will be shown. Useful when the function is called from a shiny app.
+                         ... ){
   
-  #p_load(cmapR)
   p_load(magrittr)
-  
   
   gct <- try(parse.gctx(fname, ...))
   
@@ -32,8 +32,11 @@ parse.gctx2 <- function( fname, ... ){
       #check whether ids are unique
       if(length(rid[rid.idx]) > length(unique(rid[rid.idx]))){
         warning('rids not unique! Making ids unique and exporting new GCT file...\n\n')
+        
         #make unique
-        rid[rid.idx] <- make.unique(rid[rid.idx], sep='_')
+        #rid[rid.idx] <- make.unique(rid[rid.idx], sep='_')
+        rid[rid.idx] <- de_duplicate_ids( rid[rid.idx], show_modal=show_modal)
+        
         #other columns
         rest <- gct.tmp %>% sub('.*?\t','', .)
         rest[1] <- ''

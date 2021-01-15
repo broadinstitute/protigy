@@ -18,7 +18,6 @@ p_load(shiny)
 options(shiny.maxRequestSize = MAXSIZEMB*1024^2, stringsAsFactors=F)
 
 
-
 ###########################################################################################################
 ##                         Define server logic
 ############################################################################################
@@ -233,13 +232,10 @@ shinyServer(
         ## session name
         output$session.label <- renderMenu({
           
-          #if(is.null(session$user)) return()
           if(!global.param$session.saved) return()
           label <- paste("Session:", global.param$label)
           
           notificationItem(label, status='success', shiny::icon("folder", "fa-1x", lib='glyphicon')) 
-           
-          
         })
         
         
@@ -250,7 +246,7 @@ shinyServer(
             if(is.null(session$user)) return()
             user <- session$user
           
-            notificationItem(user, shiny::icon("user", "fa-1x", lib='glyphicon'), status='success') ##, ic='users', status='info', text='test'),
+            notificationItem(user, shiny::icon("user", "fa-1x", lib='glyphicon'), status='success') 
         })
 
         ## #########################################################
@@ -275,7 +271,6 @@ shinyServer(
             ## e.g. for the number of volcano plots to draw
             ##############################################
             groups.comp <- unique(global.param$grp.comp)
-            ##groups <- global.param$grp.comp
 
             ## ##########################################
             ## class vector
@@ -1048,8 +1043,6 @@ shinyServer(
         #
         output$file.upload <- renderUI({
 
-            #if(!is.null(input$file)) return()
-            #if(!is.null( global.input$file)) return()
             if(global.param$file.done) return()
             cat( '---------------------------------\n')
           
@@ -1062,7 +1055,6 @@ shinyServer(
             if(is.null(global.param$session)){
               
               cat('No session id found:', global.param$session, '\n')
-              
               cat('creating session id...\n')
               
               ## set a seed for 'sample'
@@ -1081,7 +1073,7 @@ shinyServer(
             
             ## ##############################################
             ## authenticated session
-            ##if(is.null(global.param$user)){
+            ## only works in SSP 
             if(!is.null(session$user)){
 
                 ## ########################################
@@ -1107,7 +1099,6 @@ shinyServer(
 
                 ## if so add the project path to the search path
                 if(length(idx) > 0){
-                    ##search.path <- c()
                     for(i in 1:length(idx)){
 
                         ## folder of the project OWNER to be parsed
@@ -1158,10 +1149,6 @@ shinyServer(
                 saved.sessions[[i]] <- grep( '_session.*RData$', dir( search.path[i], full.names=T, recursive=T ), value=T )
             saved.sessions <- unlist(saved.sessions)
 
-
-            ## subfolders in user directory
-            ##saved.sessions <- grep( '_session.RData', dir( global.param$search.path, full.names=T, recursive=T ), value=T )
-
             ## don't show the panel if there is no saved session
             if(length(saved.sessions) == 0) return()
 
@@ -1176,7 +1163,6 @@ shinyServer(
             global.param$saved.sessions <- saved.sessions
 
             list(
-                ##selectInput('session.browse', paste('My saved sessions',sep=''), choices=names(saved.sessions)),
                 selectizeInput(inputId = 'session.browse', 
                                label = 'Saved sessions:',
                                choices=names(saved.sessions), 
@@ -1187,11 +1173,8 @@ shinyServer(
                                )
                                ),
               
-                ##selectInput('session.browse', paste('Saved sessions (', sub('_at_','@',global.param$user),')',sep=''), choices=sort(names(saved.sessions))),
                 actionButton('session.browse.import', 'Import'),
                 actionButton('session.manage', 'Manage sessions', onclick =paste("window.open('", CONFAPP,"', 'newwindow', 'width=500 height=600'); return false;", sep=''))
-                #actionButton('session.manage', 'Manage sessions')
-                
                 )
         })
 
@@ -1206,25 +1189,22 @@ shinyServer(
         
         
         # ###################################################
-        #       group assignment for gct 1.3 files
+        #  UI:   group assignment for gct 1.3 files
         # - id column defined as first column in gct
         # - group assingment from column annotations
-        #
         output$define.groups.gct3 <- renderUI({
           
           if(!global.param$file.gct3) return()
           if(global.param$grp.done) return()
           
-
+          ## list all column description columns (cdesc)    
           list(
-            ## experimental design
-            #HTML('<font size=\"3\"><b>Found GCT v1.3 file with', ncol(global.input$cdesc),'annotation columns. Choose one column as class vector for marker selection.</b></font><br>'),
             radioButtons("grp.gct3", "Choose column", colnames(global.input$cdesc)),
             actionButton("update.grp.gct3", 'OK')
           )
           
         })
-        # preview levels current selection
+        # preview current selection
         output$grp.gct3.prev <- renderText({
           if(is.null(input$grp.gct3)) return()
           if(global.param$grp.done) return()
@@ -1238,34 +1218,27 @@ shinyServer(
           if(global.param$grp.done) return()
           
           tab <- table(global.input$cdesc[, input$grp.gct3]) 
-          
-          #save(tab, file='tab.RData')
-          
           tab <- data.frame(Level=names(tab), Freq=as.character(unlist(tab)), stringsAsFactors = F )
           
           list(
             tab
           )
-          
         })
         
-        # #####################################
-        # define groups for GCTv3
+        #######################################
+        ## OBSERVER: define groups for GCT v1.3
         observeEvent(input$update.grp.gct3, {
           
           tab <- global.input$table
           cdesc <- data.frame(global.input$cdesc)
-          #if(nrow)
-          #View(head(cdesc))
-          # store grp coloum
+         
+          ## store grp coloum
           global.param$grp.gct3 <- input$grp.gct3
           
           if(!input$grp.gct3 %in% colnames(cdesc)){
-              
               error$title <- paste("Parsing error")
               error$msg <- paste("Can't find column'",input$grp.gct3, "'in the sample meta data. Does it contain special characters (e.g. blanks)?")
               return()
-             
           }
           
           # initialize grp file
@@ -1274,7 +1247,6 @@ shinyServer(
           names(Experiment) <- Column.Name
           Experiment[ rownames(cdesc) ] <- make.names(cdesc[, input$grp.gct3])
           
-
           global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  input$grp.gct3)
         
           grp.file=data.frame(
@@ -1290,7 +1262,6 @@ shinyServer(
           grp.anno <- grp.file[which(nchar( Experiment) == 0 ), ]
           grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
           
-
           if(length(grp.anno)>0)
             global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
           
@@ -1342,7 +1313,6 @@ shinyServer(
 
           ## all done
           global.param$grp.done = T
-          
         })
         
         
@@ -1361,7 +1331,7 @@ shinyServer(
             tab.colnames <- global.input$table.colnames
 
             ## try to find 'id' and move it to the first position
-            id.idx <- grep('id|ID', tab.colnames)
+            id.idx <- grep('id', tab.colnames, ignore.case = T)
             if(length(id.idx) > 0){
                 tab.colnames <- c(tab.colnames[id.idx], tab.colnames[-id.idx])
             }
@@ -1404,7 +1374,8 @@ shinyServer(
         ######################################
         ## UI filter type
         output$filter.type <- renderUI({
-            ## show after analysis had been run
+           
+             ## show after analysis had been run
             if(!global.param$analysis.run) return()
 
             ## if a test has been performed
@@ -2362,7 +2333,6 @@ shinyServer(
               g.new <- strsplit(g, '\\.vs\\.') %>% unlist
               g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
               colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
-              #colnames.tmp <- gsub(g, g.new, colnames.tmp)
             }
             colnames(res.comb) <- colnames.tmp
           }
@@ -2379,20 +2349,18 @@ shinyServer(
           
           ## assemble gct file
           withProgress(message='Exporting', detail='GCT file',{
-            ##rdesc <- global.results$data$output
             rdesc <- res.comb
             mat <- rdesc[, names(grp.srt)] %>% data.matrix
             rdesc <- rdesc[ ,-which(colnames(rdesc) %in% names(grp.srt))]
             if(global.param$file.gct3){
-              #View( global.input$cdesc)
+
               cdesc <- global.input$cdesc[ names(grp.srt),]
             } else {
               cdesc <- data.frame(experiment=grp.srt)
             }
-            #cat(global.param$id.col.value, '\n')
+            cat( paste0(rep('-', 20), '\nid-column: ', global.param$id.col.value, '\n', rep('-', 20), '\n') )
             cid <- names(grp.srt)
             
-            #View(rdesc)
             
             #rid <- rdesc[, global.param$id.col.value] #rownames(mat)
             rid <- rdesc[, 'id'] #rownames(mat)
@@ -2927,50 +2895,6 @@ shinyServer(
                                              session.dir=global.param$session.dir, headerDesc=headerDesc)
                 })
               
-                    # res.comb <- global.results$data$output
-                    # grp.srt <- sort(global.param$grp)
-                    # 
-                    # ## append annotation columns
-                    # if(!is.null(global.input$table.anno))
-                    #     res.comb <- left_join(res.comb,  global.input$table.anno, 'id')
-                    #    
-                    # 
-                    # ## #########################################################
-                    # ## Two sample moderated T- test:
-                    # ## adjust labels in the header of the Excel sheet
-                    # ## WT.vs.KO -> KO.over.WT
-                    # if(global.param$which.test == 'Two-sample mod T'){
-                    #   
-                    #   colnames.tmp <- colnames(res.comb)
-                    #   grp.comp <- unique(global.param$grp.comp)
-                    #   
-                    #   for(g in grp.comp){
-                    #     g.new <- strsplit(g, '\\.vs\\.') %>% unlist
-                    #     g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
-                    #     colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
-                    #     #colnames.tmp <- gsub(g, g.new, colnames.tmp)
-                    #   }
-                    #   colnames(res.comb) <- colnames.tmp
-                    # }
-                    # 
-                    # expDesign <- data.frame(Column=names(grp.srt), Experiment=grp.srt)
-                    # 
-                    # fn.tmp <- sub(' ','_',
-                    #               paste(
-                    #                 global.param$label, '_',
-                    #                 sub(' ', '_',global.param$which.test),
-                    #                 ifelse(global.param$log.transform != 'none', paste( '_', global.param$log.transform, '_', sep=''), '_'),
-                    #                 #ifelse(global.param$norm.data != 'none', paste( global.param$norm.data, '_', sep=''), '_'),
-                    #                 ifelse(input$repro.filt=='yes', paste(global.param$filt.data, sep=''), '_'),
-                    #                 sub(' .*', '', Sys.time()),".xlsx", sep='') 
-                    # )
-                    # global.param$xls.name <- fn.tmp
-                    # 
-                    # ## Excel
-                    # render.xlsx <- try(
-                    #   WriteXLS(c('res.comb', 'expDesign'), ExcelFileName=paste(global.param$session.dir, fn.tmp, sep='/'), FreezeRow=1, FreezeCol=1, SheetNames=c(global.param$which.test, 'class vector'), row.names=F, BoldHeaderRow=T, AutoFilter=T)
-                    # )
-                 ## })
             }
             
             
@@ -3055,7 +2979,9 @@ shinyServer(
                     withProgress(message='Exporting', detail='GCT file (transformed P-values)',{
                       rdesc <- res.comb
                       global.param.list <- reactiveValuesToList(global.param)
-                      
+                     
+                      #save(rdesc, logp.colnames, logfc.colnames, file='debug.RData')
+                     
                       logp <- rdesc[, logp.colnames] %>% data.matrix
                       fc <- rdesc[, logfc.colnames ] %>% data.matrix
                       
@@ -3119,14 +3045,10 @@ shinyServer(
             ##       name of zip archive
             ## no label present
             if(is.null(global.param$label)){
-                #fn.tmp <- paste(global.param$session.dir, paste('session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep='/')
-                #save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
                 fn.zip <- paste( gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
             }
             ## label present
             if(!is.null(global.param$label) | nchar(global.param$label) == 0){
-                #fn.tmp <- paste(global.param$session.dir, paste(global.param$label, paste('_session_', gsub('( |\\:)', '-', Sys.time()), '.RData', sep=''), sep=''), sep='/')
-                #save(global.input.imp, global.param.imp, global.results.imp, global.plotparam.imp, volc.imp, file=fn.tmp)
                 fn.zip <- paste( global.param$label, '_', gsub('\\:', '', gsub(' ','-', gsub('-','',Sys.time()))),'.zip', sep='')
             }
 
@@ -3183,19 +3105,16 @@ shinyServer(
             }
             ## store file.name
 	          global.param$zip.name=fn.zip
-            ## cat('test16\n')
+
+            ####################################################
+            ##             clean up
+            ## remove archived files: all files except RData
+	        rdata.idx <- grep('\\.RData[\\"|\']$', fn.all.abs)
+	        fn.rm <- fn.all.abs
+	        if(length(rdata.idx) > 0)
+	           fn.rm <- fn.rm[-rdata.idx]
 	          
-            #----------------------------------------------------------------------
-            #             clean up
-	          # remove archived files: all files except RData
-	          rdata.idx <- grep('\\.RData[\\"|\']$', fn.all.abs)
-	          fn.rm <- fn.all.abs
-	          if(length(rdata.idx) > 0)
-	            fn.rm <- fn.rm[-rdata.idx]
-	          
-	          #fn.rm <- gsub('"|\'', '', fn.all.abs[]) 
-	          fn.rm <- gsub('"|\'', '', fn.rm)
-	          
+	        fn.rm <- gsub('"|\'', '', fn.rm)
 	        #  cat('ALL FILES:', fn.all.abs, '\n')
 	        #  cat('CLEAN UP:', fn.rm, '\n')
 	          
@@ -3227,8 +3146,7 @@ shinyServer(
         ##
         ##                             Do the actual computation
         ##
-        ###################################################################################
-        
+        ##################################################################################
         observeEvent(input$ms.robustify,{
           updateCheckboxInput('ms.max', session = session, value=!input$ms.robustify)
         })
@@ -3238,19 +3156,23 @@ shinyServer(
         
         
         ###############################################
+        ## observer
         ## 4) ID column
         ##  - make unique ids
         ##  - determine id type
         ##  - map to gene names
         ##  - initialize group assignment
+        ##
+        ## - for txt and gct 1.2 file formats
         observeEvent( input$id.col ,{
 
             if( is.null( global.input$table) | is.null(input$id.col.value) ) return()
 
             ## store name of id column
             global.param$id.col.value <- input$id.col.value
-            cat('id: ', global.param$id.col.value, '\n')
-            ## update 'input$id.col'
+            cat('id column: ', global.param$id.col.value, '\n')
+            
+            ## update 'global.input$id.col'
             global.input$id.col <- input$id.col
 
             ## ###########################################
@@ -3259,12 +3181,22 @@ shinyServer(
 
             ## ###########################################
             ## make sure the ids are unique
-            ##ids <- make.names( make.unique(as.character(tab[, global.param$id.col.value]), sep='_') )
-            ids <- make.unique( as.character(tab[, global.param$id.col.value] ), sep='_')
+            ids <- as.character(tab[, global.param$id.col.value])
+            if(sum(duplicated(ids)) > 0)
+                ids <- de_duplicate_ids(ids, reactiveValuesToList(global.param))
 
-            ## replace values in id column
-            tab[, global.param$id.col.value] <- ids
-            ##tab <- data.frame(id=ids, tab)
+            #####################################    
+            ## - update 'id.col.value' with 'id'
+            ## - replace values in 'id' column
+            if(global.param$id.col.value != 'id'){
+              
+                  tab <- data.frame(id=ids, tab)
+                  global.param$id.col.value <- "id"
+                  
+                  cat('updated id column: ', global.param$id.col.value, '\n')
+            }
+            tab[, 'id'] <- ids
+            
             ## use id as rownames
             rownames(tab) <- ids
 
@@ -3273,11 +3205,8 @@ shinyServer(
             ## ############################################
             map.res <- mapIDs(ids)
             global.results$keytype <- map.res$keytype
-            #global.results$id.map <- data.frame(id=ids, map.res$id.map)
             global.results$id.map <- map.res$id.map
-            
-            #View(data.frame(id=ids, map.res$id.map))
-            
+        
             ########################################
             ## store
             global.input$table <- tab
@@ -3336,19 +3265,20 @@ shinyServer(
             }
 
             ########################################################
-            # file import
+            ##                file import
+            ########################################################
             
-            ## ##############################################
+            
+            ################################################
             ##                      GCTX
             if(grepl('\\.gctx$', fn)){
               
                 gct <- try( parse.gctx(fn) )
 
-            # ###############################################
-            #                     GCT 1.2
+            #################################################
+            ##                     GCT 1.2
             } else if( length( grep( '^\\#1\\.2', readLines(fn,n=1))) > 0){
             
-
                   tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS, skip=2)
                   
                   ## shorten column names and store together with the original names
@@ -3361,13 +3291,13 @@ shinyServer(
                   global.input$table.colnames <- colnames.tmp
                   
                   rm(tab, colnames.tmp)
-            # ###################################################      
-            #                     GCT 1.3
+                  
+            #####################################################      
+            ##                     GCT 1.3
             } else if( length( grep( '^\\#1\\.3', readLines(fn,n=1))) > 0){
               
               # parse gct file
-              #gct <- parse.gctx(fn)
-              gct <- try( parse.gctx2(fn) )
+              gct <- try( parse.gctx2(fn, show_modal = TRUE) )
               if(class(gct) == 'try-error'){
                 error$title <- "Error importing GCT 1.3 file"
                 error$msg <- gct[1]
@@ -3376,14 +3306,18 @@ shinyServer(
               }
               
               ## #################################################
-              ## robustify ids
-              gct@rid <- make.unique( gct@rid )
+              ## robustify rids
+              if(sum(duplicated(gct@rid)) > 0)
+                  gct@rid <- de_duplicate_ids(gct@rid, reactiveValuesToList(global.param))
               rownames(gct@mat) <- gct@rid
+              
+              ## rdesc
               if(nrow(gct@rdesc) > 0){
                 rownames(gct@rdesc) <- gct@rid   
               }
-              
+              ## cid
               gct@cid <- make.unique(make.names(gct@cid))
+              #cdesc
               if(nrow(gct@cdesc) > 0)
                 rownames(gct@cdesc) <- gct@cid
               colnames(gct@mat) <- gct@cid
@@ -3397,7 +3331,7 @@ shinyServer(
               ## robustify cdesc column names
               colnames(gct@cdesc) <- make.names(colnames(gct@cdesc))
               
-              ## remove 'id'
+              ## remove 'id' from cdesc
               if('id' %in% colnames(gct@cdesc)){
                 cn.tmp <- colnames(gct@cdesc)
                 rm.idx <- which(colnames(gct@cdesc) == 'id')
@@ -3421,18 +3355,9 @@ shinyServer(
               colnames.tmp <- chopString(colnames(tab), STRLENGTH)
               names(colnames.tmp) <- colnames(tab)
               
-               
               # id column 
               global.param$id.col.value='id'
               global.param$id.done=T
-              
-              # robustify ids
-              #ids <- make.unique( as.character(tab[, global.param$id.col.value] ), sep='_')
-              
-              ## replace values in id column
-              #tab[, global.param$id.col.value] <- ids
-              ## use id as rownames
-              #rownames(tab) <- ids
               
               ## #################
               ## map to gene names
@@ -3450,7 +3375,6 @@ shinyServer(
 
               global.param$cdesc.all <- global.param$cdesc.selection <- colnames(global.input$cdesc)
               
-               
               # flag
               global.param$file.gct3 <- T
               
@@ -3458,16 +3382,16 @@ shinyServer(
               
             # ##########################################################  
             #                    other text file
-            } else {
+            } else { ## end if GCT 1.3
 
                 ## ################################
                 ## determine the separator
                 tab.sep=NULL
+                
                 ## try to figure out the separator, DON'T USE THE HEADER FOR THAT
                 ## use the fourth row instead (should be data)
                 for(s in SEPARATOR){
 
-                    ##tab <- read.table(fn, sep=s, header=T, stringsAsFactors=F, nrows=1, skip=3)
                     tab <- read.table(fn, sep=s, header=F, stringsAsFactors=F, nrows=1, skip=4)
 
                     if(length(tab) > 1){
@@ -3475,12 +3399,15 @@ shinyServer(
                         break;
                     }
                 }
+                
                 ## #########################################################
                 ## import the table: txt
                 if( global.param$tabsep == '\t'){
                     tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS)
                 } else {
-                    tab <- read.table( fn, sep=global.param$tabsep, header=T, stringsAsFactors=F, na.strings=NASTRINGS, quote = "\"", dec = ".", fill = TRUE, comment.char = "")
+                    tab <- read.table( fn, sep=global.param$tabsep, header=T, 
+                                       stringsAsFactors=F, na.strings=NASTRINGS, quote = "\"", 
+                                       dec = ".", fill = TRUE, comment.char = "")
                 }
                 ## shorten column names and store together with the original names
                 colnames.tmp <- chopString(colnames(tab), STRLENGTH)
@@ -3492,7 +3419,7 @@ shinyServer(
                 global.input$table.colnames <- colnames.tmp
                 
                 rm(tab, colnames.tmp)
-            }## end if GCT
+            } 
 
             # flag
             global.param$file.done <- T
@@ -3736,7 +3663,8 @@ shinyServer(
             names(grp)=grp.exprs$Column.Name
             
             ## update input table, keep id and expression columns
-            tab <- global.input$table[ , c(global.param$id.col.value, names(grp))]
+            #tab <- global.input$table[ , c(global.param$id.col.value, names(grp))]
+            tab <- global.input$table[ , c('id', names(grp))]
             
             ## #################################
             ## remove NA rows
@@ -3782,8 +3710,7 @@ shinyServer(
         #     determine groups to test
         # 
         observeEvent(input$which.test, {
-        #observeEvent(global.param$grp.done, {
-          
+            
           test <- input$which.test
           
           ## #############################################
@@ -3793,10 +3720,8 @@ shinyServer(
             ## each group separetely
             groups.comp <- global.param$grp.all
             
-            
             global.param$grp.comp.all <- groups.comp
             
-            #if(global.param$run.test == 0) {
             if( is.null( global.param$grp.comp.selection ) | sum( global.param$grp.comp.selection %in% global.param$grp.comp.all) == 0 )
                global.param$grp.comp.selection <- groups.comp
             if( is.null( global.param$grp.selection)  | sum( global.param$grp.selection %in% global.param$grp.comp.all) == 0 )   
@@ -3815,26 +3740,18 @@ shinyServer(
             count=1
             for(i in 1:(length(groups.unique)-1))
               for(j in (i+1):length(groups.unique)){
+                  
                 ## order alphabetically
                 groups.tmp <- sort( groups.unique[c(i,j)] )
-                ##groups.comp[count] <- paste(groups.unique[i], groups.unique[j], sep='.vs.')
                 groups.comp[count] <- paste(groups.tmp[1], groups.tmp[2], sep='.vs.')
                 count <- count+1
               }
           }
-            #if( global.param$run.test == 0  ){
           global.param$grp.comp.all <- groups.comp
-            #}
-          #if( global.param$run.test == 0  )  
+          
           if(is.null(global.param$grp.comp.selection) | sum( global.param$grp.comp.selection %in% global.param$grp.comp.all) == 0 )
             global.param$grp.comp.selection <- groups.comp
-            #global.param$grp.selection <- 
-          #}
-          
-          
         })
-        
-        
         
         ################################################################################
         ##
@@ -3850,8 +3767,6 @@ shinyServer(
 
             ## reset any error messages
             error$msg <- NULL
-
-            ##global.param$update.ppi.select <- FALSE
 
             global.input$run.test <- input$run.test
 
@@ -3879,14 +3794,15 @@ shinyServer(
             }
             
             ## id column
-            id.col = global.param$id.col.value
+            #id.col = global.param$id.col.value
+            id.col <- 'id'
             
             ## all group labels
-            groups=global.param$grp.selection
+            groups <- global.param$grp.selection
             global.param$grp <- groups
             
             ###############################################
-            ## initialize values for normalized and filtered matrix
+            ## initialize values for normalized and filtered matrices
             global.results$table.log=NULL
             global.results$table.norm=NULL
             global.results$table.repro.filt=NULL
@@ -3899,48 +3815,22 @@ shinyServer(
             ##           set up the analysis pipeline
             ##
             ## ##############################################################################
-            test = global.param$which.test
-            norm.data = global.param$norm.data
-            filt.data = global.param$filt.data
-            repro.filt.val = global.param$repro.filt.val
-            sd.filt.val = global.param$sd.filt.val
-            log.trans = global.param$log.transform
+            test <- global.param$which.test
+            norm.data <- global.param$norm.data
+            filt.data <- global.param$filt.data
+            repro.filt.val <- global.param$repro.filt.val
+            sd.filt.val <- global.param$sd.filt.val
+            log.trans <- global.param$log.transform
 
             # update group selection
-            groups.comp = global.param$grp.comp.selection
-            global.param$grp.comp = groups.comp
+            groups.comp <- global.param$grp.comp.selection
+            global.param$grp.comp <- groups.comp
             
-            # ## #############################################
-            # ## specify which comparisons should be performed
-            # if(test %in% c('One-sample mod T', 'mod F', 'none')){
-            #     ## each group separetely
-            #     groups.comp <- global.param$grp
-            #     global.param$grp.comp <- groups.comp
-            # }
-            # ## #############################################
-            # ## pairwise combinations for 2-sample test
-            # if(test == 'Two-sample mod T'){
-            # 
-            #     ## all pairwise combinations
-            #     groups.unique <- unique(global.param$grp)
-            # 
-            #     groups.comp <- c()
-            #     count=1
-            #     for(i in 1:(length(groups.unique)-1))
-            #         for(j in (i+1):length(groups.unique)){
-            #             ## order alphabetically
-            #             groups.tmp <- sort( groups.unique[c(i,j)] )
-            #             ##groups.comp[count] <- paste(groups.unique[i], groups.unique[j], sep='.vs.')
-            #             groups.comp[count] <- paste(groups.tmp[1], groups.tmp[2], sep='.vs.')
-            #             count <- count+1
-            #         }
-            #     global.param$grp.comp <- groups.comp
-            # }
-
             ## ###########################################
             ## log transformation
             ## ###########################################
             if(log.trans != 'none'){
+                
                 ids.tmp <- tab[, id.col]
                 dat.tmp <- tab[, -which(colnames(tab) == id.col)]
                 dat.tmp <- data.matrix(dat.tmp)
@@ -3968,29 +3858,13 @@ shinyServer(
             if(norm.data != 'none'){
                
                 withProgress(message='Applying normalization...', {
-                    #View(head(tab))
+                    
+                    ## run normlaization
                     tab.norm <- normalize.data(tab, id.col, norm.data)
 
                     ## if two-component norm fails
                     if(class(tab.norm) == 'try-error'){
                         
-
-                                         
-                      ## modal window
-                      # showModal(modalDialog(
-                      #     size='m',
-                      #     title =  error$title,
-                      #     HTML('<alert>No normalization has bene applied!</alert>')
-                      # ))
-                      # 
-                      ############################################### 
-                      ## if not successful skip the rest
-                      
-                      ## reset data filter
-                      #global.results$table.repro.filt=NULL
-                      #global.results$table.sd.filt=NULL
-                      #repro.filt='no'
-                      
                       ## reset test
                       test='none'
                       global.param$which.test <- 'none'
@@ -4006,14 +3880,19 @@ shinyServer(
                       global.param$filter.type <- 'none'
                       updateSelectInput('filter.type', session=session, selected = 'none')
                       
-                     
+                      ## throw error
                       error$title <- "'Error applying two-component normalization."
                       error$msg <- HTML('The two-component normalization failed to converge on at least one data column. Please note that this type of normalization expects <b>log-ratio</b> data that is approximately <b>centered around zero</b>. Please make sure this is the case by <b>inspecting the profile plots</b> under the QC tab.')
                       
                     } else {
-                        #View(head(tab.norm))
+                        ## store normalized table    
                         global.results$table.norm <- tab.norm
                     }
+                    
+                    ## Make sure the normalized table is used
+                    ## in downstream analysis.
+                    ## This was broken in v0.8.8 and v0.8.8.1 
+                    tab <- tab.norm
                 })
             }
             ## ############################################
@@ -4026,10 +3905,8 @@ shinyServer(
 
                     withProgress(message='Applying reproducibility filter',  {
                         repro = my.reproducibility.filter(tab, id.col=id.col, groups, alpha=global.param$repro.filt.val)
-
-
                         tab = repro$table
-                        ##View(repro$table)
+                        
                     })
                     ## store indices of filtered values in the original table
                     global.results$values.filtered <- repro$values.filtered
@@ -4045,8 +3922,7 @@ shinyServer(
 
                  withProgress(message='Applying StdDev filter',  {
                         filt.tmp = sd.filter(tab, id.col=id.col, groups, sd.perc=global.param$sd.filt.val)
-                        tab = filt.tmp$table
-                        ##View(tab)
+                        tab = filt.tmp$table   
                     })
                     ## store indices of filtered values in the original table
                     global.results$values.filtered <- filt.tmp$values.filtered
@@ -4063,7 +3939,7 @@ shinyServer(
             ##################################
             ## two sample
             if(test == 'Two-sample mod T'){
-                ##View(tab)
+                
                 withProgress(message='Two-sample test', value=0, {
 
                     count=0
@@ -4100,8 +3976,7 @@ shinyServer(
                     }
 
                 ##################################
-                ## reorder table
-                    #save(groups, res.comb, file='groups.RData')
+                ## reorder columns in table
                 res.id <- res.comb$id ## id column
                 res.exprs <- res.comb[, names(groups)] ## expression values
                 res.test <- res.comb[, grep('^logFC|^AveExpr|^t\\.|^P\\.Value|^adj.P.Val|^Log\\.P\\.Value', colnames(res.comb))] ## test results
@@ -4120,6 +3995,7 @@ shinyServer(
                 withProgress(message='One-sample T test', value=0, {
 
                     count=0
+                    
                     ## loop over groups
                     for(g in unique(groups.comp)){
 
@@ -4127,10 +4003,8 @@ shinyServer(
                         tab.group <- cbind(tab[, id.col], tab[, names(groups)[which(groups == g)]])
                         colnames(tab.group)[1] <- id.col
 
-                        ##View(tab.group)
-
                         res.tmp <- modT.test( tab.group, id.col=id.col, plot=F, nastrings=NASTRINGS, label=g, na.rm=FALSE)$output
-                        ##View(res.tmp)
+                    
                         if(count == 0){
                             res.comb <- res.tmp
                         } else {
@@ -4150,33 +4024,29 @@ shinyServer(
                 ## reorder columns of the table
                 res.id <- res.comb$id ## id column
                 res.exprs <- res.comb[, names(groups)] ## expression values
-                ##View(res.exprs)
                 res.test <- res.comb[, grep('^logFC|^AveExpr|^t\\.|^P\\.Value|^adj.P.Val|^Log\\.P\\.Value', colnames(res.comb))] ## test results
-                ##View(res.test)
                 res.test <- res.test[, order(colnames(res.test))]
                 ## assemble new table
                 res.comb <- data.frame(id=res.id, res.test, res.exprs, stringsAsFactors=F)
                 ##res.comb <- res.comb[tab[, id.col], ]
                 res.comb <- res.comb[rownames(tab),]
-                ###########################################
-                ## store the results
-                ##global.results$data$output <- res.comb
             }
 
             ##################################
             ## moderated F test
             if(test == 'mod F'){
-                ##cat('test F...')
+                
                 withProgress(message='moderated F-test', value=0, {
+                
                     tab.group <- cbind(tab[, id.col], tab[, names(groups)])
                     colnames(tab.group)[1] <- id.col
                   
-                    #save(groups, file='groups.RData')
                     res.comb <- modF.test( tab.group, id.col=id.col, class.vector=groups, nastrings=NASTRINGS, na.rm=FALSE)$output
                     colnames(res.comb) <- sub('^X', '', colnames(res.comb))
                 })
+                
                 ##################################
-                ## reorder table
+                ## reorder columns of the data table
                 res.id <- res.comb$id ## id column
                 ##res.exprs <- res.comb[, names(groups)] ## expression values
                 res.exprs <- tab[, names(groups)]
@@ -4187,13 +4057,11 @@ shinyServer(
                 res.comb <- data.frame(id=res.id, res.test, res.exprs, stringsAsFactors=F)
                 ##res.comb <- res.comb[tab[, id.col], ]
                 res.comb <- res.comb[rownames(tab),]
-                ###########################################
-                ## store the results
-##                global.results$data$output <- res.comb
-            }
+           }
             
             ##########################################################
             ## two group linear model with repeated measurements
+            ## -- NOT FUNCTIONAL --
             if(test == 'Two-sample LM'){
                 
                 withProgress(message='Two-sample LM', value=0, {
@@ -4275,24 +4143,19 @@ shinyServer(
 
                 ###########################################
                 ## store data matrix as test results
-                ## - values are log
+                ## - values are log, if performed
                 tab <- data.frame(id=tab[ , id.col], tab)
                 res.comb <- tab
 
             }
 
-
-
             ## #########################################
             ##   add id-mapping if not present already
             ##
             ## #########################################
-            ##if(!is.null(global.results$id.map)){
             if( sum(c('id.concat', 'id.mapped', 'id.query') %in% colnames(res.comb)) < 3 ){
                 res.comb <- left_join(res.comb, global.results$id.map, 'id')
-              
             }
-
             rownames(res.comb) <- make.names(res.comb$id, unique = T)
 
             ## #########################################
@@ -4302,13 +4165,9 @@ shinyServer(
             ## number of features with at least one non-missing value
             global.results$N.feat <- sum(apply( tab[, names(groups)], 1, function(x) sum(is.na(x)/length(x))) < 1)
 
-            ##cat(dim(global.results$data$output))
-
             ## #####################################
             ## set some flags
             global.param$analysis.run <- T
-            
-            #global.results$export.results <- F
             global.results$export.results <- F
             global.results$export.xls <- F
             global.results$export.rmd <- F

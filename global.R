@@ -24,7 +24,7 @@ require('pacman')
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.9"
+VER <- "0.8.9.1"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data

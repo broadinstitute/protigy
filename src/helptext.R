@@ -30,15 +30,12 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
-<b>v0.8.9 January 13, 2021</b>
+<b>v0.8.9.1 February 05, 2021</b>
 <ul>
-<li><mark>BUGFIX:</mark> Fixed normalization which was broken in v0.8.8 and v0.8.8.1 (unnormalized data was used in subsequent analyses).</li>
-<li>Misc: A column "id" will be used consistently throughout the different analysis steps (column will be created if not present already). This does not affect input data in GCT v1.3 format (id column in GCT 1.3 files is always "id").</li>
-<li>Misc: Warning if duplicated ids were found.</li>
-<li>Misc: Some code cleanup.</li>
+<li>Misc: Fixed the error message "Experimental design file does not match the table you have uploaded (different number of rows/columns)!" that was falsely triggered whenever the selected id column was not "id". The bug was intrduced with v0.8.9</li>
+<li>Misc: Fixed a typo in the column description of the Execl result sheet ("Nomical P-value" -> "Nominal P-Value")
 </ul>
-      
-<font size=\"3\">
+
 <b>v0.8.8.1 December 3, 2020</b>
 <ul>
 <li>PCA: Added the number of total features to the title of the plot.</li>
@@ -584,7 +581,7 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 <ul>
 <li><b>Median</b>: Subtract the sample median from each value (centering).</li>
 <li><b>Median-MAD</b>: Subtract the sample median and divide by sample MAD (centering plus scaling).</li>
-<li><b>Upper quartile: Subtract the sample\'s 75th percentile from each value.</b></li>
+<li><b>Upper quartile</b>: Subtract the sample\'s 75th percentile from each value.</li>
 <li><b>2-component</b>: Use a mixture-model approach to separate non-changing from changing features and divide both populations by the median of the non-changing features.</li>
 <li><b>Quantile</b>: Transform the data such that the quantiles of all sample distributions are the equal.</li>
 <li><b>none</b>: The data will be taken as is. Should be used if the data has been already normalized.</li>

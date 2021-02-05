@@ -1370,7 +1370,450 @@ shinyServer(
                 actionButton( 'update.grp', 'Next', width='100')
             )
         })
+        
+                
+        #################################################################################
+        # IMPORT DATA
+        ## 2) - upload file
+        ##    - determine file type
+        ##    - import file
+        ##    - user folders are create here
+        ##    - extract label from filename
+        #################################################################################
+        observeEvent( input$file, {
+            
+            global.input$id.col <- 0
+            
+            ########################################
+            ## generate session ID and prepare data
+            ## directory
+            #########################################
+            ## ## if there is an user ID...
+            if(!is.null( global.param$user )){
+                ## create user directory, if not present already
+                if(!dir.exists(paste(DATADIR, global.param$user, sep='')))
+                    dir.create(paste(DATADIR, global.param$user, sep=''))
+                
+                global.param$session.dir <- paste(DATADIR, global.param$user,'/' ,global.param$session, '/', sep='')
+                
+            } else{
+                global.param$session.dir <- paste(DATADIR, global.param$session, '/' ,sep='')
+            }
+            ## create directory on server to store the results
+            dir.create(global.param$session.dir)
+            
+            ## ############################################
+            ## copy the input file to the session folder
+            fn <- paste0( global.param$session.dir, input$file$name)
+            file.copy(input$file$datapath, fn)
+            
+            ## ###############################
+            ## generate label
+            fn.split <- unlist(strsplit( sub('.*/', '', fn), '_'))
+            if(length(fn.split) > 1){
+                label <- fn.split[1]
+                if(nchar(label) > 10)
+                    label <- chopString(label, 10, add.dots=F)
+                global.param$label <- label
+            } else {
+                global.param$label <- chopString( sub('.*/', '', fn) , 10, add.dots=F)
+            }
+            
+            ########################################################
+            ##                file import
+            ########################################################
+            
+            
+            ################################################
+            ##                      GCTX
+            if(grepl('\\.gctx$', fn)){
+                
+                gct <- try( parse.gctx(fn) )
+                
+                #################################################
+                ##                     GCT 1.2
+            } else if( length( grep( '^\\#1\\.2', readLines(fn,n=1))) > 0){
+                
+                tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS, skip=2)
+                
+                ## shorten column names and store together with the original names
+                colnames.tmp <- chopString(colnames(tab), STRLENGTH)
+                names(colnames.tmp) <- colnames(tab)
+                
+                ## store values
+                global.input$table <- global.input$table.org <- tab
+                global.input$file <- input$file
+                global.input$table.colnames <- colnames.tmp
+                
+                rm(tab, colnames.tmp)
+                
+                #####################################################      
+                ##                     GCT 1.3
+            } else if( length( grep( '^\\#1\\.3', readLines(fn,n=1))) > 0){
+                
+                # parse gct file
+                gct <- try( parse.gctx2(fn, show_modal = TRUE) )
+                if(class(gct) == 'try-error'){
+                    error$title <- "Error importing GCT 1.3 file"
+                    error$msg <- gct[1]
+                    
+                    validate(need(class(gct) != 'try-error', 'Error importing GCT 1.3 file.'))
+                }
+                
+                ## #################################################
+                ## robustify rids
+                if(sum(duplicated(gct@rid)) > 0)
+                    gct@rid <- de_duplicate_ids(gct@rid, reactiveValuesToList(global.param))
+                rownames(gct@mat) <- gct@rid
+                
+                ## rdesc
+                if(nrow(gct@rdesc) > 0){
+                    rownames(gct@rdesc) <- gct@rid   
+                }
+                ## cid
+                gct@cid <- make.unique(make.names(gct@cid))
+                #cdesc
+                if(nrow(gct@cdesc) > 0)
+                    rownames(gct@cdesc) <- gct@cid
+                colnames(gct@mat) <- gct@cid
+                
+                ## error checking for column meta data
+                if(nrow(gct@cdesc) == 0){
+                    error$title <- "Error parsing GCT 1.3 column meta data"
+                    error$msg <- paste('No column meta data tracks defined! Need at least one column meta data track to use as class vector.') 
+                    validate( need(nrow(gct@cdesc) > 0, 'Error parsing GCT 1.3 column meta data.'))
+                }
+                ## robustify cdesc column names
+                colnames(gct@cdesc) <- make.names(colnames(gct@cdesc))
+                
+                ## remove 'id' from cdesc
+                if('id' %in% colnames(gct@cdesc)){
+                    cn.tmp <- colnames(gct@cdesc)
+                    rm.idx <- which(colnames(gct@cdesc) == 'id')
+                    gct@cdesc <- data.frame(gct@cdesc[ ,-rm.idx] )
+                    cn.tmp <- cn.tmp[-rm.idx]
+                    colnames(gct@cdesc) <- cn.tmp
+                }
+                if(ncol(gct@cdesc) == 1)
+                    rownames(gct@cdesc) <- gct@cid
+                
+                #####################
+                # expression table
+                if(nrow(gct@rdesc) > 0 ){
+                    tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
+                } else {
+                    tab <- data.frame(id=gct@rid, gct@mat, stringsAsFactors = F)
+                }
+                rownames(tab) <- tab$id
+                
+                ## sample names
+                colnames.tmp <- chopString(colnames(tab), STRLENGTH)
+                names(colnames.tmp) <- colnames(tab)
+                
+                # id column 
+                global.param$id.col.value='id'
+                global.param$id.done=T
+                
+                ## #################
+                ## map to gene names
+                map.res <- mapIDs(tab$id)
+                global.results$keytype <- map.res$keytype
+                global.results$id.map <- map.res$id.map
+                
+                ## store values
+                global.input$table <- global.input$table.org <- tab
+                global.input$file <- input$file
+                global.input$table.colnames <- colnames.tmp
+                
+                global.input$rdesc <- gct@rdesc
+                global.input$cdesc <- gct@cdesc
+                
+                global.param$cdesc.all <- global.param$cdesc.selection <- colnames(global.input$cdesc)
+                
+                # flag
+                global.param$file.gct3 <- T
+                
+                rm(tab, colnames.tmp)
+                
+                # ##########################################################  
+                #                    other text file
+            } else { ## end if GCT 1.3
+                
+                ## ################################
+                ## determine the separator
+                tab.sep=NULL
+                
+                ## try to figure out the separator, DON'T USE THE HEADER FOR THAT
+                ## use the fourth row instead (should be data)
+                for(s in SEPARATOR){
+                    
+                    tab <- read.table(fn, sep=s, header=F, stringsAsFactors=F, nrows=1, skip=4)
+                    
+                    if(length(tab) > 1){
+                        global.param$tabsep <- s
+                        break;
+                    }
+                }
+                
+                ## #########################################################
+                ## import the table: txt
+                if( global.param$tabsep == '\t'){
+                    tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS)
+                } else {
+                    tab <- read.table( fn, sep=global.param$tabsep, header=T, 
+                                       stringsAsFactors=F, na.strings=NASTRINGS, quote = "\"", 
+                                       dec = ".", fill = TRUE, comment.char = "")
+                }
+                ## shorten column names and store together with the original names
+                colnames.tmp <- chopString(colnames(tab), STRLENGTH)
+                names(colnames.tmp) <- colnames(tab)
+                
+                ## store values
+                global.input$table <- global.input$table.org <- tab
+                global.input$file <- input$file
+                global.input$table.colnames <- colnames.tmp
+                
+                rm(tab, colnames.tmp)
+            } 
+            
+            # flag
+            global.param$file.done <- T
+        })
+        
+        ###############################################
+        ## observer
+        ## 4) ID column
+        ##  - make unique ids
+        ##  - determine id type
+        ##  - map to gene names
+        ##  - initialize group assignment
+        ##
+        ## - for txt and gct 1.2 file formats
+        observeEvent( input$id.col ,{
+            
+            if( is.null( global.input$table) | is.null(input$id.col.value) ) return()
+            
+            ## store name of id column
+            global.param$id.col.value <- input$id.col.value
+            cat('selected id column: ', global.param$id.col.value, '\n')
+            
+            ## update 'global.input$id.col'
+            global.input$id.col <- input$id.col
+            
+            ## ###########################################
+            ## check the id column
+            tab <- global.input$table
+            
+            ## ###########################################
+            ## make sure the ids are unique
+            ids <- as.character(tab[, global.param$id.col.value])
+            if(sum(duplicated(ids)) > 0)
+                ids <- de_duplicate_ids(ids, reactiveValuesToList(global.param))
+            
+            #####################################    
+            ## - update 'id.col.value' with 'id'
+            ## - replace values in 'id' column
+            global.param$id.col.value.updated <- FALSE
+            
+            if(global.param$id.col.value != 'id'){
+                
+                cat('updated id column: ', global.param$id.col.value, ' --> ')
+                cat('id\n')
+                
+                tab <- data.frame(id=ids, tab)
+                
+                global.param$id.col.value <- "id"
+                global.param$id.col.value.updated <- TRUE
+                
+               # global.input$table.colnames <- colnames(tab)
 
+            }
+            tab[, 'id'] <- ids
+            
+            ## use id as rownames
+            rownames(tab) <- ids
+            
+            ## ############################################
+            ## map to gene names
+            ## ############################################
+            map.res <- mapIDs(ids)
+            global.results$keytype <- map.res$keytype
+            global.results$id.map <- map.res$id.map
+            
+            ########################################
+            ## store
+            global.input$table <- tab
+            
+            
+            # #######################
+            # flag
+            global.param$id.done <- T
+            
+        })
+        
+        ## ###############################################################
+        ## 4c)       upload experimental design file
+        ##
+        ## - divide input table into expression and annotation columns
+        observeEvent( input$exp.file, {
+            
+            ## reset error message
+            error$msg <- NULL
+            
+            ## ###########################
+            ## copy file into sessions folder
+            fn <- paste0( global.param$session.dir, input$exp.file$name)
+            file.copy(input$exp.file$datapath, fn)
+            
+            
+            ## ##########################
+            ## read the experimental design file
+            grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
+             
+            #############################
+            ## if id column has been updated
+            ## to 'id':
+            if(global.param$id.col.value.updated){
+                id_row <- data.frame(Column.Name='id', Experiment='')
+                grp.file <- rbind(id_row, grp.file) 
+            }
+            
+            Column.Name <- grp.file$Column.Name
+            Experiment <- as.character(grp.file$Experiment)
+            
+            ## #############################################################
+            ## index on non-empty 'Experiment' rows
+            exprs.idx <- which(nchar(Experiment) > 0 )
+            
+            ## ###############################
+            ## update label
+            fn.split <- unlist(strsplit( sub('.*/', '', fn), '_'))
+            if(length(fn.split) > 1){
+                label <- fn.split[1]
+                if(nchar(label) > 10)
+                    label <- chopString(label, 10, add.dots=F)
+                global.param$label <- paste(global.param$label, label )
+            } else {
+                label <- chopString( sub('.*/', '', fn) , 10, add.dots=F)
+                global.param$label <- paste(global.param$label, label, sep='-')
+            }
+            
+            ###############################################################
+            ##
+            ## - do some sanity checks
+            ## - separate expression data from annotation columns
+            ##
+            ###############################################################
+            
+            ## Number of rows in exp design file does not match number of columns in data file
+            if( length(Column.Name) != ncol(global.input$table)  ){
+                error$title <- "Problem parsing experimental design file."
+                error$msg <- 'Experimental design file does not match the table you have uploaded (different number of rows/columns)!'
+                return()
+            }
+            
+            ## names in the exp design file do not match to the table
+            if( sum( Column.Name != colnames(global.input$table)) > 0 ){
+                error$title <- "Problem parsing experimental design file."
+                error$msg <- 'Experimental design file does not match the table you have uploaded!'
+                return()
+            }
+            
+            ## not an experimental design file
+            if( sum( colnames(grp.file) %in% c('Column.Name', 'Experiment'), na.rm=T) != 2 )  {
+                error$title <- "Problem parsing experimental design file."
+                error$msg <- 'This is not an experimental desgin file! The file should contain two columns (Column.Name, Experiment)!'
+                return()
+            }
+            ## 'empty' file
+            if( sum( nchar(Experiment) > 0, na.rm=T ) == 0 | sum(!is.na( Experiment) == 0) ){
+                error$title <- "Problem parsing experimental design file."
+                error$msg <- 'No experiments defined!'
+                return()
+            }
+            ##cat('L=', sum( Column.Name[ exprs.idx ] %in%  colnames(global.input$table)))
+            ## column names specified in exp design file not found in table
+            ##if( sum( Column.Name[ exprs.idx ] %in%  colnames(global.input$table)) != length(exprs.idx) ){
+            ##    error$msg <- 'Column names in the experimental design file cannot be found in the data table!'
+            ##    return()
+            ## }
+            ## check whether there are at least 2 replicates per group
+            num.rep=table(Experiment[exprs.idx])
+            if(min(num.rep) == 1){
+                ##    error$msg <- paste('Warning! Not all groups have repicate measurments defined!!')
+                ##    return()
+            }
+            
+            ## ################################
+            ## ANNOTATION: extract empty cells
+            ## - corresponding columns will be carried over as
+            ##   annotation columns in the result file
+            grp.anno <- grp.file[which(nchar( Experiment) == 0 ), ]
+            grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
+            
+            if(length(grp.anno)>0)
+                global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
+            
+            ## ################################
+            ## EXPRESSION
+            ## - extract all non-empty cells in the 'Experiment' column
+            grp.exprs <- grp.file[exprs.idx, ]
+            
+            ## order alphabetically to make coloring consistent
+            grp.exprs <- grp.exprs[order(grp.exprs$Experiment), ]
+            
+            ## class vector
+            grp=grp.exprs$Experiment
+            ## robustify experiment names
+            grp <- gsub('^ {1,10}', '', grp)
+            grp <- gsub(' {1,10}$', '', grp)
+            grp <- make.names(grp)
+            names(grp)=grp.exprs$Column.Name
+            
+            ## update input table, keep id and expression columns
+            #tab <- global.input$table[ , c(global.param$id.col.value, names(grp))]
+            tab <- global.input$table[ , c('id', names(grp))]
+            
+            ## #################################
+            ## remove NA rows
+            na.row.idx <- apply(tab[, names(grp)], 1, function(x) sum(is.na(x))/length(x) )
+            na.row.idx <- which(na.row.idx == 1)
+            if(length(na.row.idx) > 0){
+                tab <- tab[-na.row.idx, ]
+                global.input$NA.rows <- length(na.row.idx)
+            }
+            
+            global.input$table <- tab
+            
+            ################################
+            ## update number of groups
+            global.param$N.grp <- length(unique( na.omit(grp)) )
+            
+            ## store group assignment
+            global.param$grp <- global.param$grp.all <- grp
+            global.param$grp.comp.all <- global.param$grp.comp <- unique(grp)
+            
+            ## group colors
+            grp.col <- rep(GRPCOLORS[1], length(grp))
+            names(grp.col) <- names(grp)
+            
+            for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
+            global.param$grp.colors <- grp.col
+            
+            ## group colors for figure legend
+            idx <- !duplicated(grp)
+            grp.col.legend = grp.col[idx]
+            names(grp.col.legend) <- grp[idx]
+            global.param$grp.colors.legend <- grp.col.legend
+            
+            ## all done
+            global.param$grp.done = T
+            
+            ## save column name used as 'id'
+            ##global.param$id.col.value = input$id.col.value
+            
+        })
+        
         ######################################
         ## UI filter type
         output$filter.type <- renderUI({
@@ -2987,14 +3430,12 @@ shinyServer(
                       
                       ## transformed and signed p-values
                       mat <- logp*sign(fc)
-                      #if(is.null)
-                      colnames(mat) <- paste0('signed.', colnames(logp))
-                      
+                      #colnames(mat) <- paste0('signed.', colnames(logp))
+                      colnames(mat) <- paste0('signed.', logp.colnames) 
                       
                       rdesc <- rdesc[ ,-which(colnames(rdesc) %in% names(grp.srt))]
                       
                       cid <- colnames(mat)
-                      #rid <- rdesc[, global.param$id.col.value] ## 20200928
                       rid <- rdesc[, 'id']
                       
                       res.gct <- new('GCT')
@@ -3155,276 +3596,7 @@ shinyServer(
         })
         
         
-        ###############################################
-        ## observer
-        ## 4) ID column
-        ##  - make unique ids
-        ##  - determine id type
-        ##  - map to gene names
-        ##  - initialize group assignment
-        ##
-        ## - for txt and gct 1.2 file formats
-        observeEvent( input$id.col ,{
-
-            if( is.null( global.input$table) | is.null(input$id.col.value) ) return()
-
-            ## store name of id column
-            global.param$id.col.value <- input$id.col.value
-            cat('id column: ', global.param$id.col.value, '\n')
-            
-            ## update 'global.input$id.col'
-            global.input$id.col <- input$id.col
-
-            ## ###########################################
-            ## check the id column
-            tab <- global.input$table
-
-            ## ###########################################
-            ## make sure the ids are unique
-            ids <- as.character(tab[, global.param$id.col.value])
-            if(sum(duplicated(ids)) > 0)
-                ids <- de_duplicate_ids(ids, reactiveValuesToList(global.param))
-
-            #####################################    
-            ## - update 'id.col.value' with 'id'
-            ## - replace values in 'id' column
-            if(global.param$id.col.value != 'id'){
-              
-                  tab <- data.frame(id=ids, tab)
-                  global.param$id.col.value <- "id"
-                  
-                  cat('updated id column: ', global.param$id.col.value, '\n')
-            }
-            tab[, 'id'] <- ids
-            
-            ## use id as rownames
-            rownames(tab) <- ids
-
-            ## ############################################
-            ## map to gene names
-            ## ############################################
-            map.res <- mapIDs(ids)
-            global.results$keytype <- map.res$keytype
-            global.results$id.map <- map.res$id.map
         
-            ########################################
-            ## store
-            global.input$table <- tab
-            
-            # #######################
-            # flag
-            global.param$id.done <- T
-
-        })
-
-        #################################################################################
-        # IMPORT DATA
-        ## 2) - upload file
-        ##    - determine file type
-        ##    - import file
-        ##    - user folders are create here
-        ##    - extract label from filename
-        #################################################################################
-        observeEvent( input$file, {
-
-            global.input$id.col <- 0
-
-            ########################################
-            ## generate session ID and prepare data
-            ## directory
-            #########################################
-            ## ## if there is an user ID...
-            if(!is.null( global.param$user )){
-                 ## create user directory, if not present already
-                 if(!dir.exists(paste(DATADIR, global.param$user, sep='')))
-                     dir.create(paste(DATADIR, global.param$user, sep=''))
-
-                 global.param$session.dir <- paste(DATADIR, global.param$user,'/' ,global.param$session, '/', sep='')
-
-            } else{
-                 global.param$session.dir <- paste(DATADIR, global.param$session, '/' ,sep='')
-            }
-            ## create directory on server to store the results
-            dir.create(global.param$session.dir)
-
-            ## ############################################
-            ## copy the input file to the session folder
-            fn <- paste0( global.param$session.dir, input$file$name)
-            file.copy(input$file$datapath, fn)
-
-            ## ###############################
-            ## generate label
-            fn.split <- unlist(strsplit( sub('.*/', '', fn), '_'))
-            if(length(fn.split) > 1){
-                label <- fn.split[1]
-                if(nchar(label) > 10)
-                    label <- chopString(label, 10, add.dots=F)
-                global.param$label <- label
-            } else {
-                global.param$label <- chopString( sub('.*/', '', fn) , 10, add.dots=F)
-            }
-
-            ########################################################
-            ##                file import
-            ########################################################
-            
-            
-            ################################################
-            ##                      GCTX
-            if(grepl('\\.gctx$', fn)){
-              
-                gct <- try( parse.gctx(fn) )
-
-            #################################################
-            ##                     GCT 1.2
-            } else if( length( grep( '^\\#1\\.2', readLines(fn,n=1))) > 0){
-            
-                  tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS, skip=2)
-                  
-                  ## shorten column names and store together with the original names
-                  colnames.tmp <- chopString(colnames(tab), STRLENGTH)
-                  names(colnames.tmp) <- colnames(tab)
-                  
-                  ## store values
-                  global.input$table <- global.input$table.org <- tab
-                  global.input$file <- input$file
-                  global.input$table.colnames <- colnames.tmp
-                  
-                  rm(tab, colnames.tmp)
-                  
-            #####################################################      
-            ##                     GCT 1.3
-            } else if( length( grep( '^\\#1\\.3', readLines(fn,n=1))) > 0){
-              
-              # parse gct file
-              gct <- try( parse.gctx2(fn, show_modal = TRUE) )
-              if(class(gct) == 'try-error'){
-                error$title <- "Error importing GCT 1.3 file"
-                error$msg <- gct[1]
-                
-                validate(need(class(gct) != 'try-error', 'Error importing GCT 1.3 file.'))
-              }
-              
-              ## #################################################
-              ## robustify rids
-              if(sum(duplicated(gct@rid)) > 0)
-                  gct@rid <- de_duplicate_ids(gct@rid, reactiveValuesToList(global.param))
-              rownames(gct@mat) <- gct@rid
-              
-              ## rdesc
-              if(nrow(gct@rdesc) > 0){
-                rownames(gct@rdesc) <- gct@rid   
-              }
-              ## cid
-              gct@cid <- make.unique(make.names(gct@cid))
-              #cdesc
-              if(nrow(gct@cdesc) > 0)
-                rownames(gct@cdesc) <- gct@cid
-              colnames(gct@mat) <- gct@cid
-              
-              ## error checking for column meta data
-              if(nrow(gct@cdesc) == 0){
-                error$title <- "Error parsing GCT 1.3 column meta data"
-                error$msg <- paste('No column meta data tracks defined! Need at least one column meta data track to use as class vector.') 
-                validate( need(nrow(gct@cdesc) > 0, 'Error parsing GCT 1.3 column meta data.'))
-              }
-              ## robustify cdesc column names
-              colnames(gct@cdesc) <- make.names(colnames(gct@cdesc))
-              
-              ## remove 'id' from cdesc
-              if('id' %in% colnames(gct@cdesc)){
-                cn.tmp <- colnames(gct@cdesc)
-                rm.idx <- which(colnames(gct@cdesc) == 'id')
-                gct@cdesc <- data.frame(gct@cdesc[ ,-rm.idx] )
-                cn.tmp <- cn.tmp[-rm.idx]
-                colnames(gct@cdesc) <- cn.tmp
-              }
-              if(ncol(gct@cdesc) == 1)
-                rownames(gct@cdesc) <- gct@cid
-              
-              #####################
-              # expression table
-              if(nrow(gct@rdesc) > 0 ){
-                tab <- data.frame(id=gct@rid, gct@rdesc, gct@mat, stringsAsFactors = F)
-              } else {
-                tab <- data.frame(id=gct@rid, gct@mat, stringsAsFactors = F)
-              }
-              rownames(tab) <- tab$id
-              
-              ## sample names
-              colnames.tmp <- chopString(colnames(tab), STRLENGTH)
-              names(colnames.tmp) <- colnames(tab)
-              
-              # id column 
-              global.param$id.col.value='id'
-              global.param$id.done=T
-              
-              ## #################
-              ## map to gene names
-              map.res <- mapIDs(tab$id)
-              global.results$keytype <- map.res$keytype
-              global.results$id.map <- map.res$id.map
-             
-              ## store values
-              global.input$table <- global.input$table.org <- tab
-              global.input$file <- input$file
-              global.input$table.colnames <- colnames.tmp
-              
-              global.input$rdesc <- gct@rdesc
-              global.input$cdesc <- gct@cdesc
-
-              global.param$cdesc.all <- global.param$cdesc.selection <- colnames(global.input$cdesc)
-              
-              # flag
-              global.param$file.gct3 <- T
-              
-              rm(tab, colnames.tmp)
-              
-            # ##########################################################  
-            #                    other text file
-            } else { ## end if GCT 1.3
-
-                ## ################################
-                ## determine the separator
-                tab.sep=NULL
-                
-                ## try to figure out the separator, DON'T USE THE HEADER FOR THAT
-                ## use the fourth row instead (should be data)
-                for(s in SEPARATOR){
-
-                    tab <- read.table(fn, sep=s, header=F, stringsAsFactors=F, nrows=1, skip=4)
-
-                    if(length(tab) > 1){
-                        global.param$tabsep <- s
-                        break;
-                    }
-                }
-                
-                ## #########################################################
-                ## import the table: txt
-                if( global.param$tabsep == '\t'){
-                    tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS)
-                } else {
-                    tab <- read.table( fn, sep=global.param$tabsep, header=T, 
-                                       stringsAsFactors=F, na.strings=NASTRINGS, quote = "\"", 
-                                       dec = ".", fill = TRUE, comment.char = "")
-                }
-                ## shorten column names and store together with the original names
-                colnames.tmp <- chopString(colnames(tab), STRLENGTH)
-                names(colnames.tmp) <- colnames(tab)
-                
-                ## store values
-                global.input$table <- global.input$table.org <- tab
-                global.input$file <- input$file
-                global.input$table.colnames <- colnames.tmp
-                
-                rm(tab, colnames.tmp)
-            } 
-
-            # flag
-            global.param$file.done <- T
-        })
-
    
         ## ###############################################################
         ##
@@ -3550,162 +3722,7 @@ shinyServer(
 
         #
         
-        ## ###############################################################
-        ## 4c)       upload experimental design file
-        ##
-        ## - divide input table into expression and annotation columns
-        observeEvent( input$exp.file, {
-
-            ## reset error message
-            error$msg <- NULL
-
-            ## ###########################
-            ## copy file into sessions folder
-            fn <- paste0( global.param$session.dir, input$exp.file$name)
-            file.copy(input$exp.file$datapath, fn)
-
-
-            ## ##########################
-            ## read the experimental design file
-            grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
-            Column.Name <- grp.file$Column.Name
-            Experiment <- as.character(grp.file$Experiment)
-            
-            ## #############################################################
-            ## index on non-empty 'Experiment' rows
-            exprs.idx <- which(nchar(Experiment) > 0 )
-
-
-            ## ###############################
-            ## update label
-            fn.split <- unlist(strsplit( sub('.*/', '', fn), '_'))
-            if(length(fn.split) > 1){
-                label <- fn.split[1]
-                if(nchar(label) > 10)
-                    label <- chopString(label, 10, add.dots=F)
-                global.param$label <- paste(global.param$label, label )
-            } else {
-                label <- chopString( sub('.*/', '', fn) , 10, add.dots=F)
-                global.param$label <- paste(global.param$label, label, sep='-')
-            }
-
-            ###############################################################
-            ##
-            ## - do some sanity checks
-            ## - separate expression data from annotation columns
-            ##
-            ###############################################################
-
-            ## Number of rows in exp design file does not match number of columns in data file
-            if( length( Column.Name) != ncol(global.input$table)  ){
-             
-              error$title <- "Problem parsing experimental design file."
-              error$msg <- 'Experimental design file does not match the table you have uploaded (different number of rows/columns)!'
-              return()
-            }
-            
-            ## names in the exp design file do not match to the table
-            if( sum( Column.Name != colnames(global.input$table)) > 0 ){
-                error$title <- "Problem parsing experimental design file."
-                error$msg <- 'Experimental design file does not match the table you have uploaded!'
-                return()
-            }
-
-            ## not an experimental design file
-            if( sum( colnames(grp.file) %in% c('Column.Name', 'Experiment'), na.rm=T) != 2 )  {
-                error$title <- "Problem parsing experimental design file."
-                error$msg <- 'This is not an experimental desgin file! The file should contain two columns (Column.Name, Experiment)!'
-                return()
-            }
-            ## 'empty' file
-            if( sum( nchar(Experiment) > 0, na.rm=T ) == 0 | sum(!is.na( Experiment) == 0) ){
-                error$title <- "Problem parsing experimental design file."
-                error$msg <- 'No experiments defined!'
-                return()
-            }
-            ##cat('L=', sum( Column.Name[ exprs.idx ] %in%  colnames(global.input$table)))
-            ## column names specified in exp design file not found in table
-            ##if( sum( Column.Name[ exprs.idx ] %in%  colnames(global.input$table)) != length(exprs.idx) ){
-            ##    error$msg <- 'Column names in the experimental design file cannot be found in the data table!'
-            ##    return()
-           ## }
-            ## check whether there are at least 2 replicates per group
-            num.rep=table(Experiment[exprs.idx])
-            if(min(num.rep) == 1){
-            ##    error$msg <- paste('Warning! Not all groups have repicate measurments defined!!')
-            ##    return()
-            }
-
-            ## ################################
-            ## ANNOTATION: extract empty cells
-            ## - corresponding columns will be carried over as
-            ##   annotation columns in the result file
-            grp.anno <- grp.file[which(nchar( Experiment) == 0 ), ]
-            grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
-
-            if(length(grp.anno)>0)
-                global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
-
-            ## ################################
-            ## EXPRESSION
-            ## - extract all non-empty cells in the 'Experiment' column
-            grp.exprs <- grp.file[exprs.idx, ]
-
-            ## order alphabetically to make coloring consistent
-            grp.exprs <- grp.exprs[order(grp.exprs$Experiment), ]
-
-            ## class vector
-            grp=grp.exprs$Experiment
-            ## robustify experiment names
-            grp <- gsub('^ {1,10}', '', grp)
-            grp <- gsub(' {1,10}$', '', grp)
-            grp <- make.names(grp)
-            names(grp)=grp.exprs$Column.Name
-            
-            ## update input table, keep id and expression columns
-            #tab <- global.input$table[ , c(global.param$id.col.value, names(grp))]
-            tab <- global.input$table[ , c('id', names(grp))]
-            
-            ## #################################
-            ## remove NA rows
-            na.row.idx <- apply(tab[, names(grp)], 1, function(x) sum(is.na(x))/length(x) )
-            na.row.idx <- which(na.row.idx == 1)
-            if(length(na.row.idx) > 0){
-              tab <- tab[-na.row.idx, ]
-              global.input$NA.rows <- length(na.row.idx)
-            }
-            
-            global.input$table <- tab
-            
-            ################################
-            ## update number of groups
-            global.param$N.grp <- length(unique( na.omit(grp)) )
-            
-            ## store group assignment
-            global.param$grp <- global.param$grp.all <- grp
-            global.param$grp.comp.all <- global.param$grp.comp <- unique(grp)
-            
-            ## group colors
-            grp.col <- rep(GRPCOLORS[1], length(grp))
-            names(grp.col) <- names(grp)
-            
-            for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
-            global.param$grp.colors <- grp.col
-
-            ## group colors for figure legend
-            idx <- !duplicated(grp)
-            grp.col.legend = grp.col[idx]
-            names(grp.col.legend) <- grp[idx]
-            global.param$grp.colors.legend <- grp.col.legend
-
-            ## all done
-            global.param$grp.done = T
-
-            ## save column name used as 'id'
-            ##global.param$id.col.value = input$id.col.value
-
-        })
-
+        
         # #####################################
         #     determine groups to test
         # 

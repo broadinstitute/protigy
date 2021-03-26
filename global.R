@@ -19,12 +19,14 @@
 if (!require("pacman")) install.packages ("pacman")
 require('pacman')
 
+library(BiocManager)
+options(repos = BiocManager::repositories())
 
 #################################################################
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.9.1"
+VER <- "0.8.9.3"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -40,12 +42,13 @@ OS <<- Sys.info()['sysname']
 ## temp directory to write the Excel file
 TMPDIR <<- ifelse(OS=='Windows', "./", "/tmp/")
 ## app name
-##APPNAME <<- sub('.*/','',getwd())
 APPNAME <<- 'Protigy'
 ## app folder
 APPDIR <<- getwd()
 ## directory to store data files
-DATADIR <<- ifelse(OS=='Linux', "/local/shiny-data/", tempdir())
+DATADIR <<- ifelse(OS=='Linux', "/shiny-data/", tempdir())
+## User database for shared sessions 
+USERDB <<- file.path(APPDIR, 'conf/user-roles.txt')
 ## R version
 RVERSION <- as.numeric(paste(R.version$major, sub('\\..*','',R.version$minor), sep='.')) 
 ## email for trouble shooting
@@ -61,7 +64,6 @@ PIWIKURL <<- '//shiny-proteomics.broadinstitute.org/piwik/'
 ## load required packages
 #################################################################
 p_load (RColorBrewer)
-
 p_load(shiny)
 p_load(shinydashboard)
 p_load(shinyjs)
@@ -69,8 +71,10 @@ p_load(shinyjqui)
 p_load(shinyalert)
 
 ## required to install limma in R >= 3.5
-if(RVERSION >= 3.5)
+if(RVERSION >= 3.5){
   p_load(BiocManager)
+  options(repos = BiocManager::repositories())
+}
 
 #p_load(cmapR)
 p_load(magrittr)
@@ -107,7 +111,15 @@ p_load(statmod)
 p_load(hexbin)
 p_load(Hmisc)
 p_load(grid)
+
 ## pca
+# ChemometricsWith - removed from CRAN
+# use GH version instead
+if(!require("ChemometricsWithR")){
+  install.packages("remotes")
+  p_load(remotes)
+  install_github("rwehrens/ChemometricsWithR")
+}
 p_load(ChemometricsWithR)
 p_load(scatterplot3d)
 p_load(plotly)
@@ -519,7 +531,7 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
 ##            20151208 legend
 ##            20161103 check number of rows (N), 2D plot only
 ##############################################################################
-my.prcomp <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.points=3, rgl.point.size=30, main="PCA", leg.vec=NULL, leg.col=NULL, ...){
+my.prcomp_obsolete <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.points=3, rgl.point.size=30, main="PCA", leg.vec=NULL, leg.col=NULL, ...){
 
     cex.font = 1.8
 
@@ -602,118 +614,120 @@ my.prcomp2 <- function(res, grp){
    ## View(res)
 
   ## perform pca
-  ##pca <- prcomp(x, scale=scale)
+  ##pca <- prcomp(scale(t(res)))
   pca <- PCA(scale(t(res)))
-
-
+ 
   return(pca)
 }
 
-#####################################################
-##
-##
-##
-#####################################################
-plotPCAloadings <- function(pca, topn, pca.x, pca.y, pca.z){
-
-    ##load = loadings(pca)[, c(pc1, pc2, pc3)]
-
-    ## ###################
-    ## extract loadings
-    load.pca.x <- pca$loadings[, pca.x]
-    load.pca.y <- pca$loadings[, pca.y]
-    load.pca.z <- pca$loadings[, pca.z]
-
-    n=length(load.pca.x)
-
-    ## ###################
-    ## choose top N
-    x <- rev(sort(abs( load.pca.x ), decreasing=T )[1:min(topn, n)])
-    y <- rev(sort(abs( load.pca.y ), decreasing=T )[1:min(topn, n)])
-    z <- rev(sort(abs( load.pca.z ), decreasing=T )[1:min(topn, n)])
 
 
-    ## ###################################################
-    ## base plotting system
-    par(mfrow=c(1,3))
-    barplot(x, horiz=T, main=paste('PC', pca.x), las=2, border='blue', space=0, col='grey95', ylab='Features', xlab='Absolute coefficient', names.arg=rev(1:length(x)))
-    text(rep(0, length(x)), 1:length(x)-.5, labels=names(x), pos=4)
-
-    barplot(y, horiz=T, main=paste('PC', pca.y), las=2, border='blue', space=0, col='grey95', axisnames=T, xlab='Absolute coefficient',names.arg=rev(1:length(x)))
-    text(rep(0, length(y)), 1:(length(y))-.5, labels=names(y), pos=4)
-
-    barplot(z, horiz=T, main=paste('PC', pca.z), las=2, border='blue', space=0, col='grey95', axisnames=T, xlab='Absolute coefficient', names.arg=rev(1:length(x)))
-    text(rep(0, length(z)), 1:(length(z))-.5, labels=names(z), pos=4)
-
-}
-
-#####################################################
-##
-##            scatterPlotPCAloadings
-##
-#####################################################
-
-scatterPlotPCAloadings <- function(pca, topn, pca.x, pca.y, pca.z){
-
-        ## extract loadings
-        load.pca.x <- pca$loadings[, pca.x]
-        load.pca.y <- pca$loadings[, pca.y]
-        load.pca.z <- pca$loadings[, pca.z]
-
-        n=length(load.pca.x)
-
-        ## ###################
-        ## choose top N
-        x <- rev(sort(abs( load.pca.x ), decreasing=T )[1:min(topn, n)])
-        y <- rev(sort(abs( load.pca.y ), decreasing=T )[1:min(topn, n)])
-        z <- rev(sort(abs( load.pca.z ), decreasing=T )[1:min(topn, n)])
-
-
-        tmp.pcaloadings <- as.data.frame(pca$loadings[,c(pca.x,pca.y,pca.z)])
-        names(tmp.pcaloadings) <- make.names(names(tmp.pcaloadings))
-
-        PC1 <- names(tmp.pcaloadings)[pca.x]
-        PC2 <- names(tmp.pcaloadings)[pca.y]
-        PC3 <- names(tmp.pcaloadings)[pca.z]
-
-        my.scatter <- function(datafr,xa,ya,topx,topy){
-
-                #scatterplot dimensions pairwise (pairs passed to function as x,y)
-                x.axis <- xa ; y.axis <- ya ;topxy <- c(names(topx),names(topy))
-                # This is the data.frame of the TopN loadings to be marked
-                mark.frame <- tmp.pcaloadings[which(row.names(tmp.pcaloadings) %in% topxy),]
-
-                xmin = min(datafr[,x.axis]);xmax = max(datafr[,x.axis])
-                ymin = min(datafr[,y.axis]);ymax = max(datafr[,y.axis])
-
-                #make the scatterplot
-                ggplot(data = datafr,aes_string(x = x.axis,y = y.axis))+
-                        geom_hline(yintercept = 0, linetype = "dashed",size =0.7)+
-                        geom_vline(xintercept = 0, linetype = "dashed",size = 0.7)+
-                        geom_point(color = "navy",alpha = 0.15,size=0.1, show.legend = FALSE)+
-                        geom_label_repel(data = mark.frame, size = 3, label.r = unit(0.45,"lines"),
-                                         color = "deeppink", bg = "plum1",
-                                         segment.size = 0.1, box.padding = unit(1,"lines"),
-                                         aes(label = rownames(mark.frame)))+
-                        geom_point(data = mark.frame,
-                                   color = "deeppink",
-                                   size = 2,show.legend = FALSE)+
-                        xlim(c(xmin-0.01,xmax+0.01))+ylim(c(ymin-0.01,ymax+0.01))+
-                        theme_bw()+
-                        theme(panel.grid.major = element_blank(),
-                              panel.grid.minor = element_blank()
-                        )
-                #mark the TopN ids
-
-        }
-
-        # call my.scatter 3 times to make 3 ggplots
-        g1 <- my.scatter(tmp.pcaloadings,PC1,PC2,x,y)
-        g2 <- my.scatter(tmp.pcaloadings,PC2,PC3,y,z)
-        g3 <- my.scatter(tmp.pcaloadings,PC1,PC3,x,z)
-        #combine them in a row by using multiplot() function
-        multiplot(g1,g2,g3,cols = 3)
-}
+# 
+# #####################################################
+# ##
+# ##
+# ##
+# #####################################################
+# plotPCAloadings <- function(pca, topn, pca.x, pca.y, pca.z){
+# 
+#     ##load = loadings(pca)[, c(pc1, pc2, pc3)]
+# 
+#     ## ###################
+#     ## extract loadings
+#     load.pca.x <- pca$loadings[, pca.x]
+#     load.pca.y <- pca$loadings[, pca.y]
+#     load.pca.z <- pca$loadings[, pca.z]
+# 
+#     n=length(load.pca.x)
+# 
+#     ## ###################
+#     ## choose top N
+#     x <- rev(sort(abs( load.pca.x ), decreasing=T )[1:min(topn, n)])
+#     y <- rev(sort(abs( load.pca.y ), decreasing=T )[1:min(topn, n)])
+#     z <- rev(sort(abs( load.pca.z ), decreasing=T )[1:min(topn, n)])
+# 
+# 
+#     ## ###################################################
+#     ## base plotting system
+#     par(mfrow=c(1,3))
+#     barplot(x, horiz=T, main=paste('PC', pca.x), las=2, border='blue', space=0, col='grey95', ylab='Features', xlab='Absolute coefficient', names.arg=rev(1:length(x)))
+#     text(rep(0, length(x)), 1:length(x)-.5, labels=names(x), pos=4)
+# 
+#     barplot(y, horiz=T, main=paste('PC', pca.y), las=2, border='blue', space=0, col='grey95', axisnames=T, xlab='Absolute coefficient',names.arg=rev(1:length(x)))
+#     text(rep(0, length(y)), 1:(length(y))-.5, labels=names(y), pos=4)
+# 
+#     barplot(z, horiz=T, main=paste('PC', pca.z), las=2, border='blue', space=0, col='grey95', axisnames=T, xlab='Absolute coefficient', names.arg=rev(1:length(x)))
+#     text(rep(0, length(z)), 1:(length(z))-.5, labels=names(z), pos=4)
+# 
+# }
+# 
+# #####################################################
+# ##
+# ##            scatterPlotPCAloadings
+# ##
+# #####################################################
+# 
+# scatterPlotPCAloadings <- function(pca, topn, pca.x, pca.y, pca.z){
+# 
+#         ## extract loadings
+#         load.pca.x <- pca$loadings[, pca.x]
+#         load.pca.y <- pca$loadings[, pca.y]
+#         load.pca.z <- pca$loadings[, pca.z]
+# 
+#         n=length(load.pca.x)
+# 
+#         ## ###################
+#         ## choose top N
+#         x <- rev(sort(abs( load.pca.x ), decreasing=T )[1:min(topn, n)])
+#         y <- rev(sort(abs( load.pca.y ), decreasing=T )[1:min(topn, n)])
+#         z <- rev(sort(abs( load.pca.z ), decreasing=T )[1:min(topn, n)])
+# 
+# 
+#         tmp.pcaloadings <- as.data.frame(pca$loadings[,c(pca.x,pca.y,pca.z)])
+#         names(tmp.pcaloadings) <- make.names(names(tmp.pcaloadings))
+# 
+#         PC1 <- names(tmp.pcaloadings)[pca.x]
+#         PC2 <- names(tmp.pcaloadings)[pca.y]
+#         PC3 <- names(tmp.pcaloadings)[pca.z]
+# 
+#         my.scatter <- function(datafr,xa,ya,topx,topy){
+# 
+#                 #scatterplot dimensions pairwise (pairs passed to function as x,y)
+#                 x.axis <- xa ; y.axis <- ya ;topxy <- c(names(topx),names(topy))
+#                 # This is the data.frame of the TopN loadings to be marked
+#                 mark.frame <- tmp.pcaloadings[which(row.names(tmp.pcaloadings) %in% topxy),]
+# 
+#                 xmin = min(datafr[,x.axis]);xmax = max(datafr[,x.axis])
+#                 ymin = min(datafr[,y.axis]);ymax = max(datafr[,y.axis])
+# 
+#                 #make the scatterplot
+#                 ggplot(data = datafr,aes_string(x = x.axis,y = y.axis))+
+#                         geom_hline(yintercept = 0, linetype = "dashed",size =0.7)+
+#                         geom_vline(xintercept = 0, linetype = "dashed",size = 0.7)+
+#                         geom_point(color = "navy",alpha = 0.15,size=0.1, show.legend = FALSE)+
+#                         geom_label_repel(data = mark.frame, size = 3, label.r = unit(0.45,"lines"),
+#                                          color = "deeppink", bg = "plum1",
+#                                          segment.size = 0.1, box.padding = unit(1,"lines"),
+#                                          aes(label = rownames(mark.frame)))+
+#                         geom_point(data = mark.frame,
+#                                    color = "deeppink",
+#                                    size = 2,show.legend = FALSE)+
+#                         xlim(c(xmin-0.01,xmax+0.01))+ylim(c(ymin-0.01,ymax+0.01))+
+#                         theme_bw()+
+#                         theme(panel.grid.major = element_blank(),
+#                               panel.grid.minor = element_blank()
+#                         )
+#                 #mark the TopN ids
+# 
+#         }
+# 
+#         # call my.scatter 3 times to make 3 ggplots
+#         g1 <- my.scatter(tmp.pcaloadings,PC1,PC2,x,y)
+#         g2 <- my.scatter(tmp.pcaloadings,PC2,PC3,y,z)
+#         g3 <- my.scatter(tmp.pcaloadings,PC1,PC3,x,z)
+#         #combine them in a row by using multiplot() function
+#         multiplot(g1,g2,g3,cols = 3)
+# }
 
 
 #################################################

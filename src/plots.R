@@ -190,7 +190,7 @@ plotHM <- function(res,
     # ## plot
     # draw(hm, annotation_legend_side='right')
 
-    
+    #save(res, anno.col, anno.col.color, file='debug.RData')    
     # pheatmap
     pheatmap(res, fontsize_row=fontsize_row, fontsize_col=fontsize_col,
              cluster_rows=Rowv, cluster_cols=Colv, border_col=NA, col=color.hm,  main=hm.title,
@@ -754,7 +754,6 @@ makeBoxplotly <- function(tab, id.col, grp, grp.col, verbose=T, title='boxplot')
 ##
 #################################################################################################
 my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5, 
-                            #cor=c('pearson', 'spearman', 'kendall'), 
                             repro.filt=NULL, 
                             grp, 
                             grp.col.legend, 
@@ -766,15 +765,8 @@ my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5,
   
   # trigger 'update' button
   trigger <- update
-  #cat(update,'\n')
-  ## cor method
-  #corm = match.arg(cor)
-  
-  ## correlation
-  #cm = cor(mat, use='pairwise.complete', method=corm)
-  
+ 
   ## number of samples to compare
-  #N = ncol(mat)
   N= ncol(cm)
   
   ## define limits
@@ -789,7 +781,6 @@ my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5,
       lim=max( abs( mat ), na.rm=T )
       lim=c(-lim, lim)
   }
-  
   
   ###########################################################################
   ## help function to set up the viewports
@@ -817,7 +808,6 @@ my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5,
         numb = plots[[i]]
         col='black'
         ## dynamic font size for correlations
-        ##size = min(max(abs(90*as.numeric(numb)), 25), 50)
         size = min(max(abs(90*as.numeric(numb)), 25), 40)
         grid.rect(width=unit(.85, 'npc'), height=unit(.85, 'npc'), vp=vp, gp=gpar(fill='grey95', col='transparent'))
         grid.text(numb, vp=vp, gp=gpar(fontsize=size, col=col))
@@ -841,7 +831,6 @@ my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5,
       
       ## extract pairwise data
       dat <- data.frame(x=mat[,colnames(mat)[i]], y=mat[,colnames(mat)[j]])
-      #dat <- data.frame(x=mat[,i], y=mat[,j])
       rownames(dat) <- rownames(mat)
       
       ## filter according to xlim/ylim
@@ -856,24 +845,15 @@ my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5,
       if(i < j){
         
         ## hexbin
-        ##hex <- hexbin(dat$x, dat$y, hexbin, xbnds=range(dat$x, na.rm=T), ybnds=range(dat$y, na.rm=T) )
         hex <- hexbin(dat$x, dat$y, hexbin, xbnds=lim, ybnds=lim )
         gghex <- data.frame(hcell2xy(hex), c = cut2(hex@count, g = hexcut))
         p <- ggplot(gghex) + geom_hex(aes(x = x, y = y, fill = c) ,stat = "identity") + guides(fill=FALSE) + theme( plot.margin=unit(rep(0, 4), 'cm')) + xlab('') + ylab('') + xlim(lim[1], lim[2]) + ylim(lim[1], lim[2])
-        
-        ##if(length(current.group) == 1)
-        ##    p <- p + scale_fill_manual( values=paste(rep( grp.col.legend[current.group], hexcut) ))
-        ##else
-        
         p <- p + scale_fill_manual( values=paste('grey', ceiling(seq(70, 20, length.out=hexcut)), sep=''))
-        
         
         ## add filtered values
         if(!is.null(repro.filt) & length(current.group) == 1){
           not.valid.idx <- repro.filt[[current.group]]
           dat.repro <- dat[not.valid.idx, ]
-          ##cat(not.valid.idx)
-          ##cat(dim(dat.repro))
           p = p + geom_point( aes(x=x, y=y ), data=dat.repro, colour=my.col2rgb('blue', 50), size=1)
         }
       }
@@ -951,8 +931,6 @@ plotlyPCA <- function(global.param,     ## reactiveValue converted to list
   )
   rownames(pca.mat) <- rownames(pca$scores)
   
-  ##View(pca.mat)
-  #save(pca.mat, grp.unique, grp, grp.colors, file='debug.RData')  
   ## 3D
   if(mode == 'xyz'){
     pca.z <- as.numeric(sub('PC ','', pca.z))

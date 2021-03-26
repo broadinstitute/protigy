@@ -1074,7 +1074,7 @@ shinyServer(
             ## ##############################################
             ## authenticated session
             ## only works in SSP 
-            if(!is.null(session$user)){
+            if(!is.null(session$user) & file.exists(USERDB)){
 
                 ## ########################################
                 ## user name
@@ -1092,8 +1092,9 @@ shinyServer(
                 ##   the current user has access to
                 ##
                 ## #########################################
-                user.roles <- read.delim(paste(APPDIR, '/conf/user-roles.txt', sep=''), stringsAsFactors=F)
-
+                # user.roles <- read.delim( file.path(APPDIR, 'conf/user-roles.txt'), stringsAsFactors=F)
+                user.roles <- read.delim( USERDB, stringsAsFactors=F)
+                
                 ## check whether the user appears as collaborator in a project
                 idx <- grep( paste('(^|;)', session$user, '($|;)', sep=''), user.roles$collaborator)
 
@@ -1191,7 +1192,7 @@ shinyServer(
         # ###################################################
         #  UI:   group assignment for gct 1.3 files
         # - id column defined as first column in gct
-        # - group assingment from column annotations
+        # - group assignment from column annotations
         output$define.groups.gct3 <- renderUI({
           
           if(!global.param$file.gct3) return()
@@ -1232,7 +1233,7 @@ shinyServer(
           tab <- global.input$table
           cdesc <- data.frame(global.input$cdesc)
          
-          ## store grp coloum
+          ## store grp column
           global.param$grp.gct3 <- input$grp.gct3
           
           if(!input$grp.gct3 %in% colnames(cdesc)){
@@ -1241,11 +1242,16 @@ shinyServer(
               return()
           }
           
+          ## robustify levels of group variable
+          cdesc[, input$grp.gct3] <- make.names(cdesc[, input$grp.gct3])
+          global.input$cdesc <- cdesc
+          
           # initialize grp file
           Column.Name <- colnames(tab)
           Experiment <- rep('', length(Column.Name))
           names(Experiment) <- Column.Name
-          Experiment[ rownames(cdesc) ] <- make.names(cdesc[, input$grp.gct3])
+
+          Experiment[ rownames(cdesc) ] <- cdesc[, input$grp.gct3]
           
           global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  input$grp.gct3)
         

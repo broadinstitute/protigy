@@ -30,6 +30,15 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.9.3 March 26, 2021</b>
+<ul>
+<li>Misc: Switched to GitHub version of package "ChemometricsWithR" as it got removed from CRAN.</li>
+<li>Misc: Robustified category names of the class vector if selected from a GCT 1.3 file.</li>
+</ul>
+<b>v0.8.9.2 February 11, 2021</b>
+<ul>
+<li>Misc: SSP/RSC only - path to configuration file for sharing sessions between users can be specified in "global.R".</li>
+</ul>
 <b>v0.8.9.1 February 05, 2021</b>
 <ul>
 <li>Misc: Fixed the error message "Experimental design file does not match the table you have uploaded (different number of rows/columns)!" that was falsely triggered whenever the selected id column was not "id". The bug was intrduced with v0.8.9</li>

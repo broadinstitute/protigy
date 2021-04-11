@@ -103,7 +103,7 @@ shinyServer(
             ##sd.filt='no',              ## sd filter
             sd.filt.val=10,              ## remove lower 10 percent of features with lowest sd
             
-            na.filt.val=100,            ## max. % missin  values
+            na.filt.val=100,            ## max. % missing  values
 
             
             filter.type='adj.p',         ## default filter
@@ -386,7 +386,7 @@ shinyServer(
             summary.tab <-  tabPanel('Summary',
 
                                      fluidRow(
-                                        box(title="Dataset:", solidHeader = T, status = "primary", width = 4,
+                                        box(title="Dataset:", solidHeader = T, status = "primary", width = 4,# color='purple',
                                          tableOutput('summary.data')),
 
                                         box(title="Workflow:", solidHeader = T, status = "primary",width = 4,
@@ -1978,6 +1978,10 @@ shinyServer(
         ## #####################################################################
         ## UI: set up analysis
         ##
+        ## - the if-conditions regarding the type of filtering below are
+        ##   probably obsolete and can be removed
+        ## - initial reason to have the if-statements was to avoid the  
+        ##   application of the reproducibility filter to 2-sample t and F-test
         ##
         ## #####################################################################
         output$list.groups <- renderUI({
@@ -1986,12 +1990,13 @@ shinyServer(
 
             ####################################
             ## initialize
+            ## - show everything
             if( is.null(input$filt.data)){
 
                 list(
                     
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
 
                      #radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'MissingValues', 'none'), selected=global.param$filt.data ),
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected=global.param$filt.data ),
@@ -2008,12 +2013,13 @@ shinyServer(
             }
             ## ###################################################
             ## no filter
+            ## - show everything
             else if(input$filt.data == 'none'){
 
                 list(
                   
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
 
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='none'),
                      
@@ -2036,18 +2042,19 @@ shinyServer(
 
             ## ###################################################
             ## Reproducibility filter
+            ## - show only one sample T test
             else if(input$filt.data == 'Reproducibility'){
 
                 list(
                   
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
 
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='Reproducibility'),
                      selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
                     # sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
-                     radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
-                    #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
+                     # radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T',  'mod F', 'none'), selected=global.param$which.test),
                     
 
                      actionButton('run.test', 'Run analysis!'),
@@ -2059,12 +2066,13 @@ shinyServer(
 
             ## ###################################################
             ## StdDev filter
+            ## - show everything
             else if(input$filt.data == 'StdDev'){
 
                 list(
                   
                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'none'), selected=global.param$norm.data),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'VSN','none'), selected=global.param$norm.data),
 
                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='StdDev'),
                     sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
@@ -2106,15 +2114,18 @@ shinyServer(
           global.plotparam$pca.x <- input$pca.x
           global.plotparam$pca.y <- input$pca.y
           global.plotparam$pca.z <- input$pca.z
+          
           ## multiscatter
           global.plotparam$ms.max <- input$ms.max
           global.plotparam$ms.min <- input$ms.min
           global.plotparam$ms.max <- input$ms.max
           global.plotparam$ms.robustify <- input$ms.robustify
+          
           ## correlation matrix
           global.plotparam$cm.upper <- input$cm.upper
           global.plotparam$cm.lower <- input$cm.lower
           global.plotparam$cm.numb <- input$cm.numb
+          
           ## fanplot
           global.plotparam$HC.fan.show.tip.label <- input$HC.fan.show.tip.label
           global.plotparam$HC.fan.tip.cex <- input$HC.fan.tip.cex

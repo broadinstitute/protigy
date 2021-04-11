@@ -18,7 +18,7 @@ p_load(shiny)
 
 shinyUI(
 
-    dashboardPage( skin='blue',
+    dashboardPage( skin='purple', #skin='blue',
                    
                   ## ##########################################
                   ## header

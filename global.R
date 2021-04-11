@@ -19,7 +19,8 @@
 if (!require("pacman")) install.packages ("pacman")
 require('pacman')
 
-library(BiocManager)
+if (!require("BiocManager")) install.packages ("BiocManager")
+require(BiocManager)
 options(repos = BiocManager::repositories())
 
 #################################################################
@@ -133,6 +134,8 @@ p_load(nlme)
 p_load(BlandAltmanLeh)
 ## normalization Quantile
 p_load(preprocessCore)
+## normalization VSN
+p_load(vsn)
 ## normalization 2-component
 p_load (mice)
 p_load (mixtools)
@@ -447,7 +450,8 @@ link.db <- function(id, # vetcor of ids
 ##
 ## 20160235
 #############################################################################################
-normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-MAD', '2-component', 'Upper-quartile')){
+normalize.data <- function(data, id.col, 
+                           method=c('Median', 'Quantile', 'VSN', 'Median-MAD', '2-component', 'Upper-quartile')){
     cat('\n\n-- normalize data --\n\n')
 
     method = match.arg(method)
@@ -482,7 +486,7 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
     
     ## 2-component normalization
     if(method == '2-component'){
-        #data.norm.list = apply(data, 2, function(x) try(two.comp.normalize(x, type="unimodal")))
+      
       data.norm.list <- vector('list', ncol(data))
       names(data.norm.list) <- colnames(data)
       
@@ -509,6 +513,12 @@ normalize.data <- function(data, id.col, method=c('Median', 'Quantile', 'Median-
     if(method == 'Upper-quartile'){
       data.norm <- apply(data, 2, function(x) x - quantile(x, c(0.75),na.rm=T))
       colnames(data.norm) <- paste( colnames(data), sep='.')
+    }
+    
+    ## VSN - variance stabilizing normalization
+    if(method == 'VSN'){
+      p_load(vsn)
+      data.norm <- justvsn(data)
     }
     
     ## add id column

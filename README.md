@@ -13,9 +13,11 @@ This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interac
 * **Sample-wise Normalization**
     + Centering (median)
     + Centering and scaling (median-MAD)
+    + 2-component normalization
     + Upper quartile normalization
     + Quantile normalization
-    + 2-component normalization
+    + Variance stablizing normalization (VSN)
+    
 * **Filtering**
     + Reproducibility filter across replicate measurements
     + Standard deviation across samples

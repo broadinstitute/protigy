@@ -83,7 +83,7 @@ shinyServer(
             analysis.run=F,              ## flag whether the analysis has been run
             session.saved=F,             ## flag whether session has been saved (v0.8.0.2)
             
-            file.gct3=F,                 ## special case: GCT v1.3 file
+            file.gct3=F,                 ## GCT v1.3?
             
             session=NULL,                ## session id
             user=NULL,                   ## user
@@ -168,7 +168,10 @@ shinyServer(
           
             ## fanplot
             HC.fan.show.tip.label=T,
-            HC.fan.tip.cex=1
+            HC.fan.tip.cex=1,
+            
+            ## profile plot
+            profile.plot.xlim='as-is'  ## 'symmetric' or 'as-is'
         )
 
         ## coordinates in volcano plot
@@ -217,7 +220,7 @@ shinyServer(
             updateCheckboxInput(session, 'export.volc', 'Volcano plot', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.phist', 'P-value histogram', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.pca', 'PCA', value=!input$export.toggle.all)
-            updateCheckboxInput(session, 'export.pca.loadings', 'PCA loadings (xls)', value=!input$export.toggle.all)
+            #updateCheckboxInput(session, 'export.pca.loadings', 'PCA loadings (xls)', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.ms', 'Multiscatter', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.excel', 'Excel sheet', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.gct.file', 'GCT files: 1) original data and 2) signed log P-values', value=!input$export.toggle.all)
@@ -358,7 +361,7 @@ shinyServer(
                                                   checkboxInput('export.volc', 'Volcano plot',value=T),
                                                   checkboxInput('export.phist', 'P-value histogram',value=T),
                                                   checkboxInput('export.pca', 'PCA',value=T),
-                                                  checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
+                                                  #checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
                                                   checkboxInput('export.ms', 'Multiscatter',value=T),
                                                   checkboxInput('export.excel', 'Excel sheet',value=T),
                                                   checkboxInput('export.gct.file', 'GCT files: 1) original data and 2) signed log P-values',value=T),
@@ -821,13 +824,22 @@ shinyServer(
                                                        if(is.null(global.results$table.norm)){
                                                            fluidPage(
                                                                fluidRow(
+                                                                   box(title='Data range', solidHeader=T, status='primary',
+                                                                       column(width=6, selectInput('profile.plot.xlim', label='x-axis', choices=c('symmetric', 'as-is'), selected = global.plotparam$profile.plot.xlim))
+                                                                       )
+                                                               ),
+                                                               fluidRow(
                                                                    box(title="Before normalization", solidHeader=T, status="primary",
                                                                        column(width=12, plotOutput("expr.profile"))
                                                                ))
                                                             )
                                                        } else {
                                                            fluidPage(
-
+                                                               fluidRow(
+                                                                   box(title='Data range', solidHeader=T, status='primary',
+                                                                       column(width=6, selectInput('profile.plot.xlim', label='x-axis', choices=c('symmetric', 'as-is'), selected = global.plotparam$profile.plot.xlim))
+                                                                   )
+                                                               ),
                                                                fluidRow(
                                                                    box(title="Before normalization", solidHeader=T, status="primary",
                                                                       column(width=12, plotOutput("expr.profile"))
@@ -1996,7 +2008,7 @@ shinyServer(
                 list(
                     
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
 
                      #radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'MissingValues', 'none'), selected=global.param$filt.data ),
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected=global.param$filt.data ),
@@ -2019,7 +2031,7 @@ shinyServer(
                 list(
                   
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
 
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='none'),
                      
@@ -2048,7 +2060,7 @@ shinyServer(
                 list(
                   
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
 
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='Reproducibility'),
                      selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
@@ -2072,7 +2084,7 @@ shinyServer(
                 list(
                   
                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median-MAD', 'Upper-quartile', '2-component', 'Quantile', 'VSN','none'), selected=global.param$norm.data),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
 
                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='StdDev'),
                     sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
@@ -2104,6 +2116,7 @@ shinyServer(
           global.plotparam$hm.max <- input$hm.max
           global.plotparam$hm.show.rownames <- input$hm.show.rownames
           global.plotparam$hm.show.colnames <- input$hm.show.colnames
+          
           ## volcano
           #global.plotparam$volc.ps <- input$volc.ps
           #global.plotparam$volc.ls <- input$volc.ls
@@ -2129,6 +2142,10 @@ shinyServer(
           ## fanplot
           global.plotparam$HC.fan.show.tip.label <- input$HC.fan.show.tip.label
           global.plotparam$HC.fan.tip.cex <- input$HC.fan.tip.cex
+          
+          ## profile plot
+          global.plotparam$profile.xlim.mode <- input$profile.xlim.mode
+          
         }
         ## ##############################################################
         ##                 update plotting parameters
@@ -2143,7 +2160,6 @@ shinyServer(
           updateCheckboxInput(session, inputId='hm.max', value=global.plotparam$hm.max)
           updateCheckboxInput(session, inputId='hm.show.rownames', value=global.plotparam$hm.show.rownames)
           updateCheckboxInput(session, inputId='hm.show.colnames', value=global.plotparam$hm.show.colnames)
-          
           ## PCA
           updateSelectInput(session, inputId='pca.x', selected=global.plotparam$pca.x)
           updateSelectInput(session, inputId='pca.y', selected=global.plotparam$pca.y)
@@ -2157,10 +2173,13 @@ shinyServer(
           updateCheckboxInput(session, inputId='cm.numb', value=global.plotparam$cm.numb)
           updateSelectInput(session, inputId='cm.upper', selected=global.plotparam$cm.upper)
           updateSelectInput(session, inputId='cm.lower', selected=global.plotparam$cm.lower)
-          
           ## fanplot
           updateCheckboxInput(session, inputId='HC.fan.show.tip.label', value= global.plotparam$HC.fan.show.tip.label)
           updateNumericInput(session, inputId='HC.fan.tip.cex', value=global.plotparam$HC.fan.tip.cex)
+          ## profile plot
+          updateSelectInput(session, inputId='profile.xlim.mode', selected=global.plotparam$profile.xlim.mode)
+          
+          
         }
         
         ## ######################################################################
@@ -3275,14 +3294,20 @@ shinyServer(
 
                         ## normalized ratios
                         tab.norm <- data.frame(global.results$table.norm)
-                        makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, main='Before normalization')
-                        makeProfileplot(tab.norm, id.col.value, grp, grp.col, grp.col.leg, main=paste(global.param$norm.data, 'normalized'))
+                        makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, 
+                                        xlim.mode=input$profile.plot.xlim, 
+                                        main='Before normalization')
+                        makeProfileplot(tab.norm, id.col.value, grp, grp.col, grp.col.leg, 
+                                        xlim.mode=input$profile.plot.xlim,
+                                        main=paste(global.param$norm.data, 'normalized'))
                         dev.off()
 
                     } else{
                         pdf(fn.profile, 7, 7)
                         par(mfrow=c(1,1))
-                        makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, main='unnormalized')
+                        makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, 
+                                        xlim.mode=input$profile.plot.xlim,
+                                        main='unnormalized')
                         dev.off()
 
                     }
@@ -5802,7 +5827,6 @@ shinyServer(
 
             if(length(sig.idx) > 0){
                 pch.vec[ sig.idx ] <- sig.pch
-                #cex.vec[ sig.idx ] <- cex.vec[1]+.5
             }
 
             #############################
@@ -5814,12 +5838,7 @@ shinyServer(
               opac1 = 0.3
               opac2 = 0.2
             }
-
-            #col=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=opac1)
-            #col.opac=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=opac2)
-            #col=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=opac1)
-            #col.opac=myColorRamp(c('grey30', 'grey50', 'darkred', 'red', 'deeppink'), na.omit(logPVal), range=c(0, max.logP), opac=opac2)
-                   
+          
             col <- rep(my.col2rgb(bg.col, alpha = 255*opac1), length(IDs))
             col[sig.idx] <- my.col2rgb(sig.col, alpha = 255*opac1)
             
@@ -5871,7 +5890,6 @@ shinyServer(
                   col[ nchar(ppi.col) > 0] <- ppi.col[ nchar(ppi.col) > 0]
                   col.opac[ nchar(ppi.col) > 0] <- ppi.col[ nchar(ppi.col) > 0 ]
                 }
-                #save(ppi.map, IDs,file='test.tmp.RData')
                 
 
                 ## ###############################
@@ -5936,7 +5954,6 @@ shinyServer(
 
                     ## update index of significant stuff
                     sig.idx <- sig.idx[ !(sig.idx %in% rm.idx) ]
-                    ##sig.idx <- sig.idx[ -rm.idx ]
                 }
             }
 
@@ -5991,12 +6008,9 @@ shinyServer(
             ## ############################
             ## indicate directionality for two-sample tests
             if(global.param$which.test == 'Two-sample mod T'){
-                #legend('topleft', legend=sub('\\.vs.*', '', group), cex=2, text.col='darkblue', bty='n')
-                #legend('topright', legend=sub('.*\\.vs\\.', '', group), cex=2, text.col='darkblue', bty='n')
                 mtext(sub('\\.vs.*', '', group), side=3, line=1, at=(xlim[1]+abs(xlim[1])*0.05), cex=cex.main, col='darkblue')
                 mtext(sub('.*\\.vs\\.', '', group), side=3, line=1, at=(xlim[2]-abs(xlim[2])*0.05), cex=cex.main, col='darkblue')
-                
-                }
+            }
 
 
             ## ###########################################################
@@ -6040,10 +6054,6 @@ shinyServer(
         } ## end plotVolcano
 
 
-
-
-
-
         #######################################################################################
         ##
         ##                                profile plots
@@ -6073,7 +6083,9 @@ shinyServer(
               
             withProgress({
                    setProgress(message = 'Processing...', detail= 'Generating profile plots')
-                   makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, main='Before normalization')
+                   makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, 
+                                   xlim.mode = input$profile.plot.xlim,
+                                   main='Before normalization')
             })
 
         })
@@ -6093,7 +6105,7 @@ shinyServer(
             grp.col <- global.param$grp.colors
             grp.col.leg <- global.param$grp.colors.legend
 
-            
+            #save(tab, id.col.value, file='debug.RData')
             # update selection
             tab <- tab[, c(id.col.value, names(grp))]
             grp.col <- grp.col[names(grp)]
@@ -6102,7 +6114,10 @@ shinyServer(
             
             withProgress({
                    setProgress(message = 'Processing...', detail= 'Generating profile plots')
-                   makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, main=paste(global.param$norm.data, 'normalized'))
+                   makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, 
+                                   #xlim.mode = 'data',
+                                   xlim.mode = input$profile.plot.xlim,   
+                                   main=paste(global.param$norm.data, 'normalized'))
             })
 
         })
@@ -6281,13 +6296,9 @@ shinyServer(
                   else
                     tab <- data.frame(global.results$table.log)
                
-                  ## dataset
-                  #tab <- data.frame(global.results$table.log)
-                  
                   ## id column
                   id.col.value <- global.param$id.col.value
-                  
-                  #tab[, c(id.col.value, names(grp))]
+               
                   ## group vector
                   grp <- global.param$grp
                   ## group colors
@@ -6341,11 +6352,6 @@ shinyServer(
        ##          plotCorrMat(lower=input$cm.lower, upper=input$cm.upper, trans=T, display_numbers=input$cm.numb)
        ##      })
        ## }, width=1200, height=1000)
-
-
-
-
-        
 
 
         ## ################################################################################

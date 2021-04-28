@@ -27,7 +27,7 @@ options(repos = BiocManager::repositories())
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.9.3"
+VER <- "0.8.9.4"
 ## maximal filesize for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -60,11 +60,10 @@ CONFAPP <<- 'http://shiny-proteomics.broadinstitute.org:3838/modTconf/'
 PIWIKURL <<- '//shiny-proteomics.broadinstitute.org/piwik/'
 
 
-
 #################################################################
 ## load required packages
 #################################################################
-p_load (RColorBrewer)
+p_load(RColorBrewer)
 p_load(shiny)
 p_load(shinydashboard)
 p_load(shinyjs)
@@ -186,7 +185,7 @@ headerDesc <- read_excel('docs/description-column-headers.xlsx')
 
 
 ## #####################################
-## CSS for loading animantion
+## CSS for loading animation
 appCSS <- "
 #loading-content {
   position: absolute;
@@ -451,11 +450,21 @@ link.db <- function(id, # vetcor of ids
 ## 20160235
 #############################################################################################
 normalize.data <- function(data, id.col, 
-                           method=c('Median', 'Quantile', 'VSN', 'Median-MAD', '2-component', 'Upper-quartile')){
+                           method=c('Median',
+                                    'Median (log-intensity)',
+                                    'Quantile', 
+                                    'VSN (intensity)', 
+                                    'Median-MAD',
+                                    'Median-MAD (log-intensity)',
+                                    '2-component', 
+                                    'Upper-quartile')
+                           ){
     cat('\n\n-- normalize data --\n\n')
 
     method = match.arg(method)
 
+    cat('   normalization method: ', method, '\n')
+    
     ids = data[, id.col]
     data = data[ , -grep(paste('^', id.col, '$', sep=''), colnames(data))]
 
@@ -477,11 +486,30 @@ normalize.data <- function(data, id.col,
         ##rownames(data.norm) <- rownames(data)
         colnames(data.norm) <- paste( colnames(data), sep='.')
     }
+    ## median plus shifting by medians of medians
+    if(method == 'Median (log-intensity)'){
+      
+      all_medians <- data.norm <- apply(data, 2, median, na.rm=T)
+      data.norm <- apply(data, 2, function(x) x - median(x, na.rm=T))
+      
+      data.norm <- data.norm + median( all_medians, na.rm=T )
+      colnames(data.norm) <- paste( colnames(data), sep='.')
+    }
     ## median & MAD
     if(method == 'Median-MAD'){
         data.norm <- apply(data, 2, function(x) (x - median(x, na.rm=T))/mad(x, na.rm=T) )
         ##rownames(data.norm) <- rownames(data)
         colnames(data.norm) <- paste( colnames(data), sep='.')
+    }
+    ## median & MAD plus shifting by medians of medians
+    if(method == 'Median-MAD (log-intensity)'){
+  
+      all_medians <- data.norm <- apply(data, 2, median, na.rm=T)
+      data.norm <- apply(data, 2, function(x) (x - median(x, na.rm=T))/mad(x, na.rm=T) )
+      
+      data.norm <- data.norm + median( all_medians, na.rm=T )
+      colnames(data.norm) <- paste( colnames(data), sep='.')
+
     }
     
     ## 2-component normalization
@@ -516,7 +544,7 @@ normalize.data <- function(data, id.col,
     }
     
     ## VSN - variance stabilizing normalization
-    if(method == 'VSN'){
+    if(method == 'VSN (intensity)'){
       p_load(vsn)
       data.norm <- justvsn(data)
     }
@@ -524,6 +552,8 @@ normalize.data <- function(data, id.col,
     ## add id column
     data.norm <- data.frame(ids, data.norm)
     colnames(data.norm)[1] <- id.col
+    
+    cat('\n\n-- normalize data exit--\n\n')
     
     return(data.norm)
 }
@@ -541,67 +571,67 @@ normalize.data <- function(data, id.col,
 ##            20151208 legend
 ##            20161103 check number of rows (N), 2D plot only
 ##############################################################################
-my.prcomp_obsolete <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.points=3, rgl.point.size=30, main="PCA", leg.vec=NULL, leg.col=NULL, ...){
-
-    cex.font = 1.8
-
-    ## number of data columns, N=2 -> 2D plot only
-    N <- nrow(x)
-
-    ## color
-    if( is.null(col) ) col="black"
-
-    ## perform pca
-    pca <- prcomp(x, scale=scale)
-
-    ## calculate variance
-    comp.var <- eigen(cov(pca$x))$values
-
-    ## extract the principle components
-    pc1=pca$x[,1]
-    pc2=pca$x[,2]
-    if(N>2)
-        pc3=pca$x[,3]
-
-    ##############
-    # rgl plot
-    ##############
-    if(rgl & N > 2){
-        p_load(rgl)
-        plot3d(pc1, pc2, pc3, xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), zlab=paste("PC 3 (", round(100*comp.var[3]/sum(comp.var),1),"%)", sep=""), type="s", col=col, expand=1.2, size=rgl.point.size)
-    }
-
-    ########################################
-    # scatterplot 2D/3D
-    ########################################
-    if( plot){
-
-         p_load(scatterplot3d)
-
-        if(N > 2)
-            par(mfrow=c(1,3), mar=c(7,7,3,1))
-        if(N <= 2)
-            par(mfrow=c(1,2), mar=c(7,7,3,1))
-
-         ## PC 1-2
-         plot(pc1, pc2, xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), pch=pch, main=main, col=col, sub=paste("Cumulative variance = ", round(100*sum(comp.var[1:2]/sum(comp.var)),1),"%", sep=""), cex=cex.points, ylim=c( min(pc2),  max(pc2)+.15*max(pc2)), cex.axis=cex.font, cex.lab=cex.font, cex.sub=cex.font )
-
-
-        if(N > 2) {
-            ## PC 1-3
-            scatterplot3d( pca$x[,1], pca$x[,3], pca$x[,2], xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), zlab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 3 (", round(100*comp.var[3]/sum(comp.var),1),"%)", sep=""), color=col,  cex.symbols=cex.points, pch=pch, main=main, sub=paste("Cumulative variance = ", round(100*sum(comp.var[1:3]/sum(comp.var)),1),"%", sep=""), type="h" )
-
-        }
-        ## legend
-         plot.new()
-         plot.window(xlim=c(0,1), ylim=c(0, 1))
-         if(!is.null(leg.vec) & !is.null(leg.col))
-             legend('topleft', legend=leg.vec, col=leg.col, pch=pch, pt.cex=max(1, cex.points-1.5), ncol=ifelse( length(leg.vec)> 10, 2, 1), bty='n', cex=2 )
-       par(mfrow=c(1,1))
-    }
-
-    return(pca)
-}
+# my.prcomp_obsolete <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.points=3, rgl.point.size=30, main="PCA", leg.vec=NULL, leg.col=NULL, ...){
+# 
+#     cex.font = 1.8
+# 
+#     ## number of data columns, N=2 -> 2D plot only
+#     N <- nrow(x)
+# 
+#     ## color
+#     if( is.null(col) ) col="black"
+# 
+#     ## perform pca
+#     pca <- prcomp(x, scale=scale)
+# 
+#     ## calculate variance
+#     comp.var <- eigen(cov(pca$x))$values
+# 
+#     ## extract the principle components
+#     pc1=pca$x[,1]
+#     pc2=pca$x[,2]
+#     if(N>2)
+#         pc3=pca$x[,3]
+# 
+#     ##############
+#     # rgl plot
+#     ##############
+#     if(rgl & N > 2){
+#         p_load(rgl)
+#         plot3d(pc1, pc2, pc3, xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), zlab=paste("PC 3 (", round(100*comp.var[3]/sum(comp.var),1),"%)", sep=""), type="s", col=col, expand=1.2, size=rgl.point.size)
+#     }
+# 
+#     ########################################
+#     # scatterplot 2D/3D
+#     ########################################
+#     if( plot){
+# 
+#          p_load(scatterplot3d)
+# 
+#         if(N > 2)
+#             par(mfrow=c(1,3), mar=c(7,7,3,1))
+#         if(N <= 2)
+#             par(mfrow=c(1,2), mar=c(7,7,3,1))
+# 
+#          ## PC 1-2
+#          plot(pc1, pc2, xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), pch=pch, main=main, col=col, sub=paste("Cumulative variance = ", round(100*sum(comp.var[1:2]/sum(comp.var)),1),"%", sep=""), cex=cex.points, ylim=c( min(pc2),  max(pc2)+.15*max(pc2)), cex.axis=cex.font, cex.lab=cex.font, cex.sub=cex.font )
+# 
+# 
+#         if(N > 2) {
+#             ## PC 1-3
+#             scatterplot3d( pca$x[,1], pca$x[,3], pca$x[,2], xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), zlab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 3 (", round(100*comp.var[3]/sum(comp.var),1),"%)", sep=""), color=col,  cex.symbols=cex.points, pch=pch, main=main, sub=paste("Cumulative variance = ", round(100*sum(comp.var[1:3]/sum(comp.var)),1),"%", sep=""), type="h" )
+# 
+#         }
+#         ## legend
+#          plot.new()
+#          plot.window(xlim=c(0,1), ylim=c(0, 1))
+#          if(!is.null(leg.vec) & !is.null(leg.col))
+#              legend('topleft', legend=leg.vec, col=leg.col, pch=pch, pt.cex=max(1, cex.points-1.5), ncol=ifelse( length(leg.vec)> 10, 2, 1), bty='n', cex=2 )
+#        par(mfrow=c(1,1))
+#     }
+# 
+#     return(pca)
+# }
 
 #####################################################
 ##
@@ -821,9 +851,10 @@ sd.filter <- function(tab, grp.vec, id.col, sd.perc){
 ##                   reproducibility filter
 ##
 ## n=2: Bland-Altman
-## n>2: lmm-model written by Mani DR
+## n>2: lmm-model written by DR Mani
 ##
-## - replaces not reprodicibly measuered values in 'tab' with 'NA'
+## - replaces not reproducibly measuered values in 'tab' with 'NA'
+## - done separately for each group in 'grp.vec'
 ##
 ########################################################################
 my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
@@ -841,7 +872,7 @@ my.reproducibility.filter <- function(tab, grp.vec, id.col='id', alpha=0.05){
     ##rownames(tab) <- tab[, id.col]
 
     ##tab.repro.filter <- tab
-   ## View(tab.repro.filter)
+    ## View(tab.repro.filter)
 
     ############################################
     ## loop over replicate groups
@@ -967,14 +998,15 @@ dynamicWidthHM <- function(n, style=c('none', 'One-sample mod T', 'Two-sample mo
 ##       generate the profile plots under the 'QC' tab
 ##
 ###################################################################
-makeProfileplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.lab=1.5, mar=c(5,5,3,1), ... ){
+makeProfileplot <- function(tab, id.col, grp, grp.col, grp.col.leg, 
+                            legend=T, cex.lab=1.5, mar=c(5,5,3,1), 
+                            xlim.mode=c('symmetric', 'as-is'), 
+                            ... ){
 
     cat('\n-- makeProfileplot --\n')
 
     ## table
     tab <- tab[, setdiff(colnames(tab), id.col)]
-
-    xlim=max(abs(tab), na.rm=T)
 
     ## caclulate densities
     dens <- apply(tab, 2, density, na.rm=T)
@@ -982,12 +1014,24 @@ makeProfileplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, ce
     ## ylim
     ylim <- max(unlist(lapply(dens, function(x) max(x$y))))
 
+    ## xlim
+    xlim.mode <- match.arg(xlim.mode)
+    if(xlim.mode == 'symmetric'){
+      xlim=max(abs(tab), na.rm=T)
+      xlim <- c(-xlim, xlim)
+    }
+    if(xlim.mode == 'as-is'){
+      xlim_min <- min(unlist(lapply(dens, function(x) min(x$x))))
+      xlim_max <- max(unlist(lapply(dens, function(x) max(x$x))))
+      xlim <- c(xlim_min, xlim_max)
+    }
+    
     ##########################################
     ## plot
     par(mar=mar)
     for(i in 1:ncol(tab)){
         if(i == 1)
-            plot(dens[[i]], xlab='expression', xlim=c(-xlim, xlim), ylim=c(0, ylim), col=my.col2rgb(grp.col[i], alpha=100), lwd=3, cex.axis=2, cex.lab=2, cex.main=1.5, ...)
+            plot(dens[[i]], xlab='expression', xlim=xlim, ylim=c(0, ylim), col=my.col2rgb(grp.col[i], alpha=100), lwd=3, cex.axis=2, cex.lab=2, cex.main=1.5, ...)
         else
             lines(dens[[i]], col=my.col2rgb(grp.col[i], alpha=100), lwd=3)
 
@@ -1400,7 +1444,6 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
   ## 
   if(!is.null(headerDesc )){
     
-  
     ## descriptions available in the in the "library" file
     ColumnHeaderLibrary <- headerDesc$ColumnHeader
     DescriptionLibrary <- headerDesc$Description

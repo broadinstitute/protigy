@@ -30,6 +30,12 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.9.4 April 28, 2021</b>
+<ul>
+<li>Normalization: Added normalization methods for intensity data (e.g. label-free quantification in proteomics): <b>Median (log-intensity)</b>, <b>Median-MAD (log-intensity)</b>, <b>VSN (intensity)</b></li>
+<li>Profile plots: Users can now control the scale of the x-axis (symmetric or as-is)</li>
+<li>Misc: changed color scheme to <i>pink</i></li>
+</ul>
 <b>v0.8.9.3 March 26, 2021</b>
 <ul>
 <li>Misc: Switched to GitHub version of package "ChemometricsWithR" as it got removed from CRAN.</li>
@@ -585,19 +591,22 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 
         txt <- paste('<font size=\"4\">
 <p><h3>Log-transformation</h3>Apply log transformation to the data.</p>
-<p><h3>Data normalization</h3>You can apply different normalization methods to the data prior to testing. The methods are applied for each column separately, except for \'Quantile\'-normalization which takes the entire matrix into account.</p>
+<p><h3>Data normalization</h3>You can apply different normalization methods to the data prior to testing. The methods are applied for each column separately, except for \'Quantile\' and \'VSN\' normalization which take the entire matrix into account.</p>
 <p>
 <ul>
-<li><b>Median</b>: Subtract the sample median from each value (centering).</li>
-<li><b>Median-MAD</b>: Subtract the sample median and divide by sample MAD (centering plus scaling).</li>
-<li><b>Upper quartile</b>: Subtract the sample\'s 75th percentile from each value.</li>
-<li><b>2-component</b>: Use a mixture-model approach to separate non-changing from changing features and divide both populations by the median of the non-changing features.</li>
-<li><b>Quantile</b>: Transform the data such that the quantiles of all sample distributions are the equal.</li>
-<li><b>none</b>: The data will be taken as is. Should be used if the data has been already normalized.</li>
+<li><b>Median</b>: Subtract the sample median from each value (centering). Intended to be used with <b>log-transformed ratios</b>.</li>
+<li><b>Median (log-intensity)</b>: Subtract the sample median from each value and add the median of all sample medians. Intended to be used with <b>log-transformed intensities</b>.</i> 
+<li><b>Median-MAD</b>: Subtract the sample median and divide by sample MAD (centering plus scaling). Intended to be used with <b>log-transformed ratios</b>.</li>
+<li><b>Median-MAD (log-intensity)</b></li>: Subtract the sample median and divide by sample MAD, and add the median of all sample medians. Intended to be used with <b>log-transformed intensities</b>.</li>
+<li><b>Upper quartile</b>: Subtract the sample\'s 75th percentile from each value. Intended to be used with <b>log-transformed intensities</b>.</li>
+<li><b>2-component</b>: Use a mixture-model approach to separate non-changing from changing features and divide both populations by the mean of the non-changing features. Intended to be used with <b>log-transformed ratios</b>.</li>
+<li><b>Quantile</b>: Transform the data such that the quantiles of all sample distributions are the equal. <b>Use with caution as this type of normalization can remove potentially meaningful outliers from the data</b>.</li>
+<li><b>VSN</b>: Variance stabalizing normalization. Intended to be used with <b>raw intensity values</b>.</li>
+<li><b>none</b>: The data will be taken as is. Use this option if the data has already been normalized.</li>
 </ul>
 <p><h3>Filter data</h3>
 <b>Reproducibility:</b><br>
-Remove features that were not reproducibly quantifified across replicate measurements. Only available for <b>one-sample tests</b> and will be ignored otherwise. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue.</p>
+Remove features that were not reproducibly quantifified across replicate measurements of a group. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue. <b>This type of filter is applied separately to each group.</b> </p>
 
 <b>StdDev:</b><br>
 Remove features with low standard deviation across all samples. Only useful if applied to sample cohorts that were quantified against a common reference. The percentile <b><i>P</i></b> you specify 

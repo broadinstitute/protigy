@@ -30,25 +30,29 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.9.5 April 29, 2021</b>
+<ul>
+<li>PCA: Added the possibility to use different annotations to color the PC plots. Only availbale for GCT v1.3 input files.</li>
+</ul>
 <b>v0.8.9.4 April 28, 2021</b>
 <ul>
 <li>Normalization: Added normalization methods for intensity data (e.g. label-free quantification in proteomics): <b>Median (log-intensity)</b>, <b>Median-MAD (log-intensity)</b>, <b>VSN (intensity)</b></li>
 <li>Profile plots: Users can now control the scale of the x-axis (symmetric or as-is)</li>
-<li>Misc: changed color scheme to <i>pink</i></li>
+<li>Misc: Changed color scheme to <i>pink</i> in preparation to transition from SSP to RSC.</li>
 </ul>
 <b>v0.8.9.3 March 26, 2021</b>
 <ul>
-<li>Misc: Switched to GitHub version of package "ChemometricsWithR" as it got removed from CRAN.</li>
+<li>Misc: Switched to GitHub version of package <code>ChemometricsWithR</code> as it got removed from CRAN.</li>
 <li>Misc: Robustified category names of the class vector if selected from a GCT 1.3 file.</li>
 </ul>
 <b>v0.8.9.2 February 11, 2021</b>
 <ul>
-<li>Misc: SSP/RSC only - path to configuration file for sharing sessions between users can be specified in "global.R".</li>
+<li>Misc: SSP/RSC only - path to configuration file for sharing sessions between users can be specified in <code>global.R</code>.</li>
 </ul>
 <b>v0.8.9.1 February 05, 2021</b>
 <ul>
-<li>Misc: Fixed the error message "Experimental design file does not match the table you have uploaded (different number of rows/columns)!" that was falsely triggered whenever the selected id column was not "id". The bug was intrduced with v0.8.9</li>
-<li>Misc: Fixed a typo in the column description of the Execl result sheet ("Nomical P-value" -> "Nominal P-Value")
+<li>Misc: Fixed the error message "Experimental design" file does not match the table you have uploaded (different number of rows/columns)!" that was falsely triggered whenever the selected id column was anothing other than <code>id</code>. The bug was intrduced with v0.8.9</li>
+<li>Misc: Fixed a typo in the column description of the Excel result sheet ("Nomical P-value" -> "Nominal P-Value")
 </ul>
 
 <b>v0.8.8.1 December 3, 2020</b>
@@ -58,7 +62,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 
 <b>v0.8.8 October 23, 2020</b>
 <ul>
-<li>GCT export: Fixed bug that caused the GCT export to fail if the column name for ids was not "id".</li>
+<li>GCT export: Fixed bug that caused the GCT export to fail if the column name for ids was not <code>id</code>.</li>
 <li>Normalization: Improved error handling if 2-component normalization fails to converge.</li>
 <li>Normalization: Added upper quartile normalization (subtract 75th percentile).</li>
 <li>Misc: Some code cleanup.</li>
@@ -68,34 +72,34 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 <ul>
 <li>GCT v1.3 import: Error message when name of group variable contains special characters.</li>
 <li>GCT v1.3 import: Robustified column names of cdesc object.</li>
-<li>Misc: fixed inconsistent capitalization of file extentions (.r vs. .R)</li>
+<li>Misc: fixed inconsistent capitalization of file extentions (<code>.r</code> vs. <code>.R</code>)</li>
 <li>Misc: data folder set to <code>tempdir()</code> when running locally</li>
 </ul>
 
 <b>v0.8.6.3 April 01, 2020</b>
 <ul>
 <li>Heatmap: Disabled interactive heatmap due to incompatibility with newer verions of the heatmaply package.</li>
-<li>Excel Sheet: fixed broken column desciptions that occured when testing for prefix/suffix adn the column the respective column had been annotated already.</li>
-<li>Scatterplots: columns from other experiments can now be selected.</li>
-<li>Misc: improved error handling and error messages when uploading the experimental desing file.</li>
+<li>Excel Sheet: Fixed broken column desciptions that occured when testing for prefix/suffix adn the column the respective column had been annotated already.</li>
+<li>Scatterplots: Columns from other experiments can now be selected.</li>
+<li>Misc: Improved error handling and error messages when uploading the experimental desing file.</li>
 </ul>
 <b>v0.8.6.2 March 27, 2020</b>
 <ul>
-<li>Misc: improved handling of redundant ids.</li>
+<li>Misc: Improved handling of redundant ids.</li>
 </ul>
 <b>v0.8.6.1 March 18, 2020</b>
 <ul>
 <li>Heatmap: Fixed number of significant features.</li>
 <li>Heatmap: Interactive heatmap working again.</li>
-<li>Correlation boxplots: included in exports (.zip) and Rmarkdown reports.</li>
+<li>Correlation boxplots: Included in exports (.zip) and Rmarkdown reports.</li>
 </ul>
 <b>v0.8.6 March 9, 2020</b>
 <ul>
-<li>Excel Sheet: added column descriptions for Protigy and Spectrum Mill-specific columns.</li>
-<li>Experimental design: robustified handling of special characters in experiment names.</li>
-<li>Volcano plots: added box around legend for highlighted proteins/PTM-sites.</li>
-<li>PCA plots: number of features used for PCA shown in  title.</li>
-<li>PCA plots: central function in src/plots.r</li>
+<li>Excel Sheet: Added column descriptions for Protigy and Spectrum Mill-specific columns.</li>
+<li>Experimental design: Robustified handling of special characters in experiment names.</li>
+<li>Volcano plots: Added box around legend for highlighted proteins/PTM-sites.</li>
+<li>PCA plots: Number of features used for PCA shown in  title.</li>
+<li>PCA plots: Central function in <code>src/plots.r</code></li>
 </ul>
 <b>v0.8.5.5 September 3, 2019</b>
 <ul>
@@ -103,24 +107,24 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.5.4 August 13, 2019</b>
 <ul>
-<li>Excel sheet/GCT export: fixed a bug that that occasionally would mess up the header in the Excel/GCT file. Only happened in <b>Two-sample test</b> and if very similar names for experiments were used (e.g. one experiment name is a substring of another experiment name).</li>
+<li>Excel sheet/GCT export: Fixed a bug that that occasionally would mess up the header in the Excel/GCT file. Only happened in <b>Two-sample test</b> and if very similar names for experiments were used (e.g. one experiment name is a substring of another experiment name).</li>
 <li>Summary tab: Number of features w/o any quant is now correctly reported in previously saved sessions.</li>
 </ul>
 <b>v0.8.5.3 June 11, 2019</b>
 <ul>
-<li>Heatmap: accession and gene name are shown as row annotation.</li>
-<li>SD filter: number of remaining features is reported correctly on the summary page.</li>
+<li>Heatmap: Accession and gene name are shown as row annotation.</li>
+<li>SD filter: Number of remaining features is reported correctly on the summary page.</li>
 </ul>
 <b>v0.8.5.2 June 10, 2019</b>
 <ul>
-<li>Misc: added <i>toggle all</i> buttons in group selection dialog.</li>
-<li>Misc: draggable modal windows using the <i>shinyjqui</i> R package.</li>
-<li>Misc: improved error reporting using the <i>shinyalert</i> R package.</li>
+<li>Misc: Added <i>toggle all</i> buttons in group selection dialog.</li>
+<li>Misc: Draggable modal windows using the <code>shinyjqui</code> R package.</li>
+<li>Misc: Improved error reporting using the <code>shinyalert</code> R package.</li>
 </ul>
 <b>v0.8.5.1 June 6, 2019</b>
 <ul>
-<li>GCT: added GCT file with singed log-p-values to output zip-archive which can be used as ranking input for ssGSEA/PTM-SEA.</li>
-<li>PPI: fixed bug that would show protein-protein interactions of the first protein in the list as default in volcano and scatterplots in R vesion >=3.5.</li>
+<li>GCT: Added GCT file with singed, log-transformed p-values to output zip-archive which can be used as ranking input for ssGSEA/PTM-SEA.</li>
+<li>PPI: Fixed bug that would show protein-protein interactions of the first protein in the list as default in volcano and scatterplots in R vesion >=3.5.</li>
 </ul>
 <b>v0.8.5 Jan 21, 2019</b>
 <ul>
@@ -141,16 +145,16 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.4 Nov 16, 2018</b>
 <ul>
-<li>Multiscatter: fixed bug that would show straight lines for each pairwise plot. Occured when column ids where longer than 20 characters.</li>
+<li>Multiscatter: Fixed bug that would show straight lines for each pairwise plot. Occured when column ids where longer than 20 characters.</li>
 <li>GCT 1.3: Error message if GCT file does not contain any column meta data tracks.</li>
-<li>Misc: fixed a bug causing the app to crash if a GCT 1.3 file with single <b>column meta data track</b> was uploaded.</li>
-<li>Misc: renamed  <i>Modify selected groups</i> to  <i>Select groups</i>.</li>
+<li>Misc: Fixed a bug causing the app to crash if a GCT 1.3 file with single <b>column meta data track</b> was uploaded.</li>
+<li>Misc: Renamed  <i>Modify selected groups</i> to  <i>Select groups</i>.</li>
 </ul>
 <b>v0.8.3.1 July 24, 2018</b>
 <ul>
-<li>Misc: robustified filtering of significant features for plotting purposes.</li>
-<li>Misc: disabled Javascript code in the datatable().</li>
-<li>Correlation boxplots: changed some more aesthetics.</li>
+<li>Misc: Robustified filtering of significant features for plotting purposes.</li>
+<li>Misc: Disabled Javascript code in the <code>datatable()</code>.</li>
+<li>Correlation boxplots: Changed some more aesthetics.</li>
 </ul>
 <b>v0.8.3 July 23, 2018</b>
 <ul>
@@ -168,7 +172,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.2.6 June 28, 2018</b>
 <ul>
-<li>Misc: disabled the cmapR-package because of installation problems of the required package <i>rhdf5</i> on a <i>Red Hat Enterprise Linux 6.9</i> machine. The io.R file from the cmapR GitHub repository is used instead. </li>
+<li>Misc: disabled the cmapR-package because of installation problems of the required package <code>rhdf5</code> on a <i>Red Hat Enterprise Linux 6.9</i> machine. The io.R file from the cmapR GitHub repository is used instead. </li>
 </ul>
 <b>v0.8.2.5 June 28, 2018</b>
 <ul>
@@ -597,7 +601,7 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 <li><b>Median</b>: Subtract the sample median from each value (centering). Intended to be used with <b>log-transformed ratios</b>.</li>
 <li><b>Median (log-intensity)</b>: Subtract the sample median from each value and add the median of all sample medians. Intended to be used with <b>log-transformed intensities</b>.</i> 
 <li><b>Median-MAD</b>: Subtract the sample median and divide by sample MAD (centering plus scaling). Intended to be used with <b>log-transformed ratios</b>.</li>
-<li><b>Median-MAD (log-intensity)</b></li>: Subtract the sample median and divide by sample MAD, and add the median of all sample medians. Intended to be used with <b>log-transformed intensities</b>.</li>
+<li><b>Median-MAD (log-intensity)</b>: Subtract the sample median and divide by sample MAD, and add the median of all sample medians. Intended to be used with <b>log-transformed intensities</b>.</li>
 <li><b>Upper quartile</b>: Subtract the sample\'s 75th percentile from each value. Intended to be used with <b>log-transformed intensities</b>.</li>
 <li><b>2-component</b>: Use a mixture-model approach to separate non-changing from changing features and divide both populations by the mean of the non-changing features. Intended to be used with <b>log-transformed ratios</b>.</li>
 <li><b>Quantile</b>: Transform the data such that the quantiles of all sample distributions are the equal. <b>Use with caution as this type of normalization can remove potentially meaningful outliers from the data</b>.</li>

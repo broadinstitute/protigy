@@ -27,12 +27,12 @@ options(repos = BiocManager::repositories())
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.9.4"
-## maximal filesize for upload
+VER <- "0.8.9.5"
+## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
 NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!")
-## speparator tested in the uploaded file
+## separator tested in the uploaded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
 GRPCOLORS <<- c(RColorBrewer::brewer.pal(8, "Set1"), RColorBrewer::brewer.pal(8, "Dark2"), RColorBrewer::brewer.pal(8, "Set2"), terrain.colors(20), cm.colors(20), topo.colors(20))
@@ -642,19 +642,15 @@ normalize.data <- function(data, id.col,
 #####################################################
 my.prcomp2 <- function(res, grp){
 
-    ## remove missing values
-    ##res <- data.matrix(res)
-    rm.idx <- apply(res, 1, function(x) sum(is.na(x)) + sum(is.infinite(x)))
-    rm.idx <- which(rm.idx > 0)
-    if(length(rm.idx)>0) res <- res[-rm.idx, ]
+  ## remove missing values
+  rm.idx <- apply(res, 1, function(x) sum(is.na(x)) + sum(is.infinite(x)))
+  rm.idx <- which(rm.idx > 0)
+  if(length(rm.idx)>0) res <- res[-rm.idx, ]
 
   ## extract expression data
   res = res[, names(grp)]
 
-   ## View(res)
-
-  ## perform pca
-  ##pca <- prcomp(scale(t(res)))
+    ## perform pca
   pca <- PCA(scale(t(res)))
  
   return(pca)

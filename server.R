@@ -734,30 +734,70 @@ shinyServer(
             ## ##################################################
             ## PC plots
             ## ##################################################
-            pca.tab2[[2]] <- tabPanel('PC plots',
-                                      fluidPage(
-
-                                          fluidRow(
-                                            box( title = 'Select principle components', status='primary', solidHeader = T, align='center',
-                                              column(width=4, selectInput('pca.x', 'x-axis', paste('PC', 1:10)), selected=global.plotparam$pca.x),
-                                              column(width=4, selectInput('pca.y', 'y-axis', paste('PC', 1:10), selected=global.plotparam$pca.y)),
-                                              column(width=4, selectInput('pca.z', 'z-axis', paste('PC', 1:10), selected=global.plotparam$pca.z))
-                                            )
-                                          ),
-                                          fluidRow(
-                                            box( title='2D', status = 'primary', solidHeader = T, width = 1000, height = 700,
-                                                 column(12, align='center', plotlyOutput("pcaxy.plotly", width=800, height=600))
-                                            )
-                                          ),
-
-                                          fluidRow(
-                                            box( title='3D', status = 'primary', solidHeader = T, width = 800, height = 900,
-                                                 column(12, align='center', plotlyOutput("pcaxyz.plotly", width=800, height=800))
-                                            )
+            if(global.param$file.gct3){    ## CGT v1.3 - the user can user different annotations to color the plots
+                
+                    pca.tab2[[2]] <- tabPanel('PC plots',
+                                              fluidPage(
+        
+                                                  fluidRow(
+                                        
+                                                        box( title = 'Select principle components', status='primary', solidHeader = T, align='center',
+                                                        column(width=4, selectInput('pca.x', 'x-axis', paste('PC', 1:10)), selected=global.plotparam$pca.x),
+                                                        column(width=4, selectInput('pca.y', 'y-axis', paste('PC', 1:10), selected=global.plotparam$pca.y)),
+                                                        column(width=4, selectInput('pca.z', 'z-axis', paste('PC', 1:10), selected=global.plotparam$pca.z))
+                                                    
+                                                    ),
+                                                         box(title='Select annotation', status='primary', solidHeader = T, align='center',
+                                                             column(6, selectInput('pca.grp.col', label = 'Color by', choices = colnames(global.input$cdesc), selected = global.plotparam$pca.grp.col),
+                                                             column(6),         
+                                                               )
+                                                             )
+                                                           
+            
+                                                  ),
+                                                  fluidRow(
+                                                    box( title='2D', status = 'primary', solidHeader = T, width = 1000, height = 700,
+                                                         column(12, align='center', plotlyOutput("pcaxy.plotly", width=800, height=600))
+                                                    )
+                                                  ),
+        
+                                                  fluidRow(
+                                                    box( title='3D', status = 'primary', solidHeader = T, width = 800, height = 900,
+                                                         column(12, align='center', plotlyOutput("pcaxyz.plotly", width=800, height=800))
+                                                    )
+                                                  )
+        
+                                              )
+                                             )
+            } else { ## no GCT v1.3
+                pca.tab2[[2]] <- tabPanel('PC plots',
+                                          fluidPage(
+                                              
+                                              fluidRow(
+                                                  
+                                                  box( title = 'Select principle components', status='primary', solidHeader = T, align='center',
+                                                       column(width=4, selectInput('pca.x', 'x-axis', paste('PC', 1:10)), selected=global.plotparam$pca.x),
+                                                       column(width=4, selectInput('pca.y', 'y-axis', paste('PC', 1:10), selected=global.plotparam$pca.y)),
+                                                       column(width=4, selectInput('pca.z', 'z-axis', paste('PC', 1:10), selected=global.plotparam$pca.z))
+                                                       
+                                                  )
+                                                  
+                                              ),
+                                              fluidRow(
+                                                  box( title='2D', status = 'primary', solidHeader = T, width = 1000, height = 700,
+                                                       column(12, align='center', plotlyOutput("pcaxy.plotly", width=800, height=600))
+                                                  )
+                                              ),
+                                              
+                                              fluidRow(
+                                                  box( title='3D', status = 'primary', solidHeader = T, width = 800, height = 900,
+                                                       column(12, align='center', plotlyOutput("pcaxyz.plotly", width=800, height=800))
+                                                  )
+                                              )
+                                              
                                           )
-
-                                      )
-                                      )
+                )
+            }
             ## ####################################################################
             ## Loadings plot
             ## ####################################################################
@@ -1247,6 +1287,9 @@ shinyServer(
          
           ## store grp column
           global.param$grp.gct3 <- input$grp.gct3
+          
+          ## store grp column for PCA colors
+          global.plotparam$pca.grp.col <- input$grp.gct3
           
           if(!input$grp.gct3 %in% colnames(cdesc)){
               error$title <- paste("Parsing error")
@@ -2035,7 +2078,7 @@ shinyServer(
 
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='none'),
                      
-                   #  sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+                    # sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      
                      #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
                       
@@ -2127,6 +2170,7 @@ shinyServer(
           global.plotparam$pca.x <- input$pca.x
           global.plotparam$pca.y <- input$pca.y
           global.plotparam$pca.z <- input$pca.z
+          global.plotparam$pca.grp.col <- input$pca.grp.col
           
           ## multiscatter
           global.plotparam$ms.max <- input$ms.max
@@ -2164,6 +2208,7 @@ shinyServer(
           updateSelectInput(session, inputId='pca.x', selected=global.plotparam$pca.x)
           updateSelectInput(session, inputId='pca.y', selected=global.plotparam$pca.y)
           updateSelectInput(session, inputId='pca.z', selected=global.plotparam$pca.z)
+          updateSelectInput(session, inputId='pca.grp.col', selected=global.plotparam$pca.grp.col)
           ## multiscatter
           updateCheckboxInput(session, inputId='ms.max', value=global.plotparam$ms.max)
           updateNumericInput(session, inputId='ms.max.val', value=global.plotparam$ms.max.val)
@@ -6739,7 +6784,8 @@ shinyServer(
           
           if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
           
-          pca <- plotlyPCA( reactiveValuesToList(global.param), reactiveValuesToList(global.results), input$pca.x, input$pca.y)
+          pca <- plotlyPCA( reactiveValuesToList(global.param), reactiveValuesToList(global.results), reactiveValuesToList(global.input),
+                            input$pca.x, input$pca.y, grp.other=input$pca.grp.col)
           
           ## update if PCA has been recalculated
           if(!is.null(pca$pca)){
@@ -6758,7 +6804,8 @@ shinyServer(
             
           if(is.null(global.results$data) | is.na(global.param$filter.value)) return()
           
-          pca <- plotlyPCA(reactiveValuesToList(global.param), reactiveValuesToList(global.results), input$pca.x, input$pca.y, input$pca.z)  
+          pca <- plotlyPCA(reactiveValuesToList(global.param), reactiveValuesToList(global.results), reactiveValuesToList(global.input), 
+                           input$pca.x, input$pca.y, input$pca.z, grp.other=input$pca.grp.col)  
          
           ## update if PCA has been recalculated
           if(!is.null(pca$pca)){

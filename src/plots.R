@@ -889,16 +889,45 @@ my.multiscatter <- function(mat, cm, hexbin=30, hexcut=5,
 ##
 plotlyPCA <- function(global.param,     ## reactiveValue converted to list
                       global.results,   ## reactiveValue converted to list
+                      global.input,     ## required for coloring other than the group variable 
                       pca.x,            ## input$pca.x
                       pca.y,
-                      pca.z=NULL
+                      pca.z=NULL,
+                      grp.other=NULL    ## name of cdesc column used to color the PCs 
                       ){
   
   mode <- ifelse( is.null(pca.z), 'xy', 'xyz')
   
+  ## group vector used for coloring
   grp <- global.param$grp
   grp.unique <- unique(grp)
   grp.colors <- global.param$grp.colors[names(grp)]
+  
+  ## use a different annotation to color
+  if( !is.null(grp.other) & !is.null(global.param$grp.gct3) ){
+    
+    grp.name <- global.param$grp.gct3
+    
+    if(grp.other != grp.name){
+      
+      cdesc <- global.input$cdesc
+      
+      grp.tmp <- cdesc[ names(grp), grp.other]
+      names(grp.tmp) <- names(grp)
+      grp <- grp.tmp
+      
+      grp.unique <- unique(grp)
+      
+      grp.colors.legend <- GRPCOLORS[1:length(grp.unique)]
+      names(grp.colors.legend) <- grp.unique
+      
+      grp.colors <- grp
+      for(i in names(grp)){
+        grp.colors[i] <- grp.colors.legend[ grp[i] ]
+      }
+    }
+  }
+
   pca.out <- NULL
   
   ## check whether PCA has been run

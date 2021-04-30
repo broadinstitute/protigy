@@ -26,10 +26,18 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     }
 
     ##@###############################
-    ## changelog
+    ## change log
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.8.9.6 April 30, 2021</b>
+<ul>
+<li>Filter: Added filter for missing values.</li>
+<li>Scatterplots: Added correlation coefficients.</li>
+<li>Scatterplots: Fixed legend for filtered values if StdDev was selected.</li>
+<li>Misc: User selections when setting up the analysis worflow are now remembered when changing selecting a different value for <i>Filter data</i></li>
+<li>Misc: Removed dependency with deprecated package <code>prada</code>.</li>
+</ul>
 <b>v0.8.9.5 April 29, 2021</b>
 <ul>
 <li>PCA: Added the possibility to use different annotations to color the PC plots. Only availbale for GCT v1.3 input files.</li>
@@ -605,7 +613,7 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 <li><b>Upper quartile</b>: Subtract the sample\'s 75th percentile from each value. Intended to be used with <b>log-transformed intensities</b>.</li>
 <li><b>2-component</b>: Use a mixture-model approach to separate non-changing from changing features and divide both populations by the mean of the non-changing features. Intended to be used with <b>log-transformed ratios</b>.</li>
 <li><b>Quantile</b>: Transform the data such that the quantiles of all sample distributions are the equal. <b>Use with caution as this type of normalization can remove potentially meaningful outliers from the data</b>.</li>
-<li><b>VSN</b>: Variance stabalizing normalization. Intended to be used with <b>raw intensity values</b>.</li>
+<li><b>VSN</b>: Variance stabilizing normalization. Intended to be used with <b>raw intensity values</b>.</li>
 <li><b>none</b>: The data will be taken as is. Use this option if the data has already been normalized.</li>
 </ul>
 <p><h3>Filter data</h3>

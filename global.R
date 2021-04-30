@@ -27,7 +27,7 @@ options(repos = BiocManager::repositories())
 ## global parameters
 #################################################################
 ## version number
-VER <- "0.8.9.5"
+VER <- "0.8.9.6"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -152,11 +152,11 @@ p_load(gridExtra)
 p_load(vioplot)
 
 ## id mapping
-p_load(RSQLite)
-p_load(org.Hs.eg.db)
-p_load(org.Mm.eg.db)
-p_load(org.Rn.eg.db)
-p_load(org.Dr.eg.db)
+# p_load(RSQLite)
+# p_load(org.Hs.eg.db)
+# p_load(org.Mm.eg.db)
+# p_load(org.Rn.eg.db)
+# p_load(org.Dr.eg.db)
 
 p_load(gprofiler2)
 
@@ -571,67 +571,67 @@ normalize.data <- function(data, id.col,
 ##            20151208 legend
 ##            20161103 check number of rows (N), 2D plot only
 ##############################################################################
-# my.prcomp_obsolete <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.points=3, rgl.point.size=30, main="PCA", leg.vec=NULL, leg.col=NULL, ...){
-# 
-#     cex.font = 1.8
-# 
-#     ## number of data columns, N=2 -> 2D plot only
-#     N <- nrow(x)
-# 
-#     ## color
-#     if( is.null(col) ) col="black"
-# 
-#     ## perform pca
-#     pca <- prcomp(x, scale=scale)
-# 
-#     ## calculate variance
-#     comp.var <- eigen(cov(pca$x))$values
-# 
-#     ## extract the principle components
-#     pc1=pca$x[,1]
-#     pc2=pca$x[,2]
-#     if(N>2)
-#         pc3=pca$x[,3]
-# 
-#     ##############
-#     # rgl plot
-#     ##############
-#     if(rgl & N > 2){
-#         p_load(rgl)
-#         plot3d(pc1, pc2, pc3, xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), zlab=paste("PC 3 (", round(100*comp.var[3]/sum(comp.var),1),"%)", sep=""), type="s", col=col, expand=1.2, size=rgl.point.size)
-#     }
-# 
-#     ########################################
-#     # scatterplot 2D/3D
-#     ########################################
-#     if( plot){
-# 
-#          p_load(scatterplot3d)
-# 
-#         if(N > 2)
-#             par(mfrow=c(1,3), mar=c(7,7,3,1))
-#         if(N <= 2)
-#             par(mfrow=c(1,2), mar=c(7,7,3,1))
-# 
-#          ## PC 1-2
-#          plot(pc1, pc2, xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), pch=pch, main=main, col=col, sub=paste("Cumulative variance = ", round(100*sum(comp.var[1:2]/sum(comp.var)),1),"%", sep=""), cex=cex.points, ylim=c( min(pc2),  max(pc2)+.15*max(pc2)), cex.axis=cex.font, cex.lab=cex.font, cex.sub=cex.font )
-# 
-# 
-#         if(N > 2) {
-#             ## PC 1-3
-#             scatterplot3d( pca$x[,1], pca$x[,3], pca$x[,2], xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), zlab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 3 (", round(100*comp.var[3]/sum(comp.var),1),"%)", sep=""), color=col,  cex.symbols=cex.points, pch=pch, main=main, sub=paste("Cumulative variance = ", round(100*sum(comp.var[1:3]/sum(comp.var)),1),"%", sep=""), type="h" )
-# 
-#         }
-#         ## legend
-#          plot.new()
-#          plot.window(xlim=c(0,1), ylim=c(0, 1))
-#          if(!is.null(leg.vec) & !is.null(leg.col))
-#              legend('topleft', legend=leg.vec, col=leg.col, pch=pch, pt.cex=max(1, cex.points-1.5), ncol=ifelse( length(leg.vec)> 10, 2, 1), bty='n', cex=2 )
-#        par(mfrow=c(1,1))
-#     }
-# 
-#     return(pca)
-# }
+my.prcomp.static <- function(x, pca.x, pca.y, pca.z, col=NULL, cor=T, plot=T, rgl=F, scale=T, pch=20, cex.points=3, rgl.point.size=30, main="PCA", leg.vec=NULL, leg.col=NULL, ...){
+
+    cex.font = 1.8
+
+    ## number of data columns, N=2 -> 2D plot only
+    N <- nrow(x)
+
+    ## color
+    if( is.null(col) ) col="black"
+
+    ## perform pca
+    pca <- prcomp(x, scale=scale)
+
+    ## calculate variance
+    comp.var <- eigen(cov(pca$x))$values
+
+    ## extract the principle components
+    pc1=pca$x[,1]
+    pc2=pca$x[,2]
+    if(N>2)
+        pc3=pca$x[,3]
+
+    ##############
+    # rgl plot
+    ##############
+    if(rgl & N > 2){
+        p_load(rgl)
+        plot3d(pc1, pc2, pc3, xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), zlab=paste("PC 3 (", round(100*comp.var[3]/sum(comp.var),1),"%)", sep=""), type="s", col=col, expand=1.2, size=rgl.point.size)
+    }
+
+    ########################################
+    # scatterplot 2D/3D
+    ########################################
+    if( plot){
+
+         p_load(scatterplot3d)
+
+        if(N > 2)
+            par(mfrow=c(1,3), mar=c(7,7,3,1))
+        if(N <= 2)
+            par(mfrow=c(1,2), mar=c(7,7,3,1))
+
+         ## PC 1-2
+         plot(pc1, pc2, xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), pch=pch, main=main, col=col, sub=paste("Cumulative variance = ", round(100*sum(comp.var[1:2]/sum(comp.var)),1),"%", sep=""), cex=cex.points, ylim=c( min(pc2),  max(pc2)+.15*max(pc2)), cex.axis=cex.font, cex.lab=cex.font, cex.sub=cex.font )
+
+
+        if(N > 2) {
+            ## PC 1-3
+            scatterplot3d( pca$x[,1], pca$x[,3], pca$x[,2], xlab=paste("PC 1 (", round(100*comp.var[1]/sum(comp.var),1),"%)", sep=""), zlab=paste("PC 2 (",round(100*comp.var[2]/sum(comp.var),1),"%)", sep=""), ylab=paste("PC 3 (", round(100*comp.var[3]/sum(comp.var),1),"%)", sep=""), color=col,  cex.symbols=cex.points, pch=pch, main=main, sub=paste("Cumulative variance = ", round(100*sum(comp.var[1:3]/sum(comp.var)),1),"%", sep=""), type="h" )
+
+        }
+        ## legend
+         plot.new()
+         plot.window(xlim=c(0,1), ylim=c(0, 1))
+         if(!is.null(leg.vec) & !is.null(leg.col))
+             legend('topleft', legend=leg.vec, col=leg.col, pch=pch, pt.cex=max(1, cex.points-1.5), ncol=ifelse( length(leg.vec)> 10, 2, 1), bty='n', cex=2 )
+       par(mfrow=c(1,1))
+    }
+
+    return(pca)
+}
 
 #####################################################
 ##
@@ -813,8 +813,7 @@ sd.filter <- function(tab, grp.vec, id.col, sd.perc){
     ## get expression data
     ids=tab[, id.col]
     tab=data.matrix(tab[, names(grp.vec)])
-    #tab=tab[, names(grp.vec)]
-    
+
     ## #########################################
     ## calculate sd across all measurements
     sd.tab <- apply(tab, 1, sd, na.rm=T)
@@ -827,20 +826,54 @@ sd.filter <- function(tab, grp.vec, id.col, sd.perc){
     ## index of values to filter
     filt.idx <- which(sd.tab < sd.perc.val)
     not.filt.idx <- which(sd.tab >= sd.perc.val)
-
+    
     ## set filtered values to NA
     tab[filt.idx, ] <- NA
 
     tab <- data.frame(ids, tab)
     colnames(tab)[1] <- id.col
 
-    ##View(tab)
     values.filt <- lapply(groups, function(x) filt.idx)
     names(values.filt) <- groups
-    return(list(table=tab, values.filtered=values.filt))
+    
+    return( 
+      list(
+        table=tab, 
+        values.filtered=values.filt, 
+        sd.perc.val=sd.perc.val
+      )
+    )
 }
-
-
+########################################################################
+## 20210429
+##                missing data filter
+na.filter <- function(tab, id.col, grp.vec, na.filt.val){
+  
+  ## ##########################################
+  ## get expression data
+  ids=tab[, id.col]
+  tab=data.matrix(tab[, names(grp.vec)])
+  
+  ## #########################################
+  ## calculate sd across all measurements
+  na.tab <- apply(tab, 1, function(x) sum(is.na(x))/length(x) )
+  
+  ## #########################################
+  ## index of values to keep
+  keep.idx <- which(na.tab <= (na.filt.val/100))
+  
+  ## filter
+  tab <- tab[ keep.idx, ]
+  ids <- ids[ keep.idx ]
+  
+  tab <- data.frame(ids, tab)
+  colnames(tab)[1] <- id.col
+  
+  return(list(
+    table=tab, 
+    ids=ids
+  ))
+}
 
 ########################################################################
 ## 20160224

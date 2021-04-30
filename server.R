@@ -103,7 +103,7 @@ shinyServer(
             ##sd.filt='no',              ## sd filter
             sd.filt.val=10,              ## remove lower 10 percent of features with lowest sd
             
-            na.filt.val=100,            ## max. % missing  values
+            na.filt.val=100,             ## max. % missing  values
 
             
             filter.type='adj.p',         ## default filter
@@ -468,21 +468,10 @@ shinyServer(
                 
                 ## index of other experiments
                 other.idx <- setdiff(1:length(grp), grp.idx)
-                # if(!is.null(input$scat.showall)){
-                #   if(input$scat.showall)
-                    grp.idx <- c(grp.idx, other.idx)
-                # }
+                grp.idx <- c(grp.idx, other.idx)
                 scat.x <- names(grp)[grp.idx]
                 scat.y <- names(grp)[grp.idx]
 
-                ##
-                # scat.x.html <- c(
-                #   "<option value='none'></option>",                 # add default opt
-                #   sapply(scat.x, function(x){   # turn choices into html
-                #     paste0("<option value='",x,"'>", x, "<option>")
-                #   })
-                # )
-                   
                 scat.tabs[[i+1]]=tabPanel(paste0( grp.unique[ i ] ),
                                           fluidPage(
 
@@ -1625,12 +1614,13 @@ shinyServer(
                                        stringsAsFactors=F, na.strings=NASTRINGS, quote = "\"", 
                                        dec = ".", fill = TRUE, comment.char = "")
                 }
+                
                 ## shorten column names and store together with the original names
                 colnames.tmp <- chopString(colnames(tab), STRLENGTH)
                 names(colnames.tmp) <- colnames(tab)
                 
                 ## store values
-                global.input$table <- global.input$table.org <- tab
+                global.input$table <- global.input$table.org <- tab ## need to make sure that 'global.input$table.org' never gets overwritten 
                 global.input$file <- input$file
                 global.input$table.colnames <- colnames.tmp
                 
@@ -2044,7 +2034,8 @@ shinyServer(
             if( !global.param$grp.done ) return()
 
             ####################################
-            ## initialize
+            ## initialize with default values from
+            ## 'global.param'
             ## - show everything
             if( is.null(input$filt.data)){
 
@@ -2053,9 +2044,9 @@ shinyServer(
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
 
-                     #radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'MissingValues', 'none'), selected=global.param$filt.data ),
+                     sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+                     
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected=global.param$filt.data ),
-                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
                      
@@ -2073,17 +2064,22 @@ shinyServer(
 
                 list(
                   
-                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
-
-                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='none'),
+                     #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),
                      
-                    # sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+                     #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
+                     
+                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+                     sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+                     
+                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='none'),
                      
                      #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
                       
-                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
-                   
+                     #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+                     radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=input$which.test),
+                     
                      actionButton('run.test', 'Run analysis!'),
                      br(),
                      hr(),
@@ -2102,14 +2098,23 @@ shinyServer(
 
                 list(
                   
-                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
-
-                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='Reproducibility'),
-                     selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
+                    #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),
+                    
+                    #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
+                    
+                    #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+                    sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+                    
+                    radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='Reproducibility'),
+                    
+                    selectInput('repro.filt.val', 'alpha', choices=c(.1, .05, 0.01, 0.001 ), selected=global.param$repro.filt.val),
+                     
                     # sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      # radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
-                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T',  'mod F', 'none'), selected=global.param$which.test),
+                    #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T',  'mod F', 'none'), selected=global.param$which.test),
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T',  'mod F', 'none'), selected=input$which.test),
                     
 
                      actionButton('run.test', 'Run analysis!'),
@@ -2126,16 +2131,24 @@ shinyServer(
 
                 list(
                   
-                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
-
+                    #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),
+                    
+                    #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
+                    
+                    #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+                    sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+                    
                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='StdDev'),
+                    
                     sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
 
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                     
                     #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
-                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+                    #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=input$which.test),
                     actionButton('run.test', 'Run analysis!'),
                     br(),
                     hr(),
@@ -2522,7 +2535,7 @@ shinyServer(
               rmd <- paste(rmd, "\n
                          \n Scatterplot of ```r global.plotparam$pca.x``` and ```r global.plotparam$pca.y```.
                          \n```{r pca-scatter, echo=F}
-                         \np <- plotlyPCA( reactiveValuesToList(global.param), reactiveValuesToList(global.results), input$pca.x, input$pca.y)
+                         \np <- plotlyPCA( reactiveValuesToList(global.param), reactiveValuesToList(global.results), reactiveValuesToList(global.input), input$pca.x, input$pca.y, grp.other=input$pca.grp.col)
                          \np$p 
                          \n```
                          \n[Back to top](#top)     
@@ -2549,7 +2562,7 @@ shinyServer(
               \n```{r corrmat, echo=F, warning=F, message=F, fig.width=8, fig.height=8}
               \nwithProgress(message="Exporting", detail="correlation matrix",{
               \nif(is.null(global.results$table.log)){
-              \n  tab <- data.frame(global.input$table)
+              \n  tab <- data.frame(global.results$table.na.filt)
               \n} else{
               \n  tab <- data.frame(global.results$table.log)
               \n}
@@ -2610,7 +2623,7 @@ shinyServer(
               \n```{r corrbox, echo=F, warning=F, message=F, fig.width=8, fig.height=8}
               \nwithProgress(message="Exporting", detail="correlation matrix",{
               \nif(is.null(global.results$table.log)){
-              \n  tab <- data.frame(global.input$table)
+              \n  tab <- data.frame(global.results$table.na.filt)
               \n} else{
               \n  tab <- data.frame(global.results$table.log)
               \n}
@@ -2667,7 +2680,7 @@ shinyServer(
               \n```{r boxplot, echo=F, warning=F, message=F, fig.width=10}
               \nwithProgress(message="Exporting", detail="boxplots",{
               \nif(is.null(global.results$table.log)){
-              \n  tab <- data.frame(global.input$table)
+              \n  tab <- data.frame(global.results$table.na.filt)
               \n} else{
               \n  tab <- data.frame(global.results$table.log)
               \n}
@@ -3009,7 +3022,8 @@ shinyServer(
                 fn.cm <- paste(global.param$session.dir, '/correlation_matrix_lo_',global.plotparam$cm.lower, '_up_',global.plotparam$cm.upper, '.pdf', sep='')
                
                 if(is.null(global.results$table.log))
-                  tab <- data.frame(global.input$table)
+                  #tab <- data.frame(global.input$table)
+                  tab <- data.frame(global.results$table.na.filt)
                 else
                   tab <- data.frame(global.results$table.log)
                 
@@ -3070,7 +3084,8 @@ shinyServer(
                 fn.cm <- paste0(global.param$session.dir, '/correlation_boxplot.pdf')
                 
                 if(is.null(global.results$table.log))
-                  tab <- data.frame(global.input$table)
+                  tab <- data.frame(global.results$table.na.filt)
+                  #tab <- data.frame(global.input$table)
                 else
                   tab <- data.frame(global.results$table.log)
                 
@@ -3256,7 +3271,8 @@ shinyServer(
                     ###############################################
                     ## unnormalized ratios
                     if(is.null(global.results$table.log))
-                        tab <- data.frame(global.input$table)
+                        #tab <- data.frame(global.input$table)
+                        tab <- data.frame(global.results$table.na.filt)
                     else
                         tab <- data.frame(global.results$table.log)
 
@@ -3312,7 +3328,8 @@ shinyServer(
                     ###############################################
                     ## unnormalized ratios
                     if(is.null(global.results$table.log))
-                        tab <- data.frame(global.input$table)
+                        tab <- data.frame(global.results$table.na.filt)
+                        #tab <- data.frame(global.input$table)
                     else
                         tab <- data.frame(global.results$table.log)
 
@@ -3584,8 +3601,7 @@ shinyServer(
             ##   export parameters as small text file
             #########################################################
             global.param.imp <- reactiveValuesToList(global.param)
-            params <- global.param.imp[c('log.transform', 'norm.data', 'filt.data',  'repro.filt.val', 'sd.filt.val', 'which.test', 'filter.type', 'filter.value')]
-            #params <- global.param[[c('log.transform', 'norm.data', 'filt.data',  'repro.filt.val', 'sd.filt.val', 'which.test', 'filter.type', 'filter.value')]]
+            params <- global.param.imp[c('log.transform', 'norm.data', 'na.filt.val', 'filt.data',  'repro.filt.val', 'sd.filt.val', 'which.test', 'filter.type', 'filter.value')]
             
             params.txt <- unlist(lapply(params, paste, collapse=';'))
             params.txt <-  paste(names(params.txt),params.txt, sep='\t')
@@ -3736,6 +3752,9 @@ shinyServer(
             if(is.null( global.param$update.cm) )
               global.param$update.cm <- TRUE
           
+            ## backwards compatibility III
+            if( is.null(global.results$table.na.filt) )
+                global.results$table.na.filt <- global.input$table
 
             ## ##############################################################
             ##                       update filter
@@ -3794,7 +3813,6 @@ shinyServer(
                 ## ############################################
                 ## map to gene names
                 ## ############################################
-                ##ids <- rownames( global.results$data$output)
                 ##ids <- global.results$data$output[, global.param$id.col.val]
                 ids <- global.results$data$output[, 'id']
 
@@ -3803,12 +3821,9 @@ shinyServer(
                 global.results$keytype <- map.res$keytype
                 global.results$id.map <- data.frame(id=ids,  map.res$id.map )
                 global.results$data$output <- left_join(global.results$data$output, global.results$id.map, 'id')
-                ##rownames(global.results$data$output) <- global.results$id.map$id.concat
             }
-        })
+        }) ## end: observeEvent(input$session.browse.import
 
-        #
-        
         
         # #####################################
         #     determine groups to test
@@ -3863,6 +3878,7 @@ shinyServer(
         ##
         ## - log-transform (optional)
         ## - normalization (optional)
+        ## - filter missing values (optional)
         ## - filter data(optional)
         ## - test (optional)
         ##
@@ -3876,19 +3892,18 @@ shinyServer(
 
 
             ###########################################
-            ## - store which test has been used
-            ## - needed to supress volcanos for mod F test
+            ## - store use selections
             global.param$which.test <- input$which.test
+            global.param$na.filt.val <- input$na.filt.val
             global.param$filt.data <- input$filt.data
             global.param$repro.filt.val <- input$repro.filt.val
             global.param$sd.filt.val <- input$sd.filt.val
             global.param$norm.data <- input$norm.data
             global.param$log.transform <- input$log.transform
 
-
             #####################################################################
             ## if the 'Run test' - button has been pressed for the first time,
-            ## store a copy of the original input matrix (unnormalized, unfiltered)
+            ## store a copy of the original input matrix (un-normalized, unfiltered)
             if(!(global.param$analysis.run)){
                 global.input$table.org <- global.input$table
                 tab <- data.frame(global.input$table)
@@ -3911,6 +3926,7 @@ shinyServer(
             global.results$table.norm=NULL
             global.results$table.repro.filt=NULL
             global.results$table.sd.filt=NULL
+            global.results$table.na.filt=NULL
             global.results$values.filtered=NULL
             global.results$pca=NULL
 
@@ -3921,6 +3937,14 @@ shinyServer(
             ## ##############################################################################
             test <- global.param$which.test
             norm.data <- global.param$norm.data
+            
+            ## NA filter: backwards compatibility
+            if(!is.null(global.param$na.filt.val)){
+                na.filt.val <- as.numeric(global.param$na.filt.val)
+            } else {
+                na.filt.val <- 100
+            }
+            
             filt.data <- global.param$filt.data
             repro.filt.val <- global.param$repro.filt.val
             sd.filt.val <- global.param$sd.filt.val
@@ -4001,8 +4025,35 @@ shinyServer(
             }
             ## ############################################
             ##
+            ## missing value filter
+            ##
+            ## ############################################
+            if(na.filt.val < 100) {
+                
+                withProgress(message='Applying missing data filter',  {
+                    na.filt = na.filter(tab, id.col=id.col, groups, na.filt.val=na.filt.val)
+                    tab.na.filt <- na.filt$table
+                })
+                
+                ## store
+                global.results$table.na.filt <- tab.na.filt
+                global.results$ids.na.filt <- na.filt$ids
+                
+                ## update other tables 
+                global.results$table.norm <- global.results$table.norm[na.filt$ids, ]
+                global.results$table.log <- global.results$table.log[na.filt$ids, ] 
+                
+                ## use na-filtered table downstream
+                tab <- tab.na.filt
+                
+            } else {
+                global.results$table.na.filt <- tab
+                global.results$ids.na.filt <- tab$id
+            }
+            
+            ## ############################################
+            ##
             ## reproducibility filter
-            ## - only for one-sample test
             ##
             ## ############################################
             if(filt.data == 'Reproducibility'){
@@ -4028,10 +4079,12 @@ shinyServer(
                         filt.tmp = sd.filter(tab, id.col=id.col, groups, sd.perc=global.param$sd.filt.val)
                         tab = filt.tmp$table   
                     })
+                
                     ## store indices of filtered values in the original table
                     global.results$values.filtered <- filt.tmp$values.filtered
                     global.results$table.filt <- tab
-
+                    global.param$sd.perc.val <- filt.tmp$sd.perc.val
+                    global.param$sd.filt.str <- paste( global.param$filt.data, ' (SD > ', round(global.param$sd.perc.val, 2),' / ', global.param$sd.filt.val, 'th percentile)',sep='')
             }
 
             ## #############################################################################
@@ -4583,37 +4636,39 @@ shinyServer(
             if(is.null(global.results$data)) return()
             if(!is.null(error$msg)) return()
 
+            ## original input table
             tab <- data.frame(global.input$table.org)
+            
+            ## table after NA filter
+            if(!is.null(global.results$table.na.filt)){
+                tab.na.filt <- data.frame(global.results$table.na.filt)
+                ## No. features after NA filter
+                N.feat.na.filt <- nrow(tab.na.filt)
+                global.results$N.feat.na.filt <- N.feat.na.filt
+            }
             
             grp <- global.param$grp
             N.grp <- global.param$N.grp
 
+            ## No. features with at least 1 non-missing value 
             N.feat <- sum(apply(tab, 1, function(x) sum(is.na(x)/length(x))) < 1)
             global.results$N.feat <- N.feat
             
-            ##cat(nrow(tab), ' - ', length(grp), ' - ', N.grp)
-
             sum.tab <- t(data.frame(
-                ##id=c('Rows', 'Expression columns', 'Groups'),
-                #N.rows=nrow(tab),
                 ifelse(is.null(global.results$N.feat), nrow(tab), N.feat),
+                ifelse(is.null(global.results$N.feat.na.filt), NA, N.feat.na.filt),
                 N.columns=length(grp),
                 N.groups=N.grp
             ))
             
-            
-            ##View(sum.tab)
-            sum.tab <- data.frame(id=c('No. features', 'No. expression columns', 'No. groups'), sum.tab)
+            sum.tab <- data.frame(id=c('No. features', 'No. features (NA-filtered)', 'No. expression columns', 'No. groups'), sum.tab)
             colnames(sum.tab) <- c('', 'Number')
-            ##rownames(sum.tab) <- c('Rows', 'Expression columns', 'Groups')
             
+            ## Number of features without quant in any sample
             if(!is.null(global.input$NA.rows)){
               row.tmp <-  c('No. features w/o quant', global.input$NA.rows)
-              names(row.tmp) <- c('', 'Number')
-              #sum.tab <- add_row(sum.tab, row.tmp, .after=1)
-              sum.tab <- rbind(sum.tab[1,], row.tmp, sum.tab[2:nrow(sum.tab),])
-              #sum.tab <- add_column(sum.tab, `No. features w/o quant`=global.input$NA.rows, .after=1)
-              #sum.tab[1,1] <- paste(sum.tab[1,1], '(no quant: ', global.input$NA.rows,')')
+              names(row.tmp) <- colnames(sum.tab)
+              sum.tab <- rbind(sum.tab[1:2,], row.tmp, sum.tab[3:nrow(sum.tab),])
             }
             
             sum.tab
@@ -4628,13 +4683,13 @@ shinyServer(
             if(is.null(global.results$data)) return()
             if(!is.null(error$msg)) return()
 
-            wf.tab.ids <- c('Log scale', 'Normalization', 'Filter data', 'Test', 'Filter results')
+            wf.tab.ids <- c('Log scale', 'Normalization', 'Max % missing', 'Filter data', 'Test', 'Filter results')
 
             ## #########################
             ## Reproducibility filter
             if(global.param$filt.data == 'Reproducibility'){
 
-                wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, paste( global.param$filt.data, ' (alpha=',global.param$repro.filt.val, ')',sep=''), global.param$which.test,
+                wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, global.param$na.filt.val, paste( global.param$filt.data, ' (alpha=',global.param$repro.filt.val, ')',sep=''), global.param$which.test,
                                        paste( global.param$filter.type, ' < ', global.param$filter.value)))
 
                 wf.tab <- data.frame(id=wf.tab.ids, wf.tab, stringsAsFactors=F)
@@ -4644,7 +4699,7 @@ shinyServer(
             ## #######################
             ## SD filter
             if(global.param$filt.data == 'StdDev'){
-                wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, paste( global.param$filt.data, ' (SD=',global.param$sd.filt.val, '%)',sep=''), global.param$which.test,
+                wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, global.param$na.filt.val, global.param$sd.filt.str, global.param$which.test,
                                        paste( global.param$filter.type, ' < ', global.param$filter.value) ))
                 wf.tab <- data.frame(id=wf.tab.ids, wf.tab, stringsAsFactors=F)
             }
@@ -4652,7 +4707,7 @@ shinyServer(
             ## #############################
             ## no data filter
             if(global.param$filt.data == 'none'){
-                wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, paste( global.param$filt.data, sep=''), global.param$which.test,
+                wf.tab <- t(data.frame( global.param$log.transform, global.param$norm.data, global.param$na.filt.val, paste( global.param$filt.data, sep=''), global.param$which.test,
                                        paste( global.param$filter.type, ' < ', global.param$filter.value) ))
                 wf.tab <- data.frame(id=wf.tab.ids, wf.tab, stringsAsFactors=F)
             }
@@ -4682,14 +4737,6 @@ shinyServer(
             if(is.null(global.results$data)) return()
             if(!is.null(error$msg)) return()
 
-            ## extract results ## kk 20161025
-            ##tab.select <- input$mainPage
-            ###filter.res()#--
-            ##updateNavbarPage(session, 'mainPage', selected=tab.select)
-
-            ##filter.res()
-
-            ##res = global.results$filtered
             res <- global.results$data$output
 
             ## tested groups
@@ -4917,19 +4964,15 @@ shinyServer(
         output$summary.missing.data.row <- renderPlotly({
 
             if(is.null(global.results$data)) return()
-            ##if(!is.null(error$msg)) return()
-
+            
             if(global.param$log.transform == 'none')
-                tab <- data.frame(global.input$table.org)
+                tab <- data.frame(global.results$table.na.filt)
+                #tab <- data.frame(global.input$table.org)
             else
                 tab <- data.frame(global.results$table.log)
-
-            #grp <- global.param$grp
-            #N.grp <- global.param$N.grp
-            #grp.colors.legend <- global.param$grp.colors.legend
+                #tab <- data.frame(global.results$table.log)
 
             ## extract expression values
-            #dat <- tab[, -which(colnames(tab) == global.param$id.col.value)]
             dat <- tab[, names(global.param$grp)]
             dat <- data.matrix(dat)
 
@@ -4950,6 +4993,7 @@ shinyServer(
             
            p
         })
+        
         ## #############################################################################
         ##
         ## per column: Non-missing values
@@ -4959,9 +5003,11 @@ shinyServer(
             if(is.null(global.results$data)) return()
 
             if(global.param$log.transform == 'none')
-                tab <- data.frame(global.input$table.org)
+                tab <- data.frame(global.results$table.na.filt)
+                #tab <- data.frame(global.input$table.org)
             else
                 tab <- data.frame(global.results$table.log)
+                #tab <- data.frame(global.results$table.log)
 
             grp <- global.param$grp
             N.grp <- global.param$N.grp
@@ -4969,7 +5015,6 @@ shinyServer(
             grp.colors <- global.param$grp.colors
 
             ## extract expression values
-            #dat <- tab[, -which(colnames(tab) == global.param$id.col.value)]
             dat <- tab[, names(grp)]
             dat <- data.matrix(dat)
 
@@ -5087,19 +5132,8 @@ shinyServer(
 
 
                 ## server-side rendering of selectizeInput
-                 #updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T)#,
                 updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), choices=choices, selected="", server=T)#,
-                                       # options=list( 
-                                      #    placeholder = 'test'#,
-                                        #  oninit = I('function() { this.setValue(""); }')
-                                      #  ))
-                 #updateSelectizeInput( session=session, inputId = gsub('\\.','',paste0('ppi.bait.',  grp.comp[i])), label='Bait protein', choices=choices, selected=NULL, server=T, 
-                #                       options= list(
-                #                          onInitialize = I('function() { this.setValue(""); }')
-                #                       )
-                 #)
-                # 
-                ##}
+            
             }
             global.param$update.ppi.select <- FALSE
         })
@@ -5501,15 +5535,15 @@ shinyServer(
 
             ## ##############################
             ## extract data columns
-            ##cat(paste0('scat.x.', group), '\n')
-            ##cat(paste0('scat.y.', group), '\n')
             x.ax <- res[ , input[[ paste0('scat.x.', group) ]] ]
             y.ax <- res[ , input[[ paste0('scat.y.', group) ]] ]
      
+            cor.xy.pears <- cor(x.ax, y.ax, use='pairwise.complete', method = 'pearson')
+            cor.xy.spear <- cor(x.ax, y.ax, use='pairwise.complete', method = 'spearman')
+            
             
             ## ##############################
             ## ids
-            #IDs <- global.results$id.map$id.concat
             IDs <- res[ , 'id.concat'] 
             names(x.ax) <- names(y.ax) <- names(pval) <- IDs
 
@@ -5584,28 +5618,29 @@ shinyServer(
                     non.int.idx <- non.int.idx[ -c(sig.idx) ]  
                   
                   ## set up plot  
-                  p <- plot_ly(x=dat.plot$x.ax[ non.int.idx ], y=dat.plot$y.ax[ non.int.idx], type='scatter', mode='markers', marker=list(size=10, color=col[non.int.idx]), text=IDs[non.int.idx], opacity=.2, showlegend=T, name=non.sig.txt )
+                  p <- plot_ly(x=dat.plot$x.ax[ non.int.idx ], y=dat.plot$y.ax[ non.int.idx], 
+                               type='scatter', mode='markers', 
+                               marker=list(size=10, color=col[non.int.idx]), 
+                               text=IDs[non.int.idx], opacity=.2, showlegend=T, name=non.sig.txt )
                   
                   ## add significant proteins
                   if(length(sig.idx) > 0){
-                    p <- p %>% add_trace(x=dat.plot$x.ax[ sig.idx ], y=dat.plot$y.ax[ sig.idx], type='scatter', mode='markers', marker=list(size=10, color=col[sig.idx]), text=IDs[sig.idx], opacity=.2, showlegend=T, name=sig.txt  )
+                    p <- p %>% 
+                        add_trace(x=dat.plot$x.ax[ sig.idx ], y=dat.plot$y.ax[ sig.idx], 
+                                  type='scatter', mode='markers', 
+                                  marker=list(size=10, color=col[sig.idx]), 
+                                  text=IDs[sig.idx], opacity=.2, showlegend=T, name=sig.txt  )
                   }
                   
                   ## #######################################
                   ## if interactors have been found
                 } else {
                     col[ppi.int.idx] <- ppi.col[ nchar(ppi.col) > 0 ]
-                    #ppi.idx <- ppi.int.idx
   
-                    
-                    #cat(ppi.int.idx, '\n')
                     ## ###################################################
                     ## plot non-interactors
-                    #non.int.idx <- 1:nrow(dat.plot)[ -c(ppi.int.idx) ]
                     non.int.idx <- setdiff( 1:nrow(dat.plot), ppi.int.idx)
-                    
-                   # cat(non.int.idx, '\n')
-                    
+                 
                     if(length(sig.idx) > 0)
                       non.int.idx <- non.int.idx[ -c(sig.idx) ]  
                     
@@ -5632,15 +5667,23 @@ shinyServer(
             }  else { 
               ## ################################################################
               ## no PPI
-              ## different traces for significnat and not-significant features
+              ## different traces for significant and not-significant features
              non.sig.idx <- 1:nrow(dat.plot)
               if(length(sig.idx) > 0)
                 non.sig.idx <- non.sig.idx[ -c(sig.idx) ]  
               
-              p <- plot_ly(x=dat.plot$x.ax[non.sig.idx], y=dat.plot$y.ax[non.sig.idx], type='scatter', mode='markers', marker=list(size=10, color=col[non.sig.idx]), text=IDs[non.sig.idx], showlegend=T, name=non.sig.txt )
+              p <- plot_ly(x=dat.plot$x.ax[non.sig.idx], 
+                           y=dat.plot$y.ax[non.sig.idx], 
+                           type='scatter', mode='markers', 
+                           marker=list(size=10, color=col[non.sig.idx]), 
+                           text=IDs[non.sig.idx], showlegend=T, name=non.sig.txt )
             
               if(length(sig.idx) > 0){
-                p <- p %>% add_trace(x=dat.plot$x.ax[ sig.idx ], y=dat.plot$y.ax[ sig.idx], type='scatter', mode='markers', marker=list(size=10, color=col[sig.idx]), text=IDs[sig.idx], opacity=1, showlegend=T, name='signif.'  )
+                p <- p %>% add_trace(x=dat.plot$x.ax[ sig.idx ], 
+                                     y=dat.plot$y.ax[ sig.idx], 
+                                     type='scatter', mode='markers', 
+                                     marker=list(size=10, color=col[sig.idx]), 
+                                     text=IDs[sig.idx], opacity=1, showlegend=T, name='signif.'  )
               }
               
             }
@@ -5649,13 +5692,13 @@ shinyServer(
             ## ##############################
             ##  reproducibility filter?
             values.filtered <- global.results$values.filtered[[group]]  
-            #View(values.filtered)
             
             if(length(values.filtered) > 0){
 
               ## get the entire dataset
               if(is.null(global.results$table.log))
-                tab <- data.frame(global.input$table)
+                tab <- data.frame(global.results$table.na.filt)
+                #tab <- data.frame(global.input$table)
               else
                 tab <- data.frame(global.results$table.log)
               
@@ -5666,19 +5709,27 @@ shinyServer(
               filt.dat <- data.frame(x=filt.x, y=filt.y)
               
               ## add
-              filt.txt <-  paste( global.param$filt.data, '\n(alpha=',global.param$repro.filt.val, ')',sep='')
+              if(global.param$filt.data == 'Reproducibility')
+                filt.txt <-  paste( global.param$filt.data, '\n(alpha=',global.param$repro.filt.val, ')',sep='')
+              if(global.param$filt.data == 'StdDev')
+                filt.txt <-  global.param$sd.filt.str
+              
               p <- p %>% add_trace(
                 x=filt.dat$x,
                 y=filt.dat$y,
-                type='scatter', mode='markers', marker=list(size=10, color=rep('blue', nrow(filt.dat))), opacity=.2, text=values.filtered, name= filt.txt
+                type='scatter', mode='markers', 
+                marker=list(size=10, color=rep('blue', nrow(filt.dat))), 
+                opacity=.2, text=values.filtered, name= filt.txt
               )
               
             }
-          
+            
+            ## add Pearson correlation, based on all data points
+            
 
             ## some astethics
             p <- layout(p,
-                        title='',
+                        title=paste0( 'Pearson r: ', round(cor.xy.pears, 3), ' / Spearman r: ', round(cor.xy.spear, 3)),
                         xaxis=list(
                             title=paste( input[[ paste0('scat.x.', group) ]])
                         ),
@@ -6108,11 +6159,12 @@ shinyServer(
             if(is.null(global.results$data)) return()
 
             ## dataset
-            if(is.null(global.results$table.log))
-                tab <- data.frame(global.input$table)
-            else
+            if(is.null(global.results$table.log)){
+                #tab <- data.frame(global.input$table)
+                tab <- data.frame(global.results$table.na.filt)
+            } else {
                 tab <- data.frame(global.results$table.log)
-
+            }
             ## id column
             id.col.value <- global.param$id.col.value
             ## group vector
@@ -6160,7 +6212,6 @@ shinyServer(
             withProgress({
                    setProgress(message = 'Processing...', detail= 'Generating profile plots')
                    makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, 
-                                   #xlim.mode = 'data',
                                    xlim.mode = input$profile.plot.xlim,   
                                    main=paste(global.param$norm.data, 'normalized'))
             })
@@ -6181,7 +6232,8 @@ shinyServer(
 
             ## dataset
             if(is.null(global.results$table.log))
-                tab <- data.frame(global.input$table)
+                tab <- data.frame(global.results$table.na.filt)
+                #tab <- data.frame(global.input$table)
             else
                 tab <- data.frame(global.results$table.log)
 
@@ -6249,8 +6301,10 @@ shinyServer(
                 robustify=isolate(input$ms.robustify),
                 update=input$ms.update)
         },
-        width = function(){120*(ncol(data.frame(global.input$table))-1)},
-        height= function(){120*(ncol(data.frame(global.input$table))-1)}
+        width = function(){120*(ncol(data.frame(global.results$table.na.filt))-1)},
+        height= function(){120*(ncol(data.frame(global.results$table.na.filt))-1)}
+        #width = function(){120*(ncol(data.frame(global.input$table))-1)},
+        #height= function(){120*(ncol(data.frame(global.input$table))-1)}
         )
 
         ###############################
@@ -6261,7 +6315,8 @@ shinyServer(
             
             ## dataset
             if(is.null(global.results$table.log))
-                tab <- data.frame(global.input$table)
+                tab <- data.frame(global.results$table.na.filt)
+                #tab <- data.frame(global.input$table)
             else
                 tab <- data.frame(global.results$table.log)
 
@@ -6294,10 +6349,6 @@ shinyServer(
               cm <- global.results$cm
             }
             tab <- tab[, names(grp)]
-            #colnames(tab) <- chopString(colnames(tab), STRLENGTH)
-            
-            ## table
-            #tab <- tab[, setdiff(colnames(tab), id.col)]
             
             ###############################
             ## plot
@@ -6337,7 +6388,8 @@ shinyServer(
                  setProgress(message = 'Processing...', detail= 'Generating Heatmap')
                   
                   if(is.null(global.results$table.log))
-                    tab <- data.frame(global.input$table)
+                    tab <- data.frame(global.results$table.na.filt)
+                    #tab <- data.frame(global.input$table)
                   else
                     tab <- data.frame(global.results$table.log)
                
@@ -6408,7 +6460,9 @@ shinyServer(
             if(!is.null(error$msg)) return()
 
             ## dataset
-            tab <- data.frame(global.input$table)
+            #tab <- data.frame(global.input$table)
+            tab <- data.frame(global.results$table.na.filt)
+            
             ## id column
             id.col <- global.param$id.col.value
             ## class vector
@@ -6494,9 +6548,6 @@ shinyServer(
             ## require at least three significant hits
             validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
 
-            ## number of features with at least one non-missing value
-            #n.feat <- sum( apply() )
-            
             #######################################
             ## heatmap title
             hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
@@ -6529,7 +6580,6 @@ shinyServer(
             if(input$hm.max){
                 withProgress({
                     setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                    #plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
                     plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
                            height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
                            width=dynamicWidthHM(length(global.param$grp)))
@@ -6538,7 +6588,6 @@ shinyServer(
             } else {
                  withProgress({
                    setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                   #plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames)
                    plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
                           height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
                           width=dynamicWidthHM(length(global.param$grp)))
@@ -6560,69 +6609,60 @@ shinyServer(
         ##                                interactive  Heatmap
         ##
         ####################################################################################
-        output$HM.int <- renderPlotly({
-          
-          ## if(is.null(global.results$data)) return()
-          if(!is.null(error$msg)) return()
-          
-          ######################################
-          ## extract results
-          res = global.results$filtered
-  
-          ######################################
-          ## require at least three significant hits
-          validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
-          
-          #######################################
-          ## heatmap title
-          hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
-          hm.title <- paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
-          
-          ###################################
-          ## ids to show in heatmap
-          hm.rownames <- res[, 'id.concat']
-          
-          #######################################
-          ## extract expression values
-          res = res[, names(global.param$grp)]
-          
-          ##@#####################################
-          ##  dimensions depending on no. rows/columns
-          cw <- cwHM(ncol(res))
-          
-          if(!is.null(global.param$anno.col)){
-            #hm.cdesc <- data.frame( global.input$cdesc[names(global.param$grp),  global.param$cdesc.selection], stringsAsFactors = F )
-            anno.col=global.param$anno.col
-            anno.col.color=global.param$anno.col.color
-          } else {
-            anno.col=data.frame(Group=global.param$grp)
-            anno.col.color=list(Group=global.param$grp.colors.legend)
-          }
-          
-          #if(!is.null(global.input$cdesc))
-          #  hm.cdesc <- data.frame(global.input$cdesc[names(global.param$grp), global.param$cdesc.selection], stringsAsFactors = F)
-          #else
-          #  hm.cdesc <- NULL
-          #  hm.cdesc <- global.param$grp
-          #debug(plotHM)
-          ######################################
-          ## plot
-          if(input$hm.int.max){
-            withProgress({
-              setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-              #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, max.val=input$hm.int.max.val, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3, plotly = T)
-              plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, max.val=input$hm.int.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, plotly = T)
-            })
-          } else {
-            withProgress({
-              setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-              #plotHM(res=res, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, style=global.param$which.test, cdesc=hm.cdesc, cdesc.grp=global.param$grp.gct3, plotly = T)
-              plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, plotly = T)
-              
-            })
-          }
-        }
-        )
+        # output$HM.int <- renderPlotly({
+        #   
+        #   ## if(is.null(global.results$data)) return()
+        #   if(!is.null(error$msg)) return()
+        #   
+        #   ######################################
+        #   ## extract results
+        #   res = global.results$filtered
+        # 
+        #   ######################################
+        #   ## require at least three significant hits
+        #   validate(need(nrow(res) > 1, 'Need at least 2 features to draw a heatmap!'))
+        #   
+        #   #######################################
+        #   ## heatmap title
+        #   hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
+        #   hm.title <- paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
+        #   
+        #   ###################################
+        #   ## ids to show in heatmap
+        #   hm.rownames <- res[, 'id.concat']
+        #   
+        #   #######################################
+        #   ## extract expression values
+        #   res = res[, names(global.param$grp)]
+        #   
+        #   ##@#####################################
+        #   ##  dimensions depending on no. rows/columns
+        #   cw <- cwHM(ncol(res))
+        #   
+        #   if(!is.null(global.param$anno.col)){
+        #     anno.col=global.param$anno.col
+        #     anno.col.color=global.param$anno.col.color
+        #   } else {
+        #     anno.col=data.frame(Group=global.param$grp)
+        #     anno.col.color=list(Group=global.param$grp.colors.legend)
+        #   }
+        #   
+        #   ######################################
+        #   ## plot
+        #   if(input$hm.int.max){
+        #     withProgress({
+        #       setProgress(message = 'Processing...', detail= 'Generating Heatmap')
+        #       plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, max.val=input$hm.int.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, plotly = T)
+        #     })
+        #   } else {
+        #     withProgress({
+        #       setProgress(message = 'Processing...', detail= 'Generating Heatmap')
+        #       plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.int.clust, hm.title=hm.title, hm.scale=input$hm.int.scale, cellwidth=cw, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, plotly = T)
+        #       
+        #     })
+        #   }
+        # }
+        # )
         ## ################################################################
         ##   
         ##                         fanplot 
@@ -6634,6 +6674,7 @@ shinyServer(
           else
             updateNumericInput(session = session, inputId = 'HC.fan.tip.cex', value = 1)
           })
+        
         ## plot
         output$HC.fan <- renderPlot({
           
@@ -6891,7 +6932,7 @@ shinyServer(
             if(nrow(res) < 3) return()
 
             ## plot
-            pca <- my.prcomp(t(res[, names(grp)]), col=grp.col, plot=plot, rgl=F, main='', cex.points=5, leg.vec=names(grp.col.leg), leg.col=grp.col.leg)
+            pca <- my.prcomp.static(t(res[, names(grp)]), col=grp.col, plot=plot, rgl=F, main='', cex.points=5, leg.vec=names(grp.col.leg), leg.col=grp.col.leg)
 
             return(pca)
         }

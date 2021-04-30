@@ -1074,18 +1074,18 @@ write.gmt <- function(lst, fname) {
 #' 
 #' @family CMap parsing functions
 #' @export
-lxb2mat <- function(lxb_path, columns=c("RID", "RP1"),
-                    newnames=c("barcode_id", "FI")) {
-  message(paste("reading", lxb_path))
-  # suppressing warning about signed integers since
-  # lxb data will be unsigned
-  lxb <- suppressWarnings(prada::readFCS(lxb_path))
-  m <- prada::exprs(lxb)[, columns]
-  keep_idx <- m[, 1] != 0
-  m <- m[keep_idx, ]
-  colnames(m) <- newnames
-  return(m)
-}
+#lxb2mat <- function(lxb_path, columns=c("RID", "RP1"),
+#                    newnames=c("barcode_id", "FI")) {
+#  message(paste("reading", lxb_path))
+#  # suppressing warning about signed integers since
+#  # lxb data will be unsigned
+#  lxb <- suppressWarnings(prada::readFCS(lxb_path))
+#  m <- prada::exprs(lxb)[, columns]
+#  keep_idx <- m[, 1] != 0
+#  m <- m[keep_idx, ]
+#  colnames(m) <- newnames
+#  return(m)
+#}
 
 ########################################
 ### Other Misc. utility functions ######

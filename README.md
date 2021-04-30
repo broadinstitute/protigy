@@ -16,8 +16,7 @@ This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interac
     + 2-component normalization
     + Upper quartile normalization
     + Quantile normalization
-    + Variance stablizing normalization (VSN)
-    
+    + Variance stabilizing normalization (VSN)
 * **Filtering**
     + Reproducibility filter across replicate measurements
     + Standard deviation across samples

@@ -3628,7 +3628,7 @@ shinyServer(
             ##            create an archive
             ## ############################################################
             fn.all <- grep('pdf$|xlsx$|txt$|gct$|RData$|html$',  dir(global.param$session.dir) , value=T, ignore.case=T)
-	          fn.all.abs <- grep('pdf$|xlsx$|txt$|gct$|RData$html$', dir(global.param$session.dir, full.names=T, ignore.case=T), value=T)
+	        fn.all.abs <- grep('pdf$|xlsx$|txt$|gct$|RData$html$', dir(global.param$session.dir, full.names=T, ignore.case=T), value=T)
 
             ## #################################################
             ## handle special characters in file names

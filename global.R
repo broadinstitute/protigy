@@ -152,11 +152,11 @@ p_load(gridExtra)
 p_load(vioplot)
 
 ## id mapping
-# p_load(RSQLite)
-# p_load(org.Hs.eg.db)
-# p_load(org.Mm.eg.db)
-# p_load(org.Rn.eg.db)
-# p_load(org.Dr.eg.db)
+p_load(RSQLite)
+p_load(org.Hs.eg.db)
+p_load(org.Mm.eg.db)
+p_load(org.Rn.eg.db)
+p_load(org.Dr.eg.db)
 
 p_load(gprofiler2)
 

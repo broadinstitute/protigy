@@ -28,7 +28,7 @@ options(repos = BiocManager::repositories())
 #################################################################
 ## use PACMAN R package manager?
 ## set to FALSE if deployed to RStudio Connect 
-PACMAN <- FALSE
+PACMAN <- TRUE
 ## version number
 VER <- "0.9.0"
 ## maximal file size for upload

@@ -18,6 +18,7 @@ This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interac
     + Quantile normalization
     + Variance stabilizing normalization (VSN)
 * **Filtering**
+    + Missing Values
     + Reproducibility filter across replicate measurements
     + Standard deviation across samples
     
@@ -49,8 +50,7 @@ This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interac
 * All results can be downloaded as single zip-file.
 * [GCT v1.3](https://clue.io/connectopedia/gct_format)
 * [Rmarkdown](https://rmarkdown.rstudio.com/) analysis reports (beta)
-* Save and share sessions on a server
-    + requires [Shiny Server Pro](https://www.rstudio.com/products/shiny-server-pro/)
+* Save and share sessions on a server ([Shiny Server Pro](https://www.rstudio.com/products/shiny-server-pro/), [RStudio Connect](https://www.rstudio.com/products/connect/))
 
 ***
 
@@ -74,7 +74,7 @@ More information on how to upload data into ProTIGY can be found in [this pdf fi
 
 ## How can I run ProTIGY on my own hardware?
 
-The app can run locally on your Desktop computer (Windows/Linux/MAC) or can deployed to a [Shiny Server](https://www.rstudio.com/products/shiny/shiny-server/) environment.
+The app can run locally on your desktop computer (Windows/Linux/MAC) or can be deployed to [Shiny Server](https://www.rstudio.com/products/shiny/shiny-server/) or [RStudio Connect](https://www.rstudio.com/products/connect/).
 
 
 #### Running ProTIGY locally
@@ -92,9 +92,9 @@ The easiest way to play around with ProTIGY is to directly run it from GitHub. O
 shiny::runGitHub("protigy", "broadinstitute")
 ```
 
-This command will download the repository and run the app. Please follow the instructions to make sure all required R packages will get properly installed. This process might take several minutes when you run the command for the first time. Please note that running ProTIGY from GitHub will reinitaite the download every time which - depending on the available internet connection - might take a moment or two. 
+This command will download the repository and run the app. Please follow the instructions to make sure all required R packages will get properly installed. This process might take several minutes when you run the command for the first time. Please note that running ProTIGY from GitHub will initiate the download every time which - depending on the available internet connection - might take a moment or two. 
 
-If you plan to use ProTIGY regularily we recommend to clone or download the repository to your local PC/Mac. To start the app open R and type:
+If you plan to use ProTIGY regularly we recommend to clone or download the repository to your local PC/Mac. To start the app open R and type:
 
 ```{r}
 shiny::runApp("/path/to/Protigy")
@@ -103,9 +103,9 @@ shiny::runApp("/path/to/Protigy")
 
 #### Running ProTIGY in a Shiny Server environment
 
-To access all implemented features the app has to be deployed to a [Shiny Server Pro (SSP)](https://www.rstudio.com/products/shiny-server-pro/) instance. SSP specific features include:
+To access all implemented features the app has to be deployed to [Shiny Server Pro (SSP)](https://www.rstudio.com/products/shiny-server-pro/) or [RStudio Connect (RSC)](https://www.rstudio.com/products/connect/). SSP/RSC specific features include:
 
-* User authentification as provided by SSP.
+* User authentication as provided by SSP.
 * Save and retrieve app-sessions on the server.
 * Share saved sessions with your team.
 

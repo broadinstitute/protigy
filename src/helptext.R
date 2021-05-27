@@ -30,6 +30,18 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.9.0 May 27, 2021</b>
+<ul>
+<li>PC plots: Fixed colors if annotation data contains NA.</li>
+<li>SD filter: Fixed crash triggered by selecting SD filter after the "run-test" button has been pressed.</li>
+<li>Missing value filter: Replace slider input by numeric input widget.</li>
+<li>Misc: Updated URL to new conf-app (RStudio Connect only).</li>
+<li>Misc: Reorganized R-package managment for deployment to RStudio Connect. See parameter <code>PACMAN</code> in <code>global.R</code>.</li>
+</ul>
+<b>v0.8.9.7 May 11, 2021</b>
+<ul>
+<li>Normalization: Added checkbox for group-level normalization. If enabled the normalization will be performed within a particualr group (Median, Median-MAD, Quantile, VSN). For Median and Median-MAD normalization, the group-level median of sample medians is added to each normaized data value.</li>
+</ul>
 <b>v0.8.9.6 April 30, 2021</b>
 <ul>
 <li>Filter: Added filter for missing values.</li>
@@ -40,7 +52,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.9.5 April 29, 2021</b>
 <ul>
-<li>PCA: Added the possibility to use different annotations to color the PC plots. Only availbale for GCT v1.3 input files.</li>
+<li>PCA: Added the possibility to use different annotations to color the PC plots. Only available for GCT v1.3 input files.</li>
 </ul>
 <b>v0.8.9.4 April 28, 2021</b>
 <ul>
@@ -616,7 +628,16 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 <li><b>VSN</b>: Variance stabilizing normalization. Intended to be used with <b>raw intensity values</b>.</li>
 <li><b>none</b>: The data will be taken as is. Use this option if the data has already been normalized.</li>
 </ul>
+
+<p>
+<h4>Normalize per group</h4>
+If enabled the normalization will be performed within a particualr group (Median, Median-MAD, Quantile, VSN). For Median and Median-MAD normalization, the group-level median of sample medians is added to each normaized data value.
+</p>
+
 <p><h3>Filter data</h3>
+<b>Missing data:</b><br>
+Remove features not quantified in the percent samples specified in the slider input bar.
+
 <b>Reproducibility:</b><br>
 Remove features that were not reproducibly quantifified across replicate measurements of a group. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue. <b>This type of filter is applied separately to each group.</b> </p>
 

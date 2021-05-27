@@ -96,6 +96,7 @@ shinyServer(
             
             log.transform='none',        ## log transformation
             norm.data='none',            ## data normalization
+            norm.per.group=FALSE,        ## normalize per group? 
             filt.data='none',            ## data filtering
 
             ##repro.filt='no',           ## reproducibility filter
@@ -1133,7 +1134,6 @@ shinyServer(
                 ##   the current user has access to
                 ##
                 ## #########################################
-                # user.roles <- read.delim( file.path(APPDIR, 'conf/user-roles.txt'), stringsAsFactors=F)
                 user.roles <- read.delim( USERDB, stringsAsFactors=F)
                 
                 ## check whether the user appears as collaborator in a project
@@ -1150,7 +1150,6 @@ shinyServer(
                         if(dir.exists(dir.owner)){
                             tmp <- grep( paste(user.roles$project[ idx[i] ], '_session.*RData$', sep='' ),
                                         dir( dir.owner, full.names=T, recursive=T), value=T)
-                            ##search.path[i+1] <- sub('^(.*/).*' , '\\1', tmp)
                             search.path <- c( search.path, sub('^(.*/).*' , '\\1', tmp) )
                         }
                     }
@@ -1195,7 +1194,9 @@ shinyServer(
             if(length(saved.sessions) == 0) return()
 
             ## get the time stamp of the files
-            time.tmp <- file.info(saved.sessions)$ctime
+            #time.tmp <- file.info(saved.sessions)$ctime
+            time.tmp <- file.info(saved.sessions)$mtime
+            
             names(saved.sessions) <-  paste( sub('_.*','', sub('.*/','',saved.sessions)), time.tmp, sep='_' )
 
             ## order by time
@@ -2037,6 +2038,8 @@ shinyServer(
             ## initialize with default values from
             ## 'global.param'
             ## - show everything
+            ## - only visible for a fraction of a second (until input$filt.data is set)
+            ##  
             if( is.null(input$filt.data)){
 
                 list(
@@ -2044,8 +2047,10 @@ shinyServer(
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
 
-                     sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
-                     
+                     checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group),
+                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+                     numericInput('na.filt.val', 'Max. % missing values', min=0, max=100, step=5, value=global.param$na.filt.val),
+                    
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected=global.param$filt.data ),
                      #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
                      radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
@@ -2069,9 +2074,10 @@ shinyServer(
                      
                      #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
-                     
+                     checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                      #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
-                     sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+                     numericInput('na.filt.val', 'Max. % missing values', min=0, max=100, step=5, value=input$na.filt.val),
                      
                      radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='none'),
                      
@@ -2103,9 +2109,11 @@ shinyServer(
                     
                     #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
+                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                     
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
-                    sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+                    #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+                    numericInput('na.filt.val', 'Max. % missing values', min=0, max=100, step=5, value=input$na.filt.val),
                     
                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='Reproducibility'),
                     
@@ -2136,9 +2144,10 @@ shinyServer(
                     
                     #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
-                    
+                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
-                    sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+                    #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+                    numericInput('na.filt.val', 'Max. % missing values', min=0, max=100, step=5, value=input$na.filt.val),
                     
                     radioButtons('filt.data', 'Filter data', choices=c('Reproducibility', 'StdDev', 'none'), selected='StdDev'),
                     
@@ -3046,7 +3055,7 @@ shinyServer(
                 if(is.null(global.results$cm) | global.param$update.cm == TRUE){
                   
                   
-                  ## calculate correlatio matrix
+                  ## calculate correlation matrix
                   withProgress(message = 'Correlation matrix...',{
                     cm=calculateCorrMat( tab=tab,
                                          grp=grp,
@@ -3897,8 +3906,9 @@ shinyServer(
             global.param$na.filt.val <- input$na.filt.val
             global.param$filt.data <- input$filt.data
             global.param$repro.filt.val <- input$repro.filt.val
-            global.param$sd.filt.val <- input$sd.filt.val
+            if(!is.null(input$sd.filt.val)) global.param$sd.filt.val <- input$sd.filt.val
             global.param$norm.data <- input$norm.data
+            global.param$norm.per.group <- input$norm.per.group
             global.param$log.transform <- input$log.transform
 
             #####################################################################
@@ -3987,10 +3997,13 @@ shinyServer(
                
                 withProgress(message='Applying normalization...', {
                     
-                    ## run normlaization
-                    tab.norm <- normalize.data(tab, id.col, norm.data)
-
-                    ## if two-component norm fails
+                    ## run normalization
+                    if(!global.param$norm.per.group)
+                        tab.norm <- normalize.data(tab, id.col, norm.data )
+                    else    
+                        tab.norm <- normalize.data(tab, id.col, norm.data, grp.vec = global.param$grp )
+                    
+                    ## if two-component norm fails....
                     if(class(tab.norm) == 'try-error'){
                         
                       ## reset test
@@ -5111,13 +5124,12 @@ shinyServer(
 
 
         ## ##################################################################
-        ## obserever to trigger  'updateSelectizeInput' for volcano plots
+        ## observer to trigger  'updateSelectizeInput' for volcano plots
         ## - server side  rendering of selectizeInput
         ## ##################################################################
         observe({
-            #cat('now:', global.param$update.ppi.select, '\n')
+
             if( !global.param$update.ppi.select ) return()
-            #cat('now:', global.param$update.ppi.select, '\n')
 
             grp.comp <- unique( global.param$grp.comp )
 
@@ -5144,8 +5156,6 @@ shinyServer(
         ## ##################################################################
         observe({
             if( !global.param$update.ppi.select.scat ) return()
-
-            ##cat('now:', global.param$update.ppi.select.scat, '\n')
 
             grp.comp <- unique( global.param$grp )
 
@@ -6160,8 +6170,8 @@ shinyServer(
 
             ## dataset
             if(is.null(global.results$table.log)){
-                #tab <- data.frame(global.input$table)
-                tab <- data.frame(global.results$table.na.filt)
+                tab <- data.frame(global.input$table)
+                #tab <- data.frame(global.results$table.na.filt)
             } else {
                 tab <- data.frame(global.results$table.log)
             }
@@ -6232,8 +6242,8 @@ shinyServer(
 
             ## dataset
             if(is.null(global.results$table.log))
-                tab <- data.frame(global.results$table.na.filt)
-                #tab <- data.frame(global.input$table)
+                #tab <- data.frame(global.results$table.na.filt)
+                tab <- data.frame(global.input$table)
             else
                 tab <- data.frame(global.results$table.log)
 

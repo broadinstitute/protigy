@@ -26,8 +26,11 @@ options(repos = BiocManager::repositories())
 #################################################################
 ## global parameters
 #################################################################
+## use PACMAN R package manager?
+## set to FALSE if deployed to RStudio Connect 
+PACMAN <- FALSE
 ## version number
-VER <- "0.8.9.6"
+VER <- "0.9.0"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -54,121 +57,196 @@ USERDB <<- file.path(APPDIR, 'conf/user-roles.txt')
 RVERSION <- as.numeric(paste(R.version$major, sub('\\..*','',R.version$minor), sep='.')) 
 ## email for trouble shooting
 MAIL <<- 'karsten@broadinstitute.org'
-## URL to configuration app (SSP only)
-CONFAPP <<- 'http://shiny-proteomics.broadinstitute.org:3838/modTconf/'
+## URL to configuration app (SSP/RSC only)
+CONFAPP <<- 'https://rstudio-connect.broadapps.org/protigy-sessions/'
 ## PIWIK location
-PIWIKURL <<- '//shiny-proteomics.broadinstitute.org/piwik/'
-
+PIWIKURL <<- ''
 
 #################################################################
 ## load required packages
 #################################################################
-p_load(RColorBrewer)
-p_load(shiny)
-p_load(shinydashboard)
-p_load(shinyjs)
-p_load(shinyjqui)
-p_load(shinyalert)
+if(PACMAN){
+  p_load(RColorBrewer)
+  p_load(shiny)
+  p_load(shinydashboard)
+  p_load(shinyjs)
+  p_load(shinyjqui)
+  p_load(shinyalert)
+
+  p_load(magrittr)
+  p_load(tibble)
+  p_load(dplyr)
+  
+  ## heatmap
+  p_load(pheatmap)
+  p_load(heatmaply)
+
+  ## clustering  
+  p_load(ape)
+  p_load(dendextend)
+  p_load(scales)
+  p_load(gtable)
+  p_load(fastcluster)
+  
+  ## rmarkdown
+  p_load(rmarkdown)
+  p_load(knitr)
+  
+  ## moderated tests
+  p_load(limma)
+  p_load(statmod)
+  
+  ## multiscatter
+  p_load(hexbin)
+  p_load(Hmisc)
+  p_load(grid)
+
+  p_load(scatterplot3d)
+  p_load(plotly)
+  
+  ## Excel
+  p_load(readxl)
+  p_load(WriteXLS)
+  
+  ## reproducibility filter
+  p_load(reshape)
+  p_load(nlme)
+  p_load(BlandAltmanLeh)
+  
+  ## normalization
+  p_load(preprocessCore)
+  p_load(vsn)
+  
+  ## normalization 2-component
+  p_load (mice)
+  p_load (mixtools)
+  p_load (mclust)
+  
+  ## table preview
+  p_load(DT)
+  
+  ## label placements without overlap
+  p_load(maptools)
+  p_load(ggrepel)
+  
+  p_load(UpSetR)
+  p_load(gridExtra)
+  p_load(vioplot)
+
+  ## id mapping
+  p_load(RSQLite)
+  p_load(org.Hs.eg.db)
+  p_load(org.Mm.eg.db)
+  p_load(org.Rn.eg.db)
+  p_load(org.Dr.eg.db)
+  
+  ## enrichment analysis
+  p_load(gprofiler2)
+
+} else {
+  
+  library(RColorBrewer)
+  library(shiny)
+  library(shinydashboard)
+  library(shinyjs)
+  library(shinyjqui)
+  library(shinyalert)
+
+  library(magrittr)
+  library(tibble)
+  library(dplyr)
+
+  ## heatmap
+  library(pheatmap)
+  library(heatmaply)
+  
+  ## clustering
+  library(ape)
+  library(dendextend)
+  library(scales)
+  library(gtable)
+  library(fastcluster)
+  
+  ## rmarkdown
+  library(rmarkdown)
+  library(knitr)
+  
+  ## moderated tests
+  library(limma)
+  library(statmod)
+  
+  ## multiscatter
+  library(hexbin)
+  library(Hmisc)
+  library(grid)
+  
+  library(scatterplot3d)
+  library(plotly)
+  
+  ## Excel
+  library(WriteXLS)
+  library(readxl)
+  
+  ## reproducibility filter
+  library(reshape)
+  library(nlme)
+  library(BlandAltmanLeh)
+  
+  ## normalization
+  library(preprocessCore)
+  library(vsn)
+  
+  ## normalization 2-component
+  library (mice)
+  library (mixtools)
+  library (mclust)
+  
+  ## table preview
+  library(DT)
+  
+  ## label placements without overlap
+  library(maptools)
+  library(ggrepel)
+  
+  library(UpSetR)
+  library(gridExtra)
+  library(vioplot)
+
+  ## id mapping
+  library(RSQLite)
+  library(org.Hs.eg.db)
+  library(org.Mm.eg.db)
+  library(org.Rn.eg.db)
+  library(org.Dr.eg.db)
+  
+  ## enrichment analysis
+  library(gprofiler2)
+}
 
 ## required to install limma in R >= 3.5
 if(RVERSION >= 3.5){
-  p_load(BiocManager)
+  if(PACMAN)
+    p_load(BiocManager)
+  else
+    library(BiocManager)
   options(repos = BiocManager::repositories())
 }
 
-#p_load(cmapR)
-p_load(magrittr)
-p_load(tibble)
-
-## colors
-
-## heatmap
-p_load(pheatmap)
-p_load(heatmaply)
-#p_load(ComplexHeatmap)
-
-# clustering
-p_load(ape)
-p_load(dendextend)
-p_load(scales)
-p_load(gtable)
-p_load(fastcluster)
-
-# correlations
-#p_load(GO.db) ## reguired by WGCNA
-#p_load(impute) ## reguired by WGCNA
-#p_load(WGCNA)
-
-# markdown reports
-p_load(rmarkdown)
-p_load(knitr)
-
-## moderated tests
-p_load(limma)
-p_load(statmod)
-
-## multiscatter
-p_load(hexbin)
-p_load(Hmisc)
-p_load(grid)
-
 ## pca
-# ChemometricsWith - removed from CRAN
+# ChemometricsWithR - removed from CRAN
 # use GH version instead
 if(!require("ChemometricsWithR")){
   install.packages("remotes")
-  p_load(remotes)
+  library(remotes)
   install_github("rwehrens/ChemometricsWithR")
+  library(ChemometricsWithR)
 }
-p_load(ChemometricsWithR)
-p_load(scatterplot3d)
-p_load(plotly)
-## export
-p_load(WriteXLS)
-## import
-p_load(readxl)
-## reproducibility filter
-p_load(reshape)
-p_load(nlme)
-p_load(BlandAltmanLeh)
-## normalization Quantile
-p_load(preprocessCore)
-## normalization VSN
-p_load(vsn)
-## normalization 2-component
-p_load (mice)
-p_load (mixtools)
-p_load (mclust)
-## table preview
-p_load(DT)
-## label placements without overlap
-p_load(maptools)
-p_load(ggrepel)
-p_load(dplyr)
-
-
-p_load(UpSetR)
-p_load(gridExtra)
-p_load(vioplot)
-
-## id mapping
-p_load(RSQLite)
-p_load(org.Hs.eg.db)
-p_load(org.Mm.eg.db)
-p_load(org.Rn.eg.db)
-p_load(org.Dr.eg.db)
-
-p_load(gprofiler2)
 
 ## morpheus
 #p_load_gh('morpheus')
 #if(!require(morpheus))
 #  devtools::install_github('cmap/morpheus.R')
 #p_load(morpheus)
-
-# Required for cmpaR gctx file format. Fails to install on shiny-proteomics, but not required as of now.
-#p_load (rhdf5) 
-
 
 source('src/modT.R')
 source('src/helptext.R')
@@ -439,17 +517,62 @@ link.db <- function(id, # vetcor of ids
   return(up.link)
 }
 
-
-
-
-
+#############################################################################################
+normalize.data  <- function(data, id.col,
+                         method=c('Median',
+                                  'Median (log-intensity)',
+                                  'Quantile', 
+                                  'VSN (intensity)', 
+                                  'Median-MAD',
+                                  'Median-MAD (log-intensity)',
+                                  '2-component', 
+                                  'Upper-quartile'),
+                         grp.vec=NULL  ## if NULL apply global normalization strategy
+                                       ## if vector of group assingments, normalization will be applied to each group separately  
+                         ){
+  
+  #################################
+  ## global normalization
+  if(is.null(grp.vec)){
+    
+    data.norm <- normalize.data.helper(data, id.col, method=match.arg(method))
+  
+  ################################  
+  ## group-specific normalization  
+  } else { 
+    
+    ## extract groups
+    groups <- unique(grp.vec)
+    
+    ############################################
+    ## loop over replicate groups
+    for(gg in groups){
+      
+      gg.idx = names(grp.vec)[ which(grp.vec == gg) ]
+    
+      data.group <- data[, c(id.col, gg.idx)]
+      
+      data.group.norm <- normalize.data.helper(data.group, id.col, method=match.arg(method), per_group = TRUE)
+     # View(data.group.norm)
+      if(gg == groups[1]){
+        data.norm <- data.group.norm  
+      } else {
+        #data.norm <- cbind(data.norm, data.group.norm[, -which(colnames(data.group.norm) == id.col)])
+        data.norm <- cbind(data.norm, data.group.norm[, gg.idx])
+      }
+    } ## end for
+    
+  } ## end else
+  
+  return(data.norm)
+}
 #############################################################################################
 ##
 ##              different normalization methods for expression data
 ##
 ## 20160235
 #############################################################################################
-normalize.data <- function(data, id.col, 
+normalize.data.helper <- function(data, id.col, 
                            method=c('Median',
                                     'Median (log-intensity)',
                                     'Quantile', 
@@ -457,7 +580,8 @@ normalize.data <- function(data, id.col,
                                     'Median-MAD',
                                     'Median-MAD (log-intensity)',
                                     '2-component', 
-                                    'Upper-quartile')
+                                    'Upper-quartile'),
+                           per_group=FALSE ## for Median & Median-MAD
                            ){
     cat('\n\n-- normalize data --\n\n')
 
@@ -467,7 +591,6 @@ normalize.data <- function(data, id.col,
     
     ids = data[, id.col]
     data = data[ , -grep(paste('^', id.col, '$', sep=''), colnames(data))]
-
     data <- data.matrix(data)
 
     ## quantile
@@ -482,14 +605,19 @@ normalize.data <- function(data, id.col,
     }
     ## median only
     if(method == 'Median'){
-        data.norm <- apply(data, 2, function(x) x - median(x, na.rm=T))
-        ##rownames(data.norm) <- rownames(data)
-        colnames(data.norm) <- paste( colnames(data), sep='.')
+      
+      data.norm <- apply(data, 2, function(x) x - median(x, na.rm=T))
+      colnames(data.norm) <- paste( colnames(data), sep='.')
+      
+      if(per_group){
+        all_medians <- apply(data, 2, median, na.rm=T)
+        data.norm <- data.norm + median( all_medians, na.rm=T)
+      }
     }
     ## median plus shifting by medians of medians
     if(method == 'Median (log-intensity)'){
       
-      all_medians <- data.norm <- apply(data, 2, median, na.rm=T)
+      all_medians <- apply(data, 2, median, na.rm=T)
       data.norm <- apply(data, 2, function(x) x - median(x, na.rm=T))
       
       data.norm <- data.norm + median( all_medians, na.rm=T )
@@ -500,11 +628,16 @@ normalize.data <- function(data, id.col,
         data.norm <- apply(data, 2, function(x) (x - median(x, na.rm=T))/mad(x, na.rm=T) )
         ##rownames(data.norm) <- rownames(data)
         colnames(data.norm) <- paste( colnames(data), sep='.')
+        
+        if(per_group){
+          all_medians <-  apply(data, 2, median, na.rm=T)
+          data.norm <- data.norm + median( all_medians, na.rm=T)
+        }
     }
     ## median & MAD plus shifting by medians of medians
     if(method == 'Median-MAD (log-intensity)'){
   
-      all_medians <- data.norm <- apply(data, 2, median, na.rm=T)
+      all_medians <- apply(data, 2, median, na.rm=T)
       data.norm <- apply(data, 2, function(x) (x - median(x, na.rm=T))/mad(x, na.rm=T) )
       
       data.norm <- data.norm + median( all_medians, na.rm=T )

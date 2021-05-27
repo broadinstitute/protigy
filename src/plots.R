@@ -914,19 +914,25 @@ plotlyPCA <- function(global.param,     ## reactiveValue converted to list
       
       grp.tmp <- cdesc[ names(grp), grp.other]
       names(grp.tmp) <- names(grp)
+      grp.tmp[is.na(grp.tmp)] <- 'N/A'
+      
       grp <- grp.tmp
       
       grp.unique <- unique(grp)
-      
+       
       grp.colors.legend <- GRPCOLORS[1:length(grp.unique)]
       names(grp.colors.legend) <- grp.unique
+      grp.colors.legend[ names(grp.colors.legend) == 'N/A'] <- 'grey'
       
       grp.colors <- grp
       for(i in names(grp)){
         grp.colors[i] <- grp.colors.legend[ grp[i] ]
       }
+      
+      #save(grp.colors, grp.colors.legend, file='debug.RData')
     }
   }
+  
 
   pca.out <- NULL
   

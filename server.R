@@ -1666,12 +1666,20 @@ shinyServer(
             ## - update 'id.col.value' with 'id'
             ## - replace values in 'id' column
             global.param$id.col.value.updated <- FALSE
+            global.param$id.col.renamed <- FALSE
             
             if(global.param$id.col.value != 'id'){
                 
                 cat('updated id column: ', global.param$id.col.value, ' --> ')
-                cat('id\n')
+                cat('id\n\n')
                 
+                if('id' %in% colnames(tab)){
+                    colnames(tab)[ colnames(tab) == 'id' ] <- 'id_org'
+                    cat('renamed column "id" --> "id_org"\n\n')
+                    
+                    global.param$id.col.renamed <- TRUE
+                }
+                    
                 tab <- data.frame(id=ids, tab)
                 
                 global.param$id.col.value <- "id"
@@ -1721,7 +1729,15 @@ shinyServer(
             ## ##########################
             ## read the experimental design file
             grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
-             
+            
+            ############################# 
+            ## if existing 'id' column has been renamed to 'id_org'
+            if(global.param$id.col.renamed){
+                
+                id_idx <- which(grp.file$Column.Name == 'id')
+                grp.file$Column.Name[id_idx] <- 'id_org'
+            }
+            
             #############################
             ## if id column has been updated
             ## to 'id':
@@ -1729,6 +1745,7 @@ shinyServer(
                 id_row <- data.frame(Column.Name='id', Experiment='')
                 grp.file <- rbind(id_row, grp.file) 
             }
+            
             
             Column.Name <- grp.file$Column.Name
             Experiment <- as.character(grp.file$Experiment)
@@ -1763,9 +1780,11 @@ shinyServer(
                 error$msg <- 'Experimental design file does not match the table you have uploaded (different number of rows/columns)!'
                 return()
             }
-            
+            #table <- global.input$table
+            #save(Column.Name, table, file='debug.RData')
             ## names in the exp design file do not match to the table
             if( sum( Column.Name != colnames(global.input$table)) > 0 ){
+              
                 error$title <- "Problem parsing experimental design file."
                 error$msg <- 'Experimental design file does not match the table you have uploaded!'
                 return()

@@ -30,7 +30,7 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- TRUE
 ## version number
-VER <- "0.9.0"
+VER <- "0.9.1"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -143,7 +143,7 @@ if(PACMAN){
   ## enrichment analysis
   p_load(gprofiler2)
 
-} else {
+} else { ## RStudio Connect
   
   library(RColorBrewer)
   library(shiny)
@@ -1711,8 +1711,10 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
       size='m',
       title = "Problem generating Excel sheet",
       HTML(render.xlsx[[1]]),
-      HTML('Possible reason: missing Perl. For Windows OS please install Strawberry Perl (<a href="http://strawberryperl.com/" target="_blank_">http://strawberryperl.com/</a><br>R needs to be restarted after installing Perl.)')
-    ))
+      HTML('If you are a Broadie and encountered this problem using the Protigy on RStudio Connect please reach out to your administrator.<br>'),
+      HTML('If you are running Protigy on you local computer one possible reason could be that Perls is missing. For Windows OS please install Strawberry Perl (<a href="http://strawberryperl.com/" target="_blank_">http://strawberryperl.com/</a><br>R needs to be restarted after installing Perl.)')
+      
+         ))
     }
     return(render.xlsx)
 }

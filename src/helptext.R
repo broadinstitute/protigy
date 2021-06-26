@@ -30,6 +30,11 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.9.1 June 26, 2021</b>
+<ul>
+<li>Misc: Fixed a bug that prevented the upload of the experimental design file, if an alternate id column was chosen (e.g. <code>accession_number</code> or <code>geneSymbol</code> in Spectrum Mill reports) AND a column <code>id</code> was already present in the uploaded text file.</li>
+</ul>
+
 <b>v0.9.0 May 27, 2021</b>
 <ul>
 <li>PC plots: Fixed colors if annotation data contains NA.</li>

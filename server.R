@@ -860,7 +860,7 @@ shinyServer(
                                                                ),
                                                                fluidRow(
                                                                    box(title="Before normalization", solidHeader=T, status="primary",
-                                                                       column(width=12, plotOutput("expr.profile"))
+                                                                       column(width=12, plotlyOutput("expr.profile"))
                                                                ))
                                                             )
                                                        } else {
@@ -872,10 +872,10 @@ shinyServer(
                                                                ),
                                                                fluidRow(
                                                                    box(title="Before normalization", solidHeader=T, status="primary",
-                                                                      column(width=12, plotOutput("expr.profile"))
+                                                                      column(width=12, plotlyOutput("expr.profile"))
                                                                       ),
                                                                    box(title="After normalization", solidHeader=T, status="primary",
-                                                                       column(width=12,plotOutput("expr.profile.norm"))
+                                                                       column(width=12, plotlyOutput("expr.profile.norm"))
                                                                        )
                                                                )
                                                            )
@@ -3299,8 +3299,8 @@ shinyServer(
                     ###############################################
                     ## unnormalized ratios
                     if(is.null(global.results$table.log))
-                        #tab <- data.frame(global.input$table)
-                        tab <- data.frame(global.results$table.na.filt)
+                        tab <- data.frame(global.input$table)
+                        #tab <- data.frame(global.results$table.na.filt)
                     else
                         tab <- data.frame(global.results$table.log)
 
@@ -3349,15 +3349,14 @@ shinyServer(
             ############################################################
             ##                profile plots
             ############################################################
-             if(input$export.profile){
+            if(input$export.profile){
                 withProgress(message='Exporting', detail='profile plot',{
                     fn.profile <- paste(global.param$session.dir, 'profile_plot.pdf', sep='/')
 
                     ###############################################
                     ## unnormalized ratios
                     if(is.null(global.results$table.log))
-                        tab <- data.frame(global.results$table.na.filt)
-                        #tab <- data.frame(global.input$table)
+                        tab <- data.frame(global.input$table)
                     else
                         tab <- data.frame(global.results$table.log)
 
@@ -6184,7 +6183,7 @@ shinyServer(
         ##                                profile plots
         ##
         #######################################################################################
-        output$expr.profile <- renderPlot({
+        output$expr.profile <- renderPlotly({
             if(is.null(global.results$data)) return()
 
             ## dataset
@@ -6209,15 +6208,18 @@ shinyServer(
               
             withProgress({
                    setProgress(message = 'Processing...', detail= 'Generating profile plots')
-                   makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, 
+                   p <- makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, 
                                    xlim.mode = input$profile.plot.xlim,
-                                   main='Before normalization')
+                                   main='Before normalization',
+                                   plotly = T)
             })
+            ## plot
+            p
 
         })
         ###########################
         ## normalized
-        output$expr.profile.norm <- renderPlot({
+        output$expr.profile.norm <- renderPlotly({
             if(is.null(global.results$data)) return()
 
             ## dataset
@@ -6231,7 +6233,6 @@ shinyServer(
             grp.col <- global.param$grp.colors
             grp.col.leg <- global.param$grp.colors.legend
 
-            #save(tab, id.col.value, file='debug.RData')
             # update selection
             tab <- tab[, c(id.col.value, names(grp))]
             grp.col <- grp.col[names(grp)]
@@ -6240,11 +6241,13 @@ shinyServer(
             
             withProgress({
                    setProgress(message = 'Processing...', detail= 'Generating profile plots')
-                   makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, 
+                   p <- makeProfileplot(tab, id.col.value, grp, grp.col, grp.col.leg, 
                                    xlim.mode = input$profile.plot.xlim,   
-                                   main=paste(global.param$norm.data, 'normalized'))
+                                   main=paste(global.param$norm.data, 'normalized'),
+                                   plotly = T)
             })
-
+            # plot
+            p
         })
 
         #######################################################################################

@@ -30,11 +30,15 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.9.1.1 July 30, 2021</b>
+<ul>
+<li>Profile plots: Switched to interactive plots using <code>plotly</code>. Profile plots in the zip-file remain static.</li>
+<li>Bugfix: Distributions of unnormalized data in the .pdf verions of the box and profile plots when downloaded as .zip file are no shown correctly (pdf version would show normlaized distributions). This bug was probably introduced with the missing value filter in version v0.8.9.6.</li>
+</ul>
 <b>v0.9.1 June 26, 2021</b>
 <ul>
 <li>Misc: Fixed a bug that prevented the upload of the experimental design file, if an alternate id column was chosen (e.g. <code>accession_number</code> or <code>geneSymbol</code> in Spectrum Mill reports) AND a column <code>id</code> was already present in the uploaded text file.</li>
 </ul>
-
 <b>v0.9.0 May 27, 2021</b>
 <ul>
 <li>PC plots: Fixed colors if annotation data contains NA.</li>
@@ -62,7 +66,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 <b>v0.8.9.4 April 28, 2021</b>
 <ul>
 <li>Normalization: Added normalization methods for intensity data (e.g. label-free quantification in proteomics): <b>Median (log-intensity)</b>, <b>Median-MAD (log-intensity)</b>, <b>VSN (intensity)</b></li>
-<li>Profile plots: Users can now control the scale of the x-axis (symmetric or as-is)</li>
+<li>Profile plots: Users can now control the scale of the x-axis (<code>symmetric</code> or <code>as-is</code>)</li>
 <li>Misc: Changed color scheme to <i>pink</i> in preparation to transition from SSP to RSC.</li>
 </ul>
 <b>v0.8.9.3 March 26, 2021</b>

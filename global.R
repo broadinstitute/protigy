@@ -30,7 +30,7 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- TRUE
 ## version number
-VER <- "0.9.1"
+VER <- "0.9.1.1"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -553,11 +553,10 @@ normalize.data  <- function(data, id.col,
       data.group <- data[, c(id.col, gg.idx)]
       
       data.group.norm <- normalize.data.helper(data.group, id.col, method=match.arg(method), per_group = TRUE)
-     # View(data.group.norm)
+     
       if(gg == groups[1]){
         data.norm <- data.group.norm  
       } else {
-        #data.norm <- cbind(data.norm, data.group.norm[, -which(colnames(data.group.norm) == id.col)])
         data.norm <- cbind(data.norm, data.group.norm[, gg.idx])
       }
     } ## end for
@@ -626,7 +625,6 @@ normalize.data.helper <- function(data, id.col,
     ## median & MAD
     if(method == 'Median-MAD'){
         data.norm <- apply(data, 2, function(x) (x - median(x, na.rm=T))/mad(x, na.rm=T) )
-        ##rownames(data.norm) <- rownames(data)
         colnames(data.norm) <- paste( colnames(data), sep='.')
         
         if(per_group){
@@ -1162,7 +1160,9 @@ dynamicWidthHM <- function(n, style=c('none', 'One-sample mod T', 'Two-sample mo
 ###################################################################
 makeProfileplot <- function(tab, id.col, grp, grp.col, grp.col.leg, 
                             legend=T, cex.lab=1.5, mar=c(5,5,3,1), 
-                            xlim.mode=c('symmetric', 'as-is'), 
+                            xlim.mode=c('symmetric', 'as-is', 'as-is (80%)'),
+                            plotly=F,
+                            main='',
                             ... ){
 
     cat('\n-- makeProfileplot --\n')
@@ -1170,9 +1170,9 @@ makeProfileplot <- function(tab, id.col, grp, grp.col, grp.col.leg,
     ## table
     tab <- tab[, setdiff(colnames(tab), id.col)]
 
-    ## caclulate densities
+    ## calculate densities
     dens <- apply(tab, 2, density, na.rm=T)
-
+   
     ## ylim
     ylim <- max(unlist(lapply(dens, function(x) max(x$y))))
 
@@ -1187,27 +1187,61 @@ makeProfileplot <- function(tab, id.col, grp, grp.col, grp.col.leg,
       xlim_max <- max(unlist(lapply(dens, function(x) max(x$x))))
       xlim <- c(xlim_min, xlim_max)
     }
-    
+    if(xlim.mode == 'as-is (80%)'){
+      x_all <- unlist(lapply(dens, function(x) x$x))
+      x_robust_quant <- quantile(x_all, c(0.1, 0.9))
+      x_robust <- x_all[x_all > x_robust_quant[1] & x_all < x_robust_quant[2] ]
+      
+      xlim_min <- min(x_robust)
+      xlim_max <- max(x_robust)
+      xlim <- c(xlim_min, xlim_max)
+    }
     ##########################################
     ## plot
-    par(mar=mar)
-    for(i in 1:ncol(tab)){
-        if(i == 1)
-            plot(dens[[i]], xlab='expression', xlim=xlim, ylim=c(0, ylim), col=my.col2rgb(grp.col[i], alpha=100), lwd=3, cex.axis=2, cex.lab=2, cex.main=1.5, ...)
-        else
-            lines(dens[[i]], col=my.col2rgb(grp.col[i], alpha=100), lwd=3)
-
-        ## divide legend if there are too many experiments
-        N.exp <- length(names(grp.col.leg))
-        if( N.exp > 15){
-            legend('topright', legend=names(grp.col.leg)[1:floor(N.exp/2)], col=grp.col.leg[1:floor(N.exp/2)], lty='solid', bty='n', cex=1.5, lwd=3)
-            legend('topleft', legend=names(grp.col.leg)[ceiling(N.exp/2):N.exp], col=grp.col.leg[ceiling(N.exp/2):N.exp], lty='solid', bty='n', cex=1.5, lwd=3)
-
-        } else
-            legend('topright', legend=names(grp.col.leg), col=grp.col.leg, lty='solid', bty='n', cex=1.5, lwd=3)
+    if(!plotly){
+      p <- NULL
+      par(mar=mar)
+      for(i in 1:ncol(tab)){
+          if(i == 1)
+              plot(dens[[i]], xlab='expression', xlim=xlim, ylim=c(0, ylim), col=my.col2rgb(grp.col[i], alpha=100), lwd=3, cex.axis=2, cex.lab=2, cex.main=1.5, main=main, ...)
+          else
+              lines(dens[[i]], col=my.col2rgb(grp.col[i], alpha=100), lwd=3)
+  
+          ## divide legend if there are too many experiments
+          N.exp <- length(names(grp.col.leg))
+          if( N.exp > 15){
+              legend('topright', legend=names(grp.col.leg)[1:floor(N.exp/2)], col=grp.col.leg[1:floor(N.exp/2)], lty='solid', bty='n', cex=1.5, lwd=3)
+              legend('topleft', legend=names(grp.col.leg)[ceiling(N.exp/2):N.exp], col=grp.col.leg[ceiling(N.exp/2):N.exp], lty='solid', bty='n', cex=1.5, lwd=3)
+  
+          } else
+              legend('topright', legend=names(grp.col.leg), col=grp.col.leg, lty='solid', bty='n', cex=1.5, lwd=3)
+      }
+    } else { ## plotly
+     
+      grp.unique <- names(grp.col.leg)
+      #save(dens, grp, grp.unique, grp.col.leg, file='debug.RData')
+      for(g in grp.unique) {
+        
+        grp_tmp <- names(grp)[grp == g]
+        
+        x_tmp <- lapply(dens[grp_tmp], function(d) d$x) %>% unlist
+        y_tmp <- lapply(dens[grp_tmp], function(d) d$y) %>% unlist
+        label_tmp <- lapply(grp_tmp, function(l) rep(l, length(dens[[l]]$x)) ) %>% unlist
+        
+        if(g == grp.unique[1]) {
+          p <- plot_ly(x=x_tmp, y=y_tmp, mode='lines', name=g, type='scatter', 
+                     color = I(grp.col.leg[g]), text=label_tmp ) 
+        } else {
+          p <- p %>% add_trace(x=x_tmp, y=y_tmp, mode='lines', name=g,
+                               color = I(grp.col.leg[g]), text=label_tmp)
+        }
+      }
+      p <- p %>% layout(title = main, 
+                        xaxis = list(title='Abundance', range=xlim),
+                        yaxis = list(title='Density'))
     }
-
     cat('\n-- makeProfileplot exit --\n')
+    return(p)
 }
 
 

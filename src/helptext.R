@@ -30,6 +30,13 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.9.1.2 Aug 26, 2021</b>
+<ul>
+<li>Result tables: Added columsn for the log fold change before normalization (logFC.raw).</li>
+<li>Table-tab: Set number of decimals to 3.</li>
+<li>Excel-export: Made the error message more explicit.</li>
+<li>Misc: Some edits to the README file.</li>
+</ul>
 <b>v0.9.1.1 July 30, 2021</b>
 <ul>
 <li>Profile plots: Switched to interactive plots using <code>plotly</code>. Profile plots in the zip-file remain static.</li>
@@ -247,7 +254,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 <ul>
 <li>GCT 1.3: robustified import of GCT 1.3 files. If not unique, row and column identifiers are made unique.</li>
 <li>Volcano: Labeled points can be removed individually from the table.</li>
-<li>Table: page overhaul</li>
+<li>Table-tab: page overhaul</li>
 </ul>
 <b>v0.8.0.7 February 22, 2018</b>
 <ul>

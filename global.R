@@ -30,7 +30,7 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- TRUE
 ## version number
-VER <- "0.9.1.1"
+VER <- "0.9.1.2"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -139,7 +139,7 @@ if(PACMAN){
   p_load(org.Mm.eg.db)
   p_load(org.Rn.eg.db)
   p_load(org.Dr.eg.db)
-  
+   
   ## enrichment analysis
   p_load(gprofiler2)
 
@@ -218,7 +218,7 @@ if(PACMAN){
   library(org.Mm.eg.db)
   library(org.Rn.eg.db)
   library(org.Dr.eg.db)
-  
+   
   ## enrichment analysis
   library(gprofiler2)
 }
@@ -442,6 +442,99 @@ mapIDs <- function(ids,
     })
 
     return(res)
+}
+
+############################################################
+## given a vector of group names, return all distinct
+## pairwise comparison
+## mode = 'sort' : group names will be sorted alphanumerically
+############################################################
+get_pairwise_group_comparisons <- function(groups.unique, 
+                                           mode=c('sort') ## sort: group names are ordered alphanumerically
+                                                          ##       e.g. "Exp_B" and "Exp_A" -> "Exp_A.vs.Exp_B"
+                                                          ##            which translates to Exp_B over Exp_A             
+                                           
+                                           ){
+  
+  mode <- match.arg(mode)
+  
+  groups.comp <- c()
+  count=1
+  
+  for(i in 1:(length(groups.unique)-1))
+    for(j in (i+1):length(groups.unique)){
+      
+      ## order alphabetically
+      if(mode == 'sort')
+        groups.tmp <- sort( groups.unique[c(i,j)] )
+      else
+        groups.tmp <- groups.unique[c(i,j)]
+      
+      groups.comp[count] <- paste(groups.tmp[1], groups.tmp[2], sep='.vs.')
+      count <- count+1
+  }
+  return(groups.comp)
+  
+}
+
+
+#################################################################################
+##
+##   calculate average abundance per group groups 
+##
+#################################################################################
+calculate_fc <- function(tab, grp.vec, groups.comp, test, 
+                         mode='sort'  ## for assigning pairwise comparisons
+                                      ## sort: group names are ordered alphanumerically
+                                      ##       e.g. "Exp_B" and "Exp_A" -> "Exp_A.vs.Exp_B" 
+                         ){
+  #browser()
+  groups <- unique(grp.vec)
+  
+  ## ##########################################
+  ## average groups
+  group_avg <- lapply(groups, function(gg){
+    gg.idx = names(grp.vec)[ which(grp.vec == gg) ]
+    apply(tab[, gg.idx], 1, mean, na.rm=T)
+  })
+  group_avg <- data.frame(Reduce('cbind', group_avg))
+  colnames(group_avg) <- groups
+    
+  ## ##########################################
+  ## one sample: just average the log values
+  if(test %in% c("One-sample mod T", "none")){
+      group_fc <- group_avg
+  }
+
+  ## ##########################################
+  ## moderated F: average log values and subtract
+  ## groups as specified by the user
+  if(test == "mod F"){
+    groups.comp <- get_pairwise_group_comparisons(groups, mode=mode)
+  }
+  
+  ## ##########################################
+  ## two sample: subtract averaged groups
+  if(test %in% c("Two-sample mod T", 'mod F')){
+    
+    groups.comp.split <- strsplit(groups.comp, split = '\\.vs\\.')
+    names(groups.comp.split) <- groups.comp
+    
+    ## calculate log FCs
+    group_fc <- lapply(groups.comp.split, function(x){
+      g1 <- x[1] 
+      g2 <- x[2]
+      
+      ## subtract logs
+      g2.over.g1 <- group_avg[, g2] - group_avg[, g1]
+      g2.over.g1
+    })
+    group_fc <- data.frame(Reduce('cbind', group_fc))
+    colnames(group_fc) <- groups.comp
+  }
+  
+  colnames(group_fc) <- paste0('logFC.raw.', colnames(group_fc))
+  return(group_fc)
 }
 
 #################################################################################
@@ -1651,7 +1744,7 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
     Description <- Source <- rep(NA, length(ColumnHeader))
     names(Description) <- names(Source) <- names(ColumnHeader) <- ColumnHeader
     
-    ## to store indicies of already matched column names
+    ## to store index of already matched column names
     matched <- c()
     
     ## expression columns used
@@ -1667,7 +1760,7 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
     ############################    
     ## loop over terms in the 'library' file
     for(cc in  ColumnHeaderLibrary){
-
+      #if(cc == 'logFC') browser()
       ## exact match
       match.idx <- which( ColumnHeader == cc)
       
@@ -1694,10 +1787,14 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
         ## test prefix: protigy/limma columns
         match.idx <- grep( paste0('^',cc,'\\..*'), ColumnHeader)
         
+        match.idx <- match.idx[ which(!match.idx %in% matched) ]
+        
+        
         if(length(match.idx) > 0 ){
         
+          
           ## if hasn't been matched ...
-          if( !(match.idx %in% matched) ) {
+         # if( !(match.idx %in% matched) ) {
               if(SourceLibrary[cc] == 'limma'){
                 Description[ match.idx ] <- paste0(DescriptionLibrary[cc], ' "', which.test, '" in group "',   sub(paste0('^', cc, '.'), '', ColumnHeader[match.idx]), '"')
              } else {
@@ -1705,7 +1802,7 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
              }
               Source[ match.idx ] <- SourceLibrary[ cc ]
               matched <- c( matched, match.idx)
-          }  ## end if already matched
+          #}  ## end if already matched
           
         } else { ## end test prefix
           
@@ -1730,6 +1827,7 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
     
     allColumnsInTable <- data.frame(ColumnHeader, Description, Source)
   } 
+  
   #############################
   ## export
   render.xlsx <- try(
@@ -1738,15 +1836,16 @@ export2xlsx <- function(res.comb, grp, grp.comp, rdesc, which.test, headerDesc=N
               SheetNames=c(which.test, 'Class vector', 'Description of table header'), 
               row.names=F, BoldHeaderRow=T, AutoFilter=T)
   )
-  
+  #browser()
   ## error checking
   if(class(render.xlsx) == 'try-error' | !render.xlsx){
     showModal(modalDialog(
       size='m',
       title = "Problem generating Excel sheet",
-      HTML(render.xlsx[[1]]),
-      HTML('If you are a Broadie and encountered this problem using the Protigy on RStudio Connect please reach out to your administrator.<br>'),
-      HTML('If you are running Protigy on you local computer one possible reason could be that Perls is missing. For Windows OS please install Strawberry Perl (<a href="http://strawberryperl.com/" target="_blank_">http://strawberryperl.com/</a><br>R needs to be restarted after installing Perl.)')
+      HTML(paste('Error msg:', render.xlsx[[1]], '<br><br>')),
+      HTML('If you are a Broadie and encounter this problem using Protigy on RStudio Connect please reach out to your administrator.<br><br>'),
+      HTML('If you downloaded <a href="https://github.com/broadinstitute/protigy" target="_blank_">Protigy from GitHub</a> and running it on your local computer, one possible reason could be that Perl is not installed on your computer.<br><br>'), 
+      HTML('For Windows OS you can install Strawberry Perl (<a href="http://strawberryperl.com/" target="_blank_">http://strawberryperl.com/</a>).<br>Please note that R needs to be restarted after installing Perl.)')
       
          ))
     }

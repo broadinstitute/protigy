@@ -3880,18 +3880,20 @@ shinyServer(
             
             ## all pairwise combinations
             groups.unique <- unique(global.param$grp.all)
-            #groups.unique <- unique(global.param$grp.selection)
+          
+            ## get all distinct pairwise comparisons  
+            groups.comp <- get_pairwise_group_comparisons(groups.unique, mode='sort')
             
-            groups.comp <- c()
-            count=1
-            for(i in 1:(length(groups.unique)-1))
-              for(j in (i+1):length(groups.unique)){
-                  
-                ## order alphabetically
-                groups.tmp <- sort( groups.unique[c(i,j)] )
-                groups.comp[count] <- paste(groups.tmp[1], groups.tmp[2], sep='.vs.')
-                count <- count+1
-              }
+            # groups.comp <- c()
+            # count=1
+            # for(i in 1:(length(groups.unique)-1))
+            #   for(j in (i+1):length(groups.unique)){
+            #       
+            #     ## order alphabetically
+            #     groups.tmp <- sort( groups.unique[c(i,j)] )
+            #     groups.comp[count] <- paste(groups.tmp[1], groups.tmp[2], sep='.vs.')
+            #     count <- count+1
+            #   }
           }
           global.param$grp.comp.all <- groups.comp
           
@@ -4002,10 +4004,17 @@ shinyServer(
                 ## putting a data frame around here turns out to be ESSENTIAL!! DON'T USE CBIND HERE!
                 tab <- data.frame( ids.tmp, dat.tmp)
                 colnames(tab)[1] <- id.col
+                
                 ## store
                 global.results$table.log <- tab
             }
 
+            ## ###########################################
+            ## calculate FC between groups before 
+            ## normalization
+            ## ###########################################
+            fc.before.norm <- calculate_fc(tab,global.param$grp, groups.comp, test)
+            
             ## ###########################################
             ##
             ## normalization
@@ -4162,6 +4171,11 @@ shinyServer(
                         count=count + 1
 
                     }
+                
+                ##################################    
+                ## add FC before normalization
+                res.comb <- data.frame(res.comb, fc.before.norm)
+                    
 
                 ##################################
                 ## reorder columns in table
@@ -4208,6 +4222,10 @@ shinyServer(
                     }
                 })
 
+                ##################################    
+                ## add FC before normalization
+                res.comb <- data.frame(res.comb, fc.before.norm)
+                
                 ##################################
                 ## reorder columns of the table
                 res.id <- res.comb$id ## id column
@@ -4233,10 +4251,13 @@ shinyServer(
                     colnames(res.comb) <- sub('^X', '', colnames(res.comb))
                 })
                 
+                ##################################    
+                ## add FC before normalization
+                res.comb <- data.frame(res.comb, fc.before.norm)
+                
                 ##################################
                 ## reorder columns of the data table
                 res.id <- res.comb$id ## id column
-                ##res.exprs <- res.comb[, names(groups)] ## expression values
                 res.exprs <- tab[, names(groups)]
                 res.test <- res.comb[, grep('^logFC|^AveExpr|^F$|^P\\.Value$|^adj.P.Val$|^Log\\.P\\.Value', colnames(res.comb))] ## test results
                 res.test <- res.test[, order(colnames(res.test))]
@@ -4334,9 +4355,18 @@ shinyServer(
                 ## - values are log, if performed
                 tab <- data.frame(id=tab[ , id.col], tab)
                 res.comb <- tab
+                
+                ##################################    
+                ## add FC before normalization
+                res.comb <- data.frame(res.comb, fc.before.norm)
+                
 
             }
 
+            ############################################
+            ## add logFC.raw columns
+            #res.comb <- data.frame(res.comb, fc.before.norm)
+            
             ## #########################################
             ##   add id-mapping if not present already
             ##
@@ -5111,8 +5141,6 @@ shinyServer(
                 tab <- left_join(tab, table.anno, 'id')
             }
 
-            
-            
             if(nrow(tab) > 0){
               
                 ## add links to GeneCard/UniProt
@@ -5121,17 +5149,21 @@ shinyServer(
                 tab[, 'id'] <- up.link
             }
             
-            #View(tab)
+            ## get column data types
+            ## used for formatSignif() below
+            column_type <- sapply(tab, class)
+            numeric_column_idx <- which(column_type == 'numeric')
             
-            datatable(tab, style = 'bootstrap', 
-                      width = 1000, escape = F,  filter='top', 
-                      rownames=F, options = list( pageLength = 10, scrollX = T, selection='none',
-                                                  autoWidth = TRUE#,
-                                                  #fnRowCallback = JS("function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {ind = 2; $('td:eq('+ind+')', nRow).html( (aData[ind]).toFixed(2) );}")
-                                                  )
-                      )
-            #tab
-        #}, options = list( pageLength = 10, scrollX = T), escape=F, filter='top', rownames=F, server = T)
+            dt <- datatable(tab, style = 'bootstrap', 
+                           width = 1000, escape = F,  filter='top', 
+                           rownames=F, 
+                           options = list( pageLength = 10, scrollX = T, selection='none',
+                                           autoWidth = TRUE#,
+                                           #fnRowCallback = JS("function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {ind = 2; $('td:eq('+ind+')', nRow).html( (aData[ind]).toFixed(2) );}")
+                           )
+            )
+            formatSignif( dt, digits=3, columns = numeric_column_idx )
+ 
         }, server=T)
 
         ## ################################################################################

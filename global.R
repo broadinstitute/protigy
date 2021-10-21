@@ -28,9 +28,9 @@ options(repos = BiocManager::repositories())
 #################################################################
 ## use PACMAN R package manager?
 ## set to FALSE if deployed to RStudio Connect 
-PACMAN <- TRUE
+PACMAN <- FALSE
 ## version number
-VER <- "0.9.1.2"
+VER <- "0.9.1.4"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -484,9 +484,10 @@ get_pairwise_group_comparisons <- function(groups.unique,
 ##
 #################################################################################
 calculate_fc <- function(tab, grp.vec, groups.comp, test, 
-                         mode='sort'  ## for assigning pairwise comparisons
+                         mode='sort',  ## for assigning pairwise comparisons
                                       ## sort: group names are ordered alphanumerically
-                                      ##       e.g. "Exp_B" and "Exp_A" -> "Exp_A.vs.Exp_B" 
+                                      ##       e.g. "Exp_B" and "Exp_A" -> "Exp_A.vs.Exp_B",
+                         center=T     ## if TRUE median centering will be applied
                          ){
   #browser()
   groups <- unique(grp.vec)
@@ -532,6 +533,10 @@ calculate_fc <- function(tab, grp.vec, groups.comp, test,
     group_fc <- data.frame(Reduce('cbind', group_fc))
     colnames(group_fc) <- groups.comp
   }
+  
+  ## median center data
+  if(center)
+    group_fc <- apply(group_fc, 2, function(column) column - median(column, na.rm=T))
   
   colnames(group_fc) <- paste0('logFC.raw.', colnames(group_fc))
   return(group_fc)

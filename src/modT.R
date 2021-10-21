@@ -179,8 +179,12 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
   f <- factor (class.vector)
   design <- model.matrix ( ~ 0 + f )
 
-  # moderated F test
-  fit <- lmFit (data, design)
+  # moderated 2-sample t / F test
+  # use row centered data -- this does not affect 2-sample t test results,
+  #  but makes the F test more interpretable (to identify groups that are different, as
+  #  opposed to groups with non-zero average values)
+  data.rownorm <- sweep (data, MARGIN=1, STATS=apply (data, 1, mean, na.rm=TRUE))
+  fit <- lmFit (data.rownorm, design)
   fit <- eBayes (fit)
 
   sig <- topTable (fit, number=nrow(data), sort.by='none')

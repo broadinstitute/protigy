@@ -30,9 +30,20 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.9.1.4 Oct 21, 2021</b>
+<ul>
+<li>mod F test: use row centered data that makes the F test more interpretable (to identify groups that are different, as opposed to groups with non-zero average values)
+<li><code>logFC.raw</code></li>-columns are now median-centered
+</ul>
+<b>v0.9.1.3 Aug 30, 2021</b>
+<ul>
+<li>Result-tables: Fixed a bug in reporting <code>logFC.raw</code> that triggered a crash when the missing data filter was applied.</li>
+<li>Misc: Updated parsing of user database for shared sessions (RSC/SSP only) to be compatible with the user authentication that RSC at Broad is using. Shared sessions are now visible again.</li>
+<li>Misc: Fixed a few typos.</li>
+</ul>
 <b>v0.9.1.2 Aug 26, 2021</b>
 <ul>
-<li>Result tables: Added columsn for the log fold change before normalization (logFC.raw).</li>
+<li>Result tables: Added column for the log fold change before normalization (<code>logFC.raw</code>).</li>
 <li>Table-tab: Set number of decimals to 3.</li>
 <li>Excel-export: Made the error message more explicit.</li>
 <li>Misc: Some edits to the README file.</li>
@@ -87,7 +98,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.9.1 February 05, 2021</b>
 <ul>
-<li>Misc: Fixed the error message "Experimental design" file does not match the table you have uploaded (different number of rows/columns)!" that was falsely triggered whenever the selected id column was anothing other than <code>id</code>. The bug was intrduced with v0.8.9</li>
+<li>Misc: Fixed the error message "Experimental design" file does not match the table you have uploaded (different number of rows/columns)!" that was falsely triggered whenever the selected id column was anything other than <code>id</code>. The bug was intrduced in v0.8.9</li>
 <li>Misc: Fixed a typo in the column description of the Excel result sheet ("Nomical P-value" -> "Nominal P-Value")
 </ul>
 
@@ -424,17 +435,17 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 <li>Summary tab: number of significant hits are now reported correctly.</li>
 <li>Summary tab: Missing value distribution after log-transformation shown correctly.</li>
 <li>Changed cluster method from \'complete\' to \'ward\'.</li>
-<li>Fixed a bug that happend if a project is defined and shared in \'user-roles.txt\' but has been deleted from the server.</li>
+<li>Fixed a bug that was triggered if a project is defined and shared in \'user-roles.txt\' but has been deleted from the server.</li>
 </ul>
 <b>v0.6.3 Feb 2, 2017</b>
 <ul>
-<li>Commited to GitHub for debugging purposes. Do not use this verion!</li>
+<li>Commited to GitHub for debugging purposes. Do not use this version!</li>
 <li>Re-organization of UI elements when setting up the analysis.</li>
 <li>Implementation of SD filter across all samples.</li>
 </ul>
 <b>v0.6.2 Jan 31, 2017</b>
 <ul>
-<li>UI elements for setting up an anlysis workflow are now dynamically generated, e.g. if reproducibility filter is chosen, onnly "One-sample modT" or "none" can be chosen.</li>
+<li>UI elements for setting up an anlysis workflow are now dynamically generated, e.g. if reproducibility filter is chosen, only "One-sample modT" or "none" can be selected.</li>
 <li>Reproducibility filter: users can choose bewteen (predefined) alpha-values.</li>
 <li>Increased number of colors by 60 (85 total).</li>
 <li>Correlation matrix: increased the size of exported heatmap to 12x12 inches.</li>
@@ -646,29 +657,30 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 </ul>
 
 <p>
-<h4>Normalize per group</h4>
+<h4><b>Normalize per group</b></h4>
 If enabled the normalization will be performed within a particualr group (Median, Median-MAD, Quantile, VSN). For Median and Median-MAD normalization, the group-level median of sample medians is added to each normaized data value.
-</p>
 
-<p><h3>Filter data</h3>
+
+
+<h3>Filter data</h3>
+
 <b>Missing data:</b><br>
-Remove features not quantified in the percent samples specified in the slider input bar.
+Remove features not quantified in percent of samples specied in the text field.
 
-<b>Reproducibility:</b><br>
-Remove features that were not reproducibly quantifified across replicate measurements of a group. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue. <b>This type of filter is applied separately to each group.</b> </p>
+<br><br><b>Reproducibility:</b><br>
+Remove features that were not reproducibly quantifified across replicate measurements of a group. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue. <b>This type of filter is applied separately to each group.</b>
 
-<b>StdDev:</b><br>
+<br><br><b>StdDev:</b><br>
 Remove features with low standard deviation across all samples. Only useful if applied to sample cohorts that were quantified against a common reference. The percentile <b><i>P</i></b> you specify 
 in the slider refers to the <b><i>P</i></b> percent of features having the <b>lowest standard deviation</b> across sample columns which will be <b>excluded prior to analyis</b>.
 Using this type of filter is useful to explore result of unsupervised clustering of the data without running a statistical test.
 
-
 <br><h3>Select test</h3>You can choose between a one-sample, two-sample moderate T-tests, moderated F-test or no testing.
 <ul>
-<li><b>One-sample mod T</b>: For each test whether the group mean is significantly different from zero. Only meaningful to <b>ratio data</b>!</li>
+<li><b>One-sample mod T</b>: For each group test whether the group mean is significantly different from zero. Only meaningful to <b>ratio data</b>!</li>
 <li><b>Two-sample mod T</b>: For each possible pairwise comparison of groups test whether the group means are significantly different from each other.</li>
-<li><b>mod F</b>: Test whether there is a significant difference between any of the difined groups. Should be used if more than 2 groups are being compared. Only meaningful to <b>ratio data</b>!</li>
-<li><b>none</b>: Don\'t do any test. Useful for data exploration such as PCA.</li>
+<li><b>mod F</b>: Test whether there is a significant difference between any of the defined groups. Should be used if more than 2 groups are being compared. Only meaningful to <b>ratio data</b>!</li>
+<li><b>none</b>: Don\'t do any test. Useful for exploratory data analysis such as PCA.</li>
 </ul>
 <br></font></p>')
 

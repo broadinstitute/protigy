@@ -245,7 +245,7 @@ shinyServer(
         
         ## ########################################################
         ## logged user
-        output$logged.user <-renderMenu({
+        output$logged.user <- renderMenu({
 
             if(is.null(session$user)) return()
             user <- session$user
@@ -1112,12 +1112,18 @@ shinyServer(
               }
               cat('session:', global.param$session, '\n')
             }
+           
             
             ## ##############################################
             ## authenticated session
             ## only works in SSP 
             if(!is.null(session$user) & file.exists(USERDB)){
-
+                
+                cat('\n---------------\n', 
+                    paste("Found session db at \"", USERDB),
+                    paste("Parsing session db for user: ", session$user, collapse='\n'), 
+                    '\n-----------------')
+                
                 ## ########################################
                 ## user name
                 global.param$user <- sub('@.*', '', session$user) ## to avoid problems...
@@ -1137,7 +1143,9 @@ shinyServer(
                 user.roles <- read.delim( USERDB, stringsAsFactors=F)
                 
                 ## check whether the user appears as collaborator in a project
-                idx <- grep( paste('(^|;)', session$user, '($|;)', sep=''), user.roles$collaborator)
+                ## 20210830: - session$user was expected to be an email address (authenification on SSP via Google Auth) 
+                ##           - session$user on RSC is just the user name (up to the @ sign)
+                idx <- grep( paste('(^|;)', session$user, '(@|$|;)', sep=''), user.roles$collaborator)
 
                 ## if so add the project path to the search path
                 if(length(idx) > 0){
@@ -4081,7 +4089,10 @@ shinyServer(
                 
                 ## update other tables 
                 global.results$table.norm <- global.results$table.norm[na.filt$ids, ]
-                global.results$table.log <- global.results$table.log[na.filt$ids, ] 
+                global.results$table.log <- global.results$table.log[na.filt$ids, ]
+                
+                ## fc.before.norm doesn't have rownames..
+                fc.before.norm  <- fc.before.norm[ which(tab[, id.col] %in% na.filt$ids), ]
                 
                 ## use na-filtered table downstream
                 tab <- tab.na.filt
@@ -4809,8 +4820,9 @@ shinyServer(
 
             ######################################
             ## one/two sample mod T
-            if(global.param$which.test != 'mod F'){
-
+            #if(global.param$which.test != 'mod F'){
+            if( !global.param$which.test %in% c('mod F', 'none')){
+                
                 if(filter.type == 'adj.p')
                     test.tab=unlist(lapply(paste('adj.P.Val', grp.comp, sep='.'), function(x) sum(res[, x] < filter.value, na.rm=T) ))
                 if(filter.type == 'nom.p')

@@ -30,7 +30,7 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- FALSE
 ## version number
-VER <- "0.9.1.4"
+VER <- "0.9.1.5"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -56,7 +56,7 @@ USERDB <<- file.path(APPDIR, 'conf/user-roles.txt')
 ## R version
 RVERSION <- as.numeric(paste(R.version$major, sub('\\..*','',R.version$minor), sep='.')) 
 ## email for trouble shooting
-MAIL <<- 'karsten@broadinstitute.org'
+MAIL <<- 'nclark@broadinstitute.org'
 ## URL to configuration app (SSP/RSC only)
 CONFAPP <<- 'https://rstudio-connect.broadapps.org/protigy-sessions/'
 ## PIWIK location
@@ -142,6 +142,10 @@ if(PACMAN){
    
   ## enrichment analysis
   p_load(gprofiler2)
+  
+  #other needed packages
+  p_load(seriation)
+  p_load(preprocessCore)
 
 } else { ## RStudio Connect
   
@@ -169,6 +173,7 @@ if(PACMAN){
   
   ## rmarkdown
   library(rmarkdown)
+  library(markdown)
   library(knitr)
   
   ## moderated tests

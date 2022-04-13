@@ -15,21 +15,28 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     ## ##@#############################
     ## ## getting started
     if(what == 'gs'){
-     
-        ## render HTML
-        output$html <- renderText({
-            if(!is.null(global.input$file)) return()
-            if(!is.null(error$msg)) return()
-            includeMarkdown('README.md')
-
-        })
+      
+      ## render HTML
+      output$html <- renderText({
+        if(!is.null(global.input$file)) return()
+        if(!is.null(error$msg)) return()
+        includeMarkdown('README.md')
+        
+      })
     }
-
+    
     ##@###############################
     ## change log
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v0.9.1.5 Apr 13, 2022</b>
+<ul>
+<li>Now accepts a third annotation column to denote group-wise normalization separately from groups for statistical testing. 
+<li>Fixes an issue with missing sample annotations. Previously, samples with missing annotations were sometimes included in the analysis. Now, samples with missing annotations are not included in any part of the analysis.
+<li>Other quality of life changes, such as automatically adjusting plot axes to specify the type of p-value used (non-adjusted vs adjusted)
+<li>Improved help text in various regions of the application.
+</ul>
 <b>v0.9.1.4 Oct 21, 2021</b>
 <ul>
 <li>mod F test: use row centered data that makes the F test more interpretable (to identify groups that are different, as opposed to groups with non-zero average values)
@@ -565,7 +572,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'id'){
 
         txt <- paste('<br><br><p><font size=\"4\"><b>Group assigment</b></br>
-Here you can download a template of an experimental design file. You can open this file in Excel and define the groups you want to compare. Replicate measurements have to be grouped under a single name in the \'Experiment\'-column. <mark>Please don\'t use special characters, like blanks or any punctuation, when defining these names!</mark></font></p>
+Download a template of an experimental design file. You can open this file in Excel and define the groups you want to compare. Replicate measurements have to be grouped under a single name in the \'Experiment\'-column. You can use the \'Group\' column to denote group-wise normalization. If you are not performing group-wise normalization, you may leave this blank. <mark>Please don\'t use special characters, like blanks or any punctuation, when defining these names!</mark> <mark>You MUST re-upload the completed experimental design file on the next page. Do not use your own file, as the formatting must be consistent.</mark> </font></p>
 <br><p><font size=\"4\"><b>Select ID column</b></br>
 Choose a column from the list on the left that contains <b>unique</b> identifiers for the features in the data table. If the enntries are not unique, uniqueness will enforces by appending \"_1\". Preferably, IDs should be unique protein accession numbers (e.g. <font face=\"Courier\">NP_073737</font>) or a combination of protein accession and residue number in case of PTM analysis (e.g. <font face=\"Courier\">NP_073737_S544s _1_1_544_544</font>).</p>  
 <br><p><font size=\"4\"><b>Automatic retrieval of gene symbols</b></br>
@@ -664,7 +671,9 @@ If enabled the normalization will be performed within a particualr group (Median
 
 <h3>Filter data</h3>
 
-<b>Missing data:</b><br>
+<b>You can filter the data by p-value (non-adjusted or adjusted) and change the p-value cutoff once running the analysis (on the next screen).</b>
+
+<br><br><b>Missing data:</b><br>
 Remove features not quantified in percent of samples specied in the text field.
 
 <br><br><b>Reproducibility:</b><br>
@@ -701,7 +710,7 @@ Using this type of filter is useful to explore result of unsupervised clustering
     ## analysis
     if(what == 'res'){
 
-        txt <- paste('<p><font size=\"4\">This page allows you to interactively explore the results of you analyis. On the left you can choose between different filters, the results will be updated immediately. The filter that you specify applies to all tabs (\'Heatmap\', \'Volcanos\', ...), except the \'QC\' which shows the entire dataset. You can change the appearance of the heatmap by modifying the parameters below, you can select points shown in the Volcano plots and browse through the result table.</font></p><br>')
+        txt <- paste('<p><font size=\"4\">This page allows you to interactively explore the results of your analyis. On the left you can choose between different filters, the results will be updated immediately. <mark> Note that by scrolling down you can see more options, such as setting the type of p-value and the cutoff. </mark> The filter that you specify applies to all tabs (\'Heatmap\', \'Volcanos\', ...), except the \'QC\' which shows the entire dataset. You can change the appearance of the heatmap by modifying the parameters below, you can select points shown in the Volcano plots and browse through the result table.</font></p><br>')
 
         ## render HTML
         output$html <- renderText({

@@ -171,6 +171,7 @@ shinyUI(
                          
                          htmlOutput('grp.gct3.prev'),
                          tableOutput('grp.gct3.prev.tab'),
+                         tableOutput('grp.norm.prev.tab'),
                          
                          
                          # the actual content

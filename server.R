@@ -9,6 +9,7 @@
 ##
 ## This file defines the server logical of the app. It also takes care of most of the user interface.
 ##
+## Last updated: April 13, 2022 by Natalie Clark (nclark@broadinstitute.org)
 ################################################################################################################
 p_load(shiny)
 
@@ -87,10 +88,16 @@ shinyServer(
             
             session=NULL,                ## session id
             user=NULL,                   ## user
-            grp=NULL,                    ## the actual group assignment
-            N.grp=NULL,                  ## number of defined groups
+            grp=NULL,                    ## group to use for statistical testing
+            N.grp=NULL,                  ## number of defined groups for statistical testing
+            grp.norm = NULL,             ## group to use for group-wise normalization
             grp.colors=NULL,             ## group color assignment
             grp.colors.legend=NULL,      ## group colors, names are group names
+            grp.colors.norm=NULL,        ## group color assignment for normalization
+            grp.colors.legend.norm=NULL, ## group colors for normalization, names are group names
+            
+            tabsep = '\t',               ## default separator for non-gct files
+            tabsep.anno = '\t',          ## default separator for non-gct files, used for annotation file
             
             which.test='One-sample mod T', ## specify test
             
@@ -219,12 +226,12 @@ shinyServer(
             updateCheckboxInput(session, "export.hm", "Heatmap", value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.box', 'Boxplots', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.volc', 'Volcano plot', value=!input$export.toggle.all)
-            updateCheckboxInput(session, 'export.phist', 'P-value histogram', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.phist', 'p-value histogram', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.pca', 'PCA', value=!input$export.toggle.all)
             #updateCheckboxInput(session, 'export.pca.loadings', 'PCA loadings (xls)', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.ms', 'Multiscatter', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.excel', 'Excel sheet', value=!input$export.toggle.all)
-            updateCheckboxInput(session, 'export.gct.file', 'GCT files: 1) original data and 2) signed log P-values', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.gct.file', 'GCT files: 1) original data and 2) signed log p-values', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.cm', 'Correlation matrix', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.cb', 'Correlation boxplot', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.profile', 'Profile plot', value=!input$export.toggle.all)
@@ -279,6 +286,7 @@ shinyServer(
             ## ##########################################
             ## class vector
             grp <- global.param$grp
+            grp.norm <- global.param$grp.norm
             grp.unique <- unique(grp)
 
             ################################################################################################################
@@ -360,12 +368,12 @@ shinyServer(
                                                   checkboxInput('export.hm', 'Heatmap',value=T),
                                                   checkboxInput('export.box', 'Boxplots',value=T),
                                                   checkboxInput('export.volc', 'Volcano plot',value=T),
-                                                  checkboxInput('export.phist', 'P-value histogram',value=T),
+                                                  checkboxInput('export.phist', 'p-value histogram',value=T),
                                                   checkboxInput('export.pca', 'PCA',value=T),
                                                   #checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
                                                   checkboxInput('export.ms', 'Multiscatter',value=T),
                                                   checkboxInput('export.excel', 'Excel sheet',value=T),
-                                                  checkboxInput('export.gct.file', 'GCT files: 1) original data and 2) signed log P-values',value=T),
+                                                  checkboxInput('export.gct.file', 'GCT files: 1) original data and 2) signed log p-values',value=T),
                                                   checkboxInput('export.cm', 'Correlation matrix',value=T),
                                                   checkboxInput('export.cb', 'Correlation boxplot',value=T),
                                                   checkboxInput('export.profile', 'Profile plot',value=T),
@@ -555,7 +563,7 @@ shinyServer(
                                                               ##column(1, numericInput( paste("opac.volcano",groups.comp[i],sep='.'), "Opacity %", value=50, min=0, max=100, step=10)),
                                                               column(3, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=global.plotparam$volc.ls, min=.1, step=.1, width='100px')),
                                                               column(3, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=global.plotparam$volc.grid, width='100px')),
-                                                              column(3, numericInput( paste( "max.logP", groups.comp[i], sep='.'), "Max. Log10(P-value)", value=global.plotparam$volc.maxp, min=20, max=300, step=10, width='100px') )
+                                                              column(3, numericInput( paste( "max.logP", groups.comp[i], sep='.'), "Max. Log10(p-value)", value=global.plotparam$volc.maxp, min=20, max=300, step=10, width='100px') )
     
                                                               ##column(1, downloadButton(paste('downloadVolcano', groups.comp[i],sep='.'), 'Download (pdf)'))
                                                           )
@@ -823,7 +831,7 @@ shinyServer(
             ##
             #############################################
             qc.tabs <- vector('list', 5)
-            ##names(qc.tabs) <- c('Boxplots', 'P-values', 'Multi scatter', 'Correlation matrix', 'Correlation matrix transposed')
+            ##names(qc.tabs) <- c('Boxplots', 'p-values', 'Multi scatter', 'Correlation matrix', 'Correlation matrix transposed')
 
             ###########################
             ## boxplots
@@ -885,10 +893,10 @@ shinyServer(
             ###########################
             ## P-value distribution
             ##qc.tabs[['P-values']] <- tabPanel('P-values',
-            qc.tabs[[3]] <- tabPanel('P-values',
+            qc.tabs[[3]] <- tabPanel('p-values',
                                               fluidPage(
                                                   fluidRow(
-                                                      box(title="Distribution of P-values", solidHeader=T, status="primary", width=1000, height=600*ifelse( global.param$which.test != 'mod F', length(unique(global.param$grp.comp)), 1 ),
+                                                      box(title="Distribution of p-values", solidHeader=T, status="primary", width=1000, height=600*ifelse( global.param$which.test != 'mod F', length(unique(global.param$grp.comp)), 1 ),
                                                           column(12, plotOutput("pval.hist"))
                                                           )
                                                   )
@@ -1250,7 +1258,8 @@ shinyServer(
           
           ## list all column description columns (cdesc)    
           list(
-            radioButtons("grp.gct3", "Choose column", colnames(global.input$cdesc)),
+            radioButtons("grp.gct3", "Choose column for statistical testing", colnames(global.input$cdesc)),
+            radioButtons("grp.norm", "Choose column for group-wise normalization.", colnames(global.input$cdesc)),
             actionButton("update.grp.gct3", 'OK')
           )
           
@@ -1260,20 +1269,29 @@ shinyServer(
           if(is.null(input$grp.gct3)) return()
           if(global.param$grp.done) return()
           
-          HTML(paste('<br><p><font size=\"4\"><b>Current selection:</b><b>', input$grp.gct3,'</b></p><br>'))
-          
+          HTML(paste('<br><p><font size=\"4\"><b>Current selection for statistical testing:</b><b>', input$grp.gct3,'</b></p><br>','<br><p><font size=\"4\"><b>Current selection for group-wise normalization:</b><b>', input$grp.norm,'</b></p><br>'))
         })
-        # preview levels current selection
+        # preview levels current selection for statistical testing
         output$grp.gct3.prev.tab <- renderTable({
           if(is.null(input$grp.gct3)) return()
+          if(is.null(input$grp.norm)) return()
           if(global.param$grp.done) return()
           
           tab <- table(global.input$cdesc[, input$grp.gct3]) 
-          tab <- data.frame(Level=names(tab), Freq=as.character(unlist(tab)), stringsAsFactors = F )
+          tab <- data.frame(Stat.Test.Level=names(tab), Stat.Test.Freq=as.character(unlist(tab)), stringsAsFactors = F )
           
-          list(
-            tab
-          )
+          list(tab)
+        })
+        
+        # preview levels current selection for group normalization
+        output$grp.norm.prev.tab <- renderTable({
+          if(is.null(input$grp.norm)) return()
+          if(global.param$grp.done) return()
+          
+          tab <- table(global.input$cdesc[, input$grp.norm]) 
+          tab <- data.frame(Group.Norm.Level=names(tab), Group.Norm.Freq=as.character(unlist(tab)), stringsAsFactors = F )
+          
+          list(tab)
         })
         
         #######################################
@@ -1286,6 +1304,9 @@ shinyServer(
           ## store grp column
           global.param$grp.gct3 <- input$grp.gct3
           
+          ## store grp normalization column
+          global.param$grp.norm <- input$grp.norm
+          
           ## store grp column for PCA colors
           global.plotparam$pca.grp.col <- input$grp.gct3
           
@@ -1295,24 +1316,44 @@ shinyServer(
               return()
           }
           
+          if(!input$grp.norm %in% colnames(cdesc)){
+            error$title <- paste("Parsing error")
+            error$msg <- paste("Can't find column'",input$grp.norm, "'in the sample meta data. Does it contain special characters (e.g. blanks)?")
+            return()
+          }
+          
           ## robustify levels of group variable
-          cdesc[, input$grp.gct3] <- make.names(cdesc[, input$grp.gct3])
+          #cdesc[, input$grp.gct3] <- make.names(cdesc[, input$grp.gct3])
+          #cdesc[, input$grp.norm] <- make.names(cdesc[, input$grp.norm])
           global.input$cdesc <- cdesc
           
           # initialize grp file
           Column.Name <- colnames(tab)
           Experiment <- rep('', length(Column.Name))
           names(Experiment) <- Column.Name
+          Group <- rep('', length(Column.Name))
+          names(Group) <- Column.Name
 
           Experiment[ rownames(cdesc) ] <- cdesc[, input$grp.gct3]
+          Group[ rownames(cdesc) ] <- cdesc[, input$grp.norm]
           
-          global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  input$grp.gct3)
+          global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  c(input$grp.gct3,input$grp.norm))
         
           grp.file=data.frame(
             Column.Name,
             Experiment,
+            Group,
             stringsAsFactors = F
               )
+          
+          #remove samples with missing annotations from the table, group file, and cdesc
+          grp.file = grp.file[!is.na(grp.file$Experiment) | !is.na(grp.file$Group),]
+          #robustify levels of group variables
+          grp.file$Experiment <- make.names(grp.file$Experiment)
+          grp.file$Group <- make.names(grp.file$Group)
+          global.input$table <- tab <- tab[,colnames(tab)%in%grp.file$Column.Name]
+          global.param$cdesc.all <- global.param$cdesc.selection <- cdesc[rownames(cdesc)%in%grp.file$Column.Name,]
+          cdesc <- global.param$cdesc.all
           
           ## ################################
           ## ANNOTATION: extract empty cells
@@ -1329,16 +1370,22 @@ shinyServer(
           ## - extract all non-empty cells in the 'Experiment' column
           exprs.idx <- rownames(cdesc)
           grp.exprs <- grp.file[exprs.idx, ]
+          ## - extract all non-empty cells in the 'Group' column
+          norm.idx <- rownames(cdesc)
+          grp.norms <- grp.file[norm.idx, ]
           
           ## order alphabetically to make coloring consistent
           grp.exprs <- grp.exprs[order(grp.exprs$Experiment), ]
+          grp.norms <- grp.norms[order(grp.norms$Group), ]
           
           ## class vector
           grp=grp.exprs$Experiment
           names(grp)=grp.exprs$Column.Name
+          grp.norm=grp.norms$Group
+          names(grp.norm)=grp.norms$Column.Name
           
           ## update input table, keep id and expression columns
-          global.input$table <- global.input$table[ , c(global.param$id.col.value, names(grp))]
+          global.input$table <- global.input$table[ , c(global.param$id.col.value, names(grp), names(grp.norm))]
           
           ################################
           ## update number of groups
@@ -1346,6 +1393,7 @@ shinyServer(
           
           ## store group assignment
           global.param$grp <- global.param$grp.all <- grp
+          global.param$grp.norm <- grp.norm
           global.param$grp.comp.all <- global.param$grp.comp <- unique(grp)
           
           ## group colors
@@ -1361,6 +1409,20 @@ shinyServer(
           names(grp.col.legend) <- grp[idx]
           
           global.param$grp.colors.legend.all <- global.param$grp.colors.legend <- grp.col.legend
+          
+          ## group colors for normalization
+          grp.col.norm <- rep(GRPCOLORS[1], length(grp.norm))
+          names(grp.col.norm) <- names(grp.norm)
+          
+          for(i in 2:length(unique(grp.norm))) grp.col.norm[ which(grp.norm == unique(grp.norm)[i]) ] <- GRPCOLORS[i]
+          global.param$grp.colors.norm <- grp.col.norm
+          
+          ## group colors for figure legend
+          idx <- !duplicated(grp.norm)
+          grp.col.legend.norm = grp.col.norm[idx]
+          names(grp.col.legend.norm) <- grp.norm[idx]
+          
+          global.param$grp.colors.legend.norm <- grp.col.legend.norm
           
           # ####################################################  
           # colors for other annotation tracks
@@ -1415,7 +1477,7 @@ shinyServer(
         ## 3) UI upload experimental design file
         output$define.groups <- renderUI({
 
-            if(is.null(input$id.col)) return() ## no id colum selected
+            if(is.null(input$id.col)) return() ## no id column selected
             if( !is.null(input$id.col))
                 if( input$id.col == 0 ) return() ## not pressed yet
             if(!is.null(global.results$data)) return() ## test has been run
@@ -1600,8 +1662,6 @@ shinyServer(
                 
                 ## ################################
                 ## determine the separator
-                tab.sep=NULL
-                
                 ## try to figure out the separator, DON'T USE THE HEADER FOR THAT
                 ## use the fourth row instead (should be data)
                 for(s in SEPARATOR){
@@ -1615,7 +1675,7 @@ shinyServer(
                 }
                 
                 ## #########################################################
-                ## import the table: txt
+                ## import the table
                 if( global.param$tabsep == '\t'){
                     tab <- read.delim( fn, stringsAsFactors=F, na.strings=NASTRINGS)
                 } else {
@@ -1736,7 +1796,31 @@ shinyServer(
             
             ## ##########################
             ## read the experimental design file
-            grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
+            
+            ## ################################
+            ## determine the separator
+            ## try to figure out the separator, DON'T USE THE HEADER FOR THAT
+            ## use the fourth row instead (should be data)
+            for(s in SEPARATOR){
+              
+              grp.file<- read.table(input$exp.file$datapath, sep=s, header=F, stringsAsFactors=F, nrows=1, skip=4)
+              
+              if(length(grp.file) > 1){
+                global.param$tabsep.anno <- s
+                break;
+              }
+            }
+            
+            ## #########################################################
+            ## import the table: txt
+            if( global.param$tabsep.anno == '\t'){
+              grp.file<- read.delim( input$exp.file$datapath, stringsAsFactors=F, na.strings=NASTRINGS)
+            } else {
+              grp.file <- read.table( input$exp.file$datapath, sep=global.param$tabsep.anno, header=T, 
+                                 stringsAsFactors=F, na.strings=NASTRINGS, quote = "\"", 
+                                 dec = ".", fill = TRUE, comment.char = "")
+            }
+            #grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
             
             ############################# 
             ## if existing 'id' column has been renamed to 'id_org'
@@ -1750,17 +1834,19 @@ shinyServer(
             ## if id column has been updated
             ## to 'id':
             if(global.param$id.col.value.updated){
-                id_row <- data.frame(Column.Name='id', Experiment='')
+                id_row <- data.frame(Column.Name='id', Experiment='', Group="")
                 grp.file <- rbind(id_row, grp.file) 
             }
             
             
             Column.Name <- grp.file$Column.Name
             Experiment <- as.character(grp.file$Experiment)
+            Group <- as.character(grp.file$Group)
             
             ## #############################################################
             ## index on non-empty 'Experiment' rows
             exprs.idx <- which(nchar(Experiment) > 0 )
+            norm.idx <- which(nchar(Group) > 0)
             
             ## ###############################
             ## update label
@@ -1791,7 +1877,7 @@ shinyServer(
             #table <- global.input$table
             #save(Column.Name, table, file='debug.RData')
             ## names in the exp design file do not match to the table
-            if( sum( Column.Name != colnames(global.input$table)) > 0 ){
+            if( sum( Column.Name != colnames(global.input$table)) ){
               
                 error$title <- "Problem parsing experimental design file."
                 error$msg <- 'Experimental design file does not match the table you have uploaded!'
@@ -1799,9 +1885,9 @@ shinyServer(
             }
             
             ## not an experimental design file
-            if( sum( colnames(grp.file) %in% c('Column.Name', 'Experiment'), na.rm=T) != 2 )  {
+            if( sum( colnames(grp.file) %in% c('Column.Name', 'Experiment'), na.rm=T) < 2 )  {
                 error$title <- "Problem parsing experimental design file."
-                error$msg <- 'This is not an experimental desgin file! The file should contain two columns (Column.Name, Experiment)!'
+                error$msg <- 'This is not an experimental desgin file! The file should contain at least two columns named (Column.Name, Experiment)!'
                 return()
             }
             ## 'empty' file
@@ -1819,8 +1905,9 @@ shinyServer(
             ## check whether there are at least 2 replicates per group
             num.rep=table(Experiment[exprs.idx])
             if(min(num.rep) == 1){
-                ##    error$msg <- paste('Warning! Not all groups have repicate measurments defined!!')
-                ##    return()
+              error$title <- "Not enough replicates."
+                    error$msg <- paste('Warning! All groups must have at least 2 replicates!')
+                    return()
             }
             
             ## ################################
@@ -1837,17 +1924,25 @@ shinyServer(
             ## EXPRESSION
             ## - extract all non-empty cells in the 'Experiment' column
             grp.exprs <- grp.file[exprs.idx, ]
+            grp.norms <- grp.file[norm.idx, ]
             
             ## order alphabetically to make coloring consistent
             grp.exprs <- grp.exprs[order(grp.exprs$Experiment), ]
+            grp.norms <- grp.norms[order(grp.norms$Group), ]
             
             ## class vector
             grp=grp.exprs$Experiment
+            grp.norm = grp.exprs$Group
             ## robustify experiment names
             grp <- gsub('^ {1,10}', '', grp)
             grp <- gsub(' {1,10}$', '', grp)
             grp <- make.names(grp)
             names(grp)=grp.exprs$Column.Name
+            
+            grp.norm <- gsub('^ {1,10}', '', grp.norm)
+            grp.norm <- gsub(' {1,10}$', '', grp.norm)
+            grp.norm <- make.names(grp.norm)
+            names(grp.norm)=grp.exprs$Column.Name
             
             ## update input table, keep id and expression columns
             #tab <- global.input$table[ , c(global.param$id.col.value, names(grp))]
@@ -1870,6 +1965,7 @@ shinyServer(
             
             ## store group assignment
             global.param$grp <- global.param$grp.all <- grp
+            global.param$grp.norm <- grp.norm
             global.param$grp.comp.all <- global.param$grp.comp <- unique(grp)
             
             ## group colors
@@ -1884,6 +1980,20 @@ shinyServer(
             grp.col.legend = grp.col[idx]
             names(grp.col.legend) <- grp[idx]
             global.param$grp.colors.legend <- grp.col.legend
+            
+            ## group colors for normalization
+            grp.col.norm <- rep(GRPCOLORS[1], length(grp.norm))
+            names(grp.col.norm) <- names(grp.norm)
+            
+            for(i in 2:length(unique(grp.norm))) grp.col.norm[ which(grp.norm == unique(grp.norm)[i]) ] <- GRPCOLORS[i]
+            global.param$grp.colors.norm <- grp.col.norm
+            
+            ## group colors for figure legend
+            idx <- !duplicated(grp.norm)
+            grp.col.legend.norm = grp.col.norm[idx]
+            names(grp.col.legend.norm) <- grp.norm[idx]
+            
+            global.param$grp.colors.legend.norm <- grp.col.legend.norm
             
             ## all done
             global.param$grp.done = T
@@ -1920,8 +2030,8 @@ shinyServer(
             ## chosen filter type
             res <- list(
                   conditionalPanel(condition = "input['filter.type'] == 'top.n'", numericInput( "filter.value.top.n", "Top N features", value=50, min=2, step=1)),
-                  conditionalPanel(condition = "input['filter.type'] == 'nom.p'", numericInput( "filter.value.nom.p", "P-value filter", value=0.01, min=0, max=1, step=1e-2)),
-                  conditionalPanel(condition = "input['filter.type'] == 'adj.p'", numericInput( "filter.value.adj.p", "Corrected P-Value (FDR)", value=0.05, min=0, max=1, step=1e-2))
+                  conditionalPanel(condition = "input['filter.type'] == 'nom.p'", numericInput( "filter.value.nom.p", "p-value filter", value=0.01, min=0, max=1, step=1e-2)),
+                  conditionalPanel(condition = "input['filter.type'] == 'adj.p'", numericInput( "filter.value.adj.p", "Adj.p-value", value=0.05, min=0, max=1, step=1e-2))
             )
 
             res
@@ -2044,6 +2154,7 @@ shinyServer(
             global.param$anno.col <- anno.col[names(global.param$grp.selection), c( cdesc.selection, global.param$grp.gct3) ]
             global.param$anno.col.color <- anno.col.color[ c(cdesc.selection, global.param$grp.gct3 ) ]
           }
+          shinyalert("Group Selection Updated!", "Press OK to close this window and proceed with analysis.", type = "success")
           
         })
         
@@ -3208,8 +3319,7 @@ shinyServer(
                              anno.col=anno.col, 
                              anno.col.color=anno.col.color, 
                              show.rownames=global.plotparam$hm.show.rownames, 
-                             show.colnames=global.plotparam$hm.show.colnames)#,
-                            # fn = fn.hm)
+                             show.colnames=global.plotparam$hm.show.colnames)
                       dev.off()
                    
                     } else {
@@ -3228,13 +3338,11 @@ shinyServer(
                              anno.col=anno.col,
                              anno.col.color=anno.col.color,
                              show.rownames=global.plotparam$hm.show.rownames,
-                             show.colnames=global.plotparam$hm.show.colnames)#,
-                             #fn = fn.hm)
+                             show.colnames=global.plotparam$hm.show.colnames)
                       dev.off()
                       }
                     })
                 } ## end if nrow(res)>3
-
             }
 
 
@@ -3315,10 +3423,19 @@ shinyServer(
                     ## id column
                     id.col.value <- global.param$id.col.value
                     ## group vector
-                    grp <- global.param$grp
+                    if(!is.null(global.param$norm.per.group)){
+                      grp <- global.param$grp.norm
+                    }else{
+                      grp <- global.param$grp
+                    }
                     ## group colors
-                    grp.col <- global.param$grp.colors
-                    grp.col.leg <- global.param$grp.colors.legend
+                    if(!is.null(global.param$norm.per.group)){
+                      grp.col <- global.param$grp.colors.norm
+                      grp.col.leg <- global.param$grp.colors.legend.norm
+                    }else{
+                      grp.col <- global.param$grp.colors
+                      grp.col.leg <- global.param$grp.colors.legend
+                    }
 
                     # update selection
                     tab <- tab[, c(id.col.value, names(grp))]
@@ -3371,10 +3488,19 @@ shinyServer(
                     ## id column
                     id.col.value <- global.param$id.col.value
                     ## group vector
-                    grp <- global.param$grp
+                    if(!is.null(global.param$norm.per.group)){
+                      grp <- global.param$grp.norm
+                    }else{
+                      grp <- global.param$grp
+                    }
                     ## group colors
-                    grp.col <- global.param$grp.colors
-                    grp.col.leg <- global.param$grp.colors.legend
+                    if(!is.null(global.param$norm.per.group)){
+                      grp.col <- global.param$grp.colors.norm
+                      grp.col.leg <- global.param$grp.colors.legend.norm
+                    }else{
+                      grp.col <- global.param$grp.colors
+                      grp.col.leg <- global.param$grp.colors.legend
+                    }
 
                     # update selection
                     tab <- tab[, c(id.col.value, names(grp))]
@@ -3430,7 +3556,7 @@ shinyServer(
             if(input$export.phist & global.param$which.test != 'none'){
 
                 withProgress(message='Exporting', detail='p-value histogram',{
-                fn.pval <- paste(global.param$session.dir, 'histogram_P-values.pdf', sep='/')
+                fn.pval <- paste(global.param$session.dir, 'histogram_p-values.pdf', sep='/')
 
                 ## unfiltered results
                 res.all = global.results$data$output
@@ -3443,15 +3569,24 @@ shinyServer(
                     par(mfrow=c(length(grp.comp),1))
                     for(g in grp.comp){
                         pval <- res.all[, paste('P.Value', g, sep='.')]
-                        hist(pval, breaks=50, main=paste('Histogram of P-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='P-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
-                        legend('top', legend=g, cex=2)
+                        if(global.param$filter.type=="adj.p"){
+                          hist(pval, breaks=50, main=paste('Histogram of adj.p-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='adj.p-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
+                          legend('top', legend=g, cex=2)
+                        }else{
+                          hist(pval, breaks=50, main=paste('Histogram of p-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='p-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
+                          legend('top', legend=g, cex=2)
+                        }
                     }
                  ############################################
                  ## mod F
                 } else {
-
-                    pval <- res.all[, paste('P.Value')]
-                    hist(pval, breaks=50, main=paste('Histogram of P-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='P-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
+                  if(global.param$filter.type=="adj.p"){
+                    pval <- res.all[, paste('adj.p.value')]
+                    hist(pval, breaks=50, main=paste('Histogram of adj.p-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='adj.p-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
+                  } else{
+                    pval <- res.all[, paste('p.value')]
+                    hist(pval, breaks=50, main=paste('Histogram of p-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='p-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
+                  }
                 }
                 dev.off()
                 })
@@ -4031,12 +4166,19 @@ shinyServer(
             if(norm.data != 'none'){
                
                 withProgress(message='Applying normalization...', {
-                    
                     ## run normalization
-                    if(!global.param$norm.per.group)
-                        tab.norm <- normalize.data(tab, id.col, norm.data )
-                    else    
-                        tab.norm <- normalize.data(tab, id.col, norm.data, grp.vec = global.param$grp )
+                  if(!global.param$norm.per.group){
+                    tab.norm <- normalize.data(tab, id.col, norm.data )
+                  }else{
+                    if(is.null(global.param$grp.norm)){
+                      ## throw error
+                      shinyalert("Error applying group-wise normalization!", "No Group column detected. Proceeding with global normalization. Press OK to close this window.", type = "warning")
+                      global.param$norm.per.group=FALSE
+                      tab.norm <- normalize.data(tab, id.col, norm.data )
+                    }else{
+                      tab.norm <- normalize.data(tab, id.col, norm.data, grp.vec=global.param$grp.norm )
+                    }
+                  }
                     
                     ## if two-component norm fails....
                     if(class(tab.norm) == 'try-error'){
@@ -4692,8 +4834,8 @@ shinyServer(
             filename = function(){ 'experimentalDesign.txt' },
             content = function(file){
                 tab <- global.input$table
-                exp.design <- cbind(colnames(tab), rep('', ncol(tab)))
-                colnames(exp.design) <- c('Column.Name', 'Experiment')
+                exp.design <- cbind(colnames(tab), rep('', ncol(tab)), rep('', ncol(tab)))
+                colnames(exp.design) <- c('Column.Name', 'Experiment', 'Group')
                 write.table(  exp.design, file, sep='\t', quote=F, na='', row.names=F  )
             }
         )
@@ -6139,7 +6281,11 @@ shinyServer(
                 mtext( paste("log(", sub('.*\\.vs\\.', '', group), "/", sub('\\.vs.*', '', group),")"), side=1, cex=cex.axis, line=3)
             else
                 mtext(expression(log(FC)), side=1, cex=cex.axis, line=3)
-            mtext(expression(-10*log[10](P-value)), side=2, cex=cex.axis, line=3)
+            if(global.param$filter.type=="adj.p"){
+              mtext(expression(-10*log[10](adj.p-value)), side=2, cex=cex.axis, line=3)
+            }else{
+              mtext(expression(-10*log[10](p-value)), side=2, cex=cex.axis, line=3)
+            }
             ## draw axes
             axis(1, cex.axis=cex.axis)
             axis(2, las=2, cex.axis=cex.axis)
@@ -6240,10 +6386,19 @@ shinyServer(
             ## id column
             id.col.value <- global.param$id.col.value
             ## group vector
-            grp <- global.param$grp
+            if(!is.null(global.param$norm.per.group)){
+              grp <- global.param$grp.norm
+            }else{
+              grp <- global.param$grp
+            }
             ## group colors
-            grp.col <- global.param$grp.colors
-            grp.col.leg <- global.param$grp.colors.legend
+            if(!is.null(global.param$norm.per.group)){
+              grp.col <- global.param$grp.colors.norm
+              grp.col.leg <- global.param$grp.colors.legend.norm
+            }else{
+              grp.col <- global.param$grp.colors
+              grp.col.leg <- global.param$grp.colors.legend
+            }
 
             # update selection
             tab <- tab[, c(id.col.value, names(grp))]
@@ -6272,10 +6427,19 @@ shinyServer(
             ## id column
             id.col.value <- global.param$id.col.value
             ## group vector
-            grp <- global.param$grp
+            if(!is.null(global.param$norm.per.group)){
+              grp <- global.param$grp.norm
+            }else{
+              grp <- global.param$grp
+            }
             ## group colors
-            grp.col <- global.param$grp.colors
-            grp.col.leg <- global.param$grp.colors.legend
+            if(!is.null(global.param$norm.per.group)){
+              grp.col <- global.param$grp.colors.norm
+              grp.col.leg <- global.param$grp.colors.legend.norm
+            }else{
+              grp.col <- global.param$grp.colors
+              grp.col.leg <- global.param$grp.colors.legend
+            }
 
             # update selection
             tab <- tab[, c(id.col.value, names(grp))]
@@ -6316,10 +6480,19 @@ shinyServer(
             ## id column
             id.col.value <- global.param$id.col.value
             ## group vector
-            grp <- global.param$grp
+            if(!is.null(global.param$norm.per.group)){
+              grp <- global.param$grp.norm
+            }else{
+              grp <- global.param$grp
+            }
             ## group colors
-            grp.col <- global.param$grp.colors
-            grp.col.leg <- global.param$grp.colors.legend
+            if(!is.null(global.param$norm.per.group)){
+              grp.col <- global.param$grp.colors.norm
+              grp.col.leg <- global.param$grp.colors.legend.norm
+            }else{
+              grp.col <- global.param$grp.colors
+              grp.col.leg <- global.param$grp.colors.legend
+            }
             
             
             # update selection
@@ -6346,10 +6519,19 @@ shinyServer(
             ## id column
             id.col.value <- global.param$id.col.value
             ## group vector
-            grp <- global.param$grp
+            if(!is.null(global.param$norm.per.group)){
+              grp <- global.param$grp.norm
+            }else{
+              grp <- global.param$grp
+            }
             ## group colors
-            grp.col <- global.param$grp.colors
-            grp.col.leg <- global.param$grp.colors.legend
+            if(!is.null(global.param$norm.per.group)){
+              grp.col <- global.param$grp.colors.norm
+              grp.col.leg <- global.param$grp.colors.legend.norm
+            }else{
+              grp.col <- global.param$grp.colors
+              grp.col.leg <- global.param$grp.colors.legend
+            }
             
             
             # update selection
@@ -6408,7 +6590,7 @@ shinyServer(
             ## get correlation matrix
             if(is.null(global.results$cm) | global.param$update.cm == TRUE){
               
-              ## calculate correlatio matrix
+              ## calculate correlation matrix
               withProgress(message = 'Correlation matrix...',{
                 cm=calculateCorrMat( tab=tab,
                                      grp=grp,
@@ -6432,7 +6614,7 @@ shinyServer(
             
             withProgress({
                 setProgress(message = 'Processing...', detail= 'Calculating correlations')
-                my.multiscatter(tab, 
+                suppressWarnings(my.multiscatter(tab, 
                                 cm=cm,
                                 repro.filt=global.results$values.filtered, 
                                 grp=grp,  
@@ -6441,7 +6623,7 @@ shinyServer(
                                 max.val=max.val, 
                                 min.val=min.val, 
                                 robustify=robustify,
-                                update=update)
+                                update=update))
             })
         }
  
@@ -6489,7 +6671,7 @@ shinyServer(
                   if(is.null(global.results$cm) | global.param$update.cm == TRUE){
                     
                     
-                    ## calculate correlatio matrix
+                    ## calculate correlation matrix
                     withProgress(message = 'Correlation matrix...',{
                       cm=calculateCorrMat( tab=tab,
                                            grp=grp,
@@ -6557,7 +6739,7 @@ shinyServer(
             if(is.null(global.results$cm) | global.param$update.cm == TRUE){
               
               
-              ## calculate correlatio matrix
+              ## calculate correlation matrix
               withProgress(message = 'Correlation matrix...',{
                 cm=calculateCorrMat( tab=tab,
                                      grp=grp,
@@ -6825,17 +7007,24 @@ shinyServer(
             if(global.param$which.test != 'mod F'){
                 par(mfrow=c(length(groups.comp),1))
                 for(g in groups.comp){
-
-                    pval <- res[, paste('P.Value', g, sep='.')]
-                    hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='P-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
-                    legend('top', legend=g, cex=2)
+                  pval <- res[, paste('P.Value', g, sep='.')]
+                    if(global.param$filter.type=="adj.p"){
+                      hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='adj.p-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
+                      legend('top', legend=g, cex=2)
+                    }else{
+                      hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='p-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
+                      legend('top', legend=g, cex=2)
+                    }
                 }
             ############################################
             ## mod F
             } else {
-                pval <- res[, paste('P.Value')]
-                hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='P-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
-                ##legend('top', legend=paste(groups), cex=2)
+              pval <- res[, paste('P.Value')]
+              if(global.param$filter.type=="adj.p"){
+                hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='adj.p-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
+              }else{
+                hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='p-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
+              }
             }
 
         },

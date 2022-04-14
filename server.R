@@ -1259,7 +1259,7 @@ shinyServer(
           ## list all column description columns (cdesc)    
           list(
             radioButtons("grp.gct3", "Choose column for statistical testing", colnames(global.input$cdesc)),
-            radioButtons("grp.norm", "Choose column for group-wise normalization.", colnames(global.input$cdesc)),
+            radioButtons("grp.norm", 'Choose column for group-wise normalization. If you are NOT using group-wise normalization, select \"None.\"', c(colnames(global.input$cdesc),"None")),
             actionButton("update.grp.gct3", 'OK')
           )
           
@@ -1287,6 +1287,7 @@ shinyServer(
         output$grp.norm.prev.tab <- renderTable({
           if(is.null(input$grp.norm)) return()
           if(global.param$grp.done) return()
+          if(input$grp.norm=="None") return()
           
           tab <- table(global.input$cdesc[, input$grp.norm]) 
           tab <- data.frame(Group.Norm.Level=names(tab), Group.Norm.Freq=as.character(unlist(tab)), stringsAsFactors = F )
@@ -1305,20 +1306,25 @@ shinyServer(
           global.param$grp.gct3 <- input$grp.gct3
           
           ## store grp normalization column
-          global.param$grp.norm <- input$grp.norm
+          if(input$grp.norm=="None"){
+            global.param$grp.norm <- input$grp.gct3
+          }else{
+            global.param$grp.norm <- input$grp.norm
+            global.param$norm.per.group=TRUE
+          }
           
           ## store grp column for PCA colors
           global.plotparam$pca.grp.col <- input$grp.gct3
           
-          if(!input$grp.gct3 %in% colnames(cdesc)){
+          if(!global.param$grp.gct3 %in% colnames(cdesc)){
               error$title <- paste("Parsing error")
-              error$msg <- paste("Can't find column'",input$grp.gct3, "'in the sample meta data. Does it contain special characters (e.g. blanks)?")
+              error$msg <- paste("Can't find column'",global.param$grp.gct3, "'in the sample meta data. Does it contain special characters (e.g. blanks)?")
               return()
           }
           
-          if(!input$grp.norm %in% colnames(cdesc)){
+          if(!global.param$grp.norm %in% colnames(cdesc)){
             error$title <- paste("Parsing error")
-            error$msg <- paste("Can't find column'",input$grp.norm, "'in the sample meta data. Does it contain special characters (e.g. blanks)?")
+            error$msg <- paste("Can't find column'",global.param$grp.norm, "'in the sample meta data. Does it contain special characters (e.g. blanks)?")
             return()
           }
           
@@ -1334,10 +1340,10 @@ shinyServer(
           Group <- rep('', length(Column.Name))
           names(Group) <- Column.Name
 
-          Experiment[ rownames(cdesc) ] <- cdesc[, input$grp.gct3]
-          Group[ rownames(cdesc) ] <- cdesc[, input$grp.norm]
+          Experiment[ rownames(cdesc) ] <- cdesc[, global.param$grp.gct3]
+          Group[ rownames(cdesc) ] <- cdesc[, global.param$grp.norm]
           
-          global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  c(input$grp.gct3,input$grp.norm))
+          global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  c(global.param$grp.gct3,global.param$grp.norm))
         
           grp.file=data.frame(
             Column.Name,
@@ -1347,7 +1353,7 @@ shinyServer(
               )
           
           #remove samples with missing annotations from the table, group file, and cdesc
-          grp.file = grp.file[!is.na(grp.file$Experiment) | !is.na(grp.file$Group),]
+          grp.file = grp.file[!is.na(grp.file$Experiment) & !is.na(grp.file$Group),]
           #robustify levels of group variables
           grp.file$Experiment <- make.names(grp.file$Experiment)
           grp.file$Group <- make.names(grp.file$Group)
@@ -3423,13 +3429,13 @@ shinyServer(
                     ## id column
                     id.col.value <- global.param$id.col.value
                     ## group vector
-                    if(!is.null(global.param$norm.per.group)){
+                    if(global.param$norm.per.group){
                       grp <- global.param$grp.norm
                     }else{
                       grp <- global.param$grp
                     }
                     ## group colors
-                    if(!is.null(global.param$norm.per.group)){
+                    if(global.param$norm.per.group){
                       grp.col <- global.param$grp.colors.norm
                       grp.col.leg <- global.param$grp.colors.legend.norm
                     }else{
@@ -3488,13 +3494,13 @@ shinyServer(
                     ## id column
                     id.col.value <- global.param$id.col.value
                     ## group vector
-                    if(!is.null(global.param$norm.per.group)){
+                    if(global.param$norm.per.group){
                       grp <- global.param$grp.norm
                     }else{
                       grp <- global.param$grp
                     }
                     ## group colors
-                    if(!is.null(global.param$norm.per.group)){
+                    if(global.param$norm.per.group){
                       grp.col <- global.param$grp.colors.norm
                       grp.col.leg <- global.param$grp.colors.legend.norm
                     }else{
@@ -6386,13 +6392,13 @@ shinyServer(
             ## id column
             id.col.value <- global.param$id.col.value
             ## group vector
-            if(!is.null(global.param$norm.per.group)){
+            if(global.param$norm.per.group){
               grp <- global.param$grp.norm
             }else{
               grp <- global.param$grp
             }
             ## group colors
-            if(!is.null(global.param$norm.per.group)){
+            if(global.param$norm.per.group){
               grp.col <- global.param$grp.colors.norm
               grp.col.leg <- global.param$grp.colors.legend.norm
             }else{
@@ -6427,13 +6433,13 @@ shinyServer(
             ## id column
             id.col.value <- global.param$id.col.value
             ## group vector
-            if(!is.null(global.param$norm.per.group)){
+            if(global.param$norm.per.group){
               grp <- global.param$grp.norm
             }else{
               grp <- global.param$grp
             }
             ## group colors
-            if(!is.null(global.param$norm.per.group)){
+            if(global.param$norm.per.group){
               grp.col <- global.param$grp.colors.norm
               grp.col.leg <- global.param$grp.colors.legend.norm
             }else{
@@ -6480,13 +6486,13 @@ shinyServer(
             ## id column
             id.col.value <- global.param$id.col.value
             ## group vector
-            if(!is.null(global.param$norm.per.group)){
+            if(global.param$norm.per.group){
               grp <- global.param$grp.norm
             }else{
               grp <- global.param$grp
             }
             ## group colors
-            if(!is.null(global.param$norm.per.group)){
+            if(global.param$norm.per.group){
               grp.col <- global.param$grp.colors.norm
               grp.col.leg <- global.param$grp.colors.legend.norm
             }else{
@@ -6519,13 +6525,13 @@ shinyServer(
             ## id column
             id.col.value <- global.param$id.col.value
             ## group vector
-            if(!is.null(global.param$norm.per.group)){
+            if(global.param$norm.per.group){
               grp <- global.param$grp.norm
             }else{
               grp <- global.param$grp
             }
             ## group colors
-            if(!is.null(global.param$norm.per.group)){
+            if(global.param$norm.per.group){
               grp.col <- global.param$grp.colors.norm
               grp.col.leg <- global.param$grp.colors.legend.norm
             }else{

@@ -1,3 +1,5 @@
+# Last updated April 20, 2022 by Natalie Clark (nclark@broadinstitute.org) - v 1.0
+
 ############################
 ## UI part
 printHTMLUI <- function(id) {
@@ -30,6 +32,15 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v1.0 Apr 20, 2022</b>
+<ul>
+<li>Heatmap export is now fixed. 
+<li>App no longer crashes when attempting to export all the files without performing statistics (statistical test set to "none").
+<li>For non-gct files, the experimental design file has been streamlined. Users may still download the template experimental design file for use with Protigy. Alternatively, a experimental design file with any number of sample annotations and any type of text delimter (tab-delimited, comma-separated, etc) may be uploaded by the user as long as the first column of the design file contains the sample (column) names. These must match the column names of the table exactly.
+<li>Non-gct file users may now select the columns they wish to use for statistical analysis and/or group-wise normalization using drop-down menus as they would for a .gct file.
+<li>Help text now says to refresh the page to start a new session. F5 is a Windows-only shortcut and not applicable for all users.
+<li>Blanks ("") are now read in as missing values (NA) rather than characters.
+</ul>
 <b>v0.9.1.5 Apr 13, 2022</b>
 <ul>
 <li>Now accepts a third annotation column to denote group-wise normalization separately from groups for statistical testing. 
@@ -572,7 +583,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'id'){
 
         txt <- paste('<br><br><p><font size=\"4\"><b>Group assigment</b></br>
-Download a template of an experimental design file. You can open this file in Excel and define the groups you want to compare. Replicate measurements have to be grouped under a single name in the \'Experiment\'-column. You can use the \'Group\' column to denote group-wise normalization. If you are not performing group-wise normalization, you may leave this blank. <mark>Please don\'t use special characters, like blanks or any punctuation, when defining these names!</mark> <mark>You MUST re-upload the completed experimental design file on the next page. Do not use your own file, as the formatting must be consistent.</mark> </font></p>
+Download a template of an experimental design file. You can open this file in Excel and define the groups you want to compare. Replicate measurements have to be grouped under a single name in the \'Experiment\'-column. You can use the \'Group\' column to denote group-wise normalization. If you are not performing group-wise normalization, you may leave this blank. <mark>Please don\'t use special characters, like blanks or any punctuation, when defining these names!</mark> </font></p>
 <br><p><font size=\"4\"><b>Select ID column</b></br>
 Choose a column from the list on the left that contains <b>unique</b> identifiers for the features in the data table. If the enntries are not unique, uniqueness will enforces by appending \"_1\". Preferably, IDs should be unique protein accession numbers (e.g. <font face=\"Courier\">NP_073737</font>) or a combination of protein accession and residue number in case of PTM analysis (e.g. <font face=\"Courier\">NP_073737_S544s _1_1_544_544</font>).</p>  
 <br><p><font size=\"4\"><b>Automatic retrieval of gene symbols</b></br>
@@ -603,7 +614,7 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
     ## upload of experimental design file
     if(what == 'ed'){
 
-        txt <- paste('<br><br><p><font size=\"4\">Please upload the experimental design file that you have created using the upload button on the left.</p></font></p>')
+        txt <- paste('<br><br><p><font size=\"4\">Please upload the experimental design file that you have created using the upload button on the left. <mark>If using your own experimental design file (not created from the template on the previous screen), the first column MUST contain the sample (column) names and must match the names in your table exactly!</mark> It is optional for your experimental design file to include the ID column. <mark> All other columns must be present in your experimental design file </mark> </p></font></p>')
 
         ## render HTML
         output$html <- renderText({
@@ -625,7 +636,7 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
     ## gct v3
     if(what == 'gct3'){
       
-      txt <- paste('<br><p><font size=\"4\"><b>Found GCT v1.3 file</b><br>Choose the annotation column to use as class vector for marker selection.</p></font></p>')
+      txt <- paste('<br><p><font size=\"4\">Choose the annotation column to use as class vector for marker selection.</p></font></p>')
       
       ## render HTML
       output$html <- renderText({

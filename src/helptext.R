@@ -649,15 +649,15 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 
         txt <- paste('<font size=\"4\">
 <p><h3>Log-transformation</h3>Apply log transformation to the data.</p>
-<p><h3>Data normalization</h3>You can apply different normalization methods to the data prior to testing. The methods are applied for each column separately, except for \'Quantile\' and \'VSN\' normalization which take the entire matrix into account.</p>
+<p><h3>Data normalization</h3>You can apply different normalization methods to the data prior to testing. The methods are applied for each sample (column) separately, except for \'Quantile\' and \'VSN\' normalization which take the entire matrix into account.</p>
 <p>
 <ul>
-<li><b>Median</b>: Subtract the sample median from each value (centering). Intended to be used with <b>log-transformed ratios</b>.</li>
-<li><b>Median (log-intensity)</b>: Subtract the sample median from each value and add the median of all sample medians. Intended to be used with <b>log-transformed intensities</b>.</i> 
-<li><b>Median-MAD</b>: Subtract the sample median and divide by sample MAD (centering plus scaling). Intended to be used with <b>log-transformed ratios</b>.</li>
-<li><b>Median-MAD (log-intensity)</b>: Subtract the sample median and divide by sample MAD, and add the median of all sample medians. Intended to be used with <b>log-transformed intensities</b>.</li>
+<li><b>Median</b>: Subtract the sample median from each value (centering). After normalization, all samples have a median of zero. Intended to be used with <b>log-transformed ratios</b>.</li>
+<li><b>Median (non-zero)</b>: Subtract the sample median from each value and add back the median of all sample medians (which will be the common sample median after normalization). Intended to be used with <b>log-transformed intensities</b>.</i> 
+<li><b>Median-MAD</b>: Subtract the sample median and divide by sample MAD (centering plus scaling). After normalization, all samples have a median of zero. Intended to be used with <b>log-transformed ratios</b>.</li>
+<li><b>Median-MAD (non-zero)</b>: Subtract the sample median and divide by sample MAD, and add back the median of all sample medians (which will be the common sample median after normalization). Intended to be used with <b>log-transformed intensities</b>.</li>
 <li><b>Upper quartile</b>: Subtract the sample\'s 75th percentile from each value. Intended to be used with <b>log-transformed intensities</b>.</li>
-<li><b>2-component</b>: Use a mixture-model approach to separate non-changing from changing features and divide both populations by the mean of the non-changing features. Intended to be used with <b>log-transformed ratios</b>.</li>
+<li><b>2-component</b>: Use a mixture-model approach to separate non-changing from changing features. Z-score all features using the mean and standard deviation of the non-changing features. Intended to be used with <b>log-transformed ratios</b>.</li>
 <li><b>Quantile</b>: Transform the data such that the quantiles of all sample distributions are the equal. <b>Use with caution as this type of normalization can remove potentially meaningful outliers from the data</b>.</li>
 <li><b>VSN</b>: Variance stabilizing normalization. Intended to be used with <b>raw intensity values</b>.</li>
 <li><b>none</b>: The data will be taken as is. Use this option if the data has already been normalized.</li>
@@ -677,7 +677,7 @@ If enabled the normalization will be performed within a particualr group (Median
 Remove features not quantified in percent of samples specied in the text field.
 
 <br><br><b>Reproducibility:</b><br>
-Remove features that were not reproducibly quantifified across replicate measurements of a group. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue. <b>This type of filter is applied separately to each group.</b>
+Remove features that were not reproducibly quantified across replicate measurements of a group. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue. <b>This type of filter is applied separately to each group.</b>
 
 <br><br><b>StdDev:</b><br>
 Remove features with low standard deviation across all samples. Only useful if applied to sample cohorts that were quantified against a common reference. The percentile <b><i>P</i></b> you specify 

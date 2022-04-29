@@ -12,6 +12,8 @@
 ## two-component normalization and the reproducibility filter has been written by D. R. Mani and
 ## adopted by me for integration into a Shiny-Server environment.
 ##
+##
+## Last updated April 20, 2022 by Natalie Clark (nclark@broadinstitute.org) - v 1.0
 ##################################################################################################################
 #options( stringsAsFactors = F )
 
@@ -30,11 +32,11 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- FALSE
 ## version number
-VER <- "0.9.1.5"
+VER <- "1.0"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
-NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!")
+NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!","")
 ## separator tested in the uploaded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups

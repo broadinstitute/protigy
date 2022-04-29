@@ -9,7 +9,7 @@
 ##
 ## This file defines the server logical of the app. It also takes care of most of the user interface.
 ##
-## Last updated: April 13, 2022 by Natalie Clark (nclark@broadinstitute.org)
+## Last updated April 20, 2022 by Natalie Clark (nclark@broadinstitute.org) - v 1.0
 ################################################################################################################
 p_load(shiny)
 
@@ -201,7 +201,7 @@ shinyServer(
         #################################
         ## F5 hint
         output$F5hint <- renderText({
-            HTML('<p align=\"center\"><font size=\"5\" color=\"red\">To analyze another data set or to start over hit the F5 button.</font></p>' )
+            HTML('<p align=\"center\"><font size=\"5\" color=\"red\">To analyze another data set or to start over, refresh this page.</font></p>' )
         })
 
         #####################################
@@ -1295,6 +1295,8 @@ shinyServer(
           list(tab)
         })
         
+        
+        
         #######################################
         ## OBSERVER: define groups for GCT v1.3
         observeEvent(input$update.grp.gct3, {
@@ -1310,7 +1312,7 @@ shinyServer(
             global.param$grp.norm <- input$grp.gct3
           }else{
             global.param$grp.norm <- input$grp.norm
-            global.param$norm.per.group=TRUE
+            global.param$norm.per.group <- TRUE
           }
           
           ## store grp column for PCA colors
@@ -1720,7 +1722,7 @@ shinyServer(
             if( is.null( global.input$table) | is.null(input$id.col.value) ) return()
             
             ## store name of id column
-            global.param$id.col.value <- input$id.col.value
+            global.param$id.org.col <- global.param$id.col.value <- input$id.col.value
             cat('selected id column: ', global.param$id.col.value, '\n')
             
             ## update 'global.input$id.col'
@@ -1826,187 +1828,208 @@ shinyServer(
                                  stringsAsFactors=F, na.strings=NASTRINGS, quote = "\"", 
                                  dec = ".", fill = TRUE, comment.char = "")
             }
+            
+            #check that the first column contains the column names of the table
+            #if not, throw an error
+            colnames.noid <- colnames(global.input$table)[!colnames(global.input$table)%in%global.param$id.col.value & !colnames(global.input$table)%in%global.param$id.org.col]
+            if(sum(colnames.noid %in% grp.file[,1])!=length(colnames.noid)){
+              error$title <- paste("Parsing error")
+              error$msg <- paste("The first column of the experimental design file must be the sample (column) names, and they must match the column names in the table exactly! All columns (except the ID column) must be present in the experimental design file.")
+              return()
+            }
+            
+            
+            #after this, the grp.file will be used as the cdesc file, and non-gct table will be processed as a gct file.
+            #assume that the first column of the annotation file is the id
+            my.cdesc <- data.frame(grp.file[,-1])
+            row.names(my.cdesc) <- grp.file[,1]
+            global.input$cdesc <- my.cdesc
+            global.param$file.gct3 <- T
+            
+            ###############################################################
+            
             #grp.file <- read.delim(input$exp.file$datapath, header=T, stringsAsFactors=F)
             
-            ############################# 
-            ## if existing 'id' column has been renamed to 'id_org'
-            if(global.param$id.col.renamed){
-                
-                id_idx <- which(grp.file$Column.Name == 'id')
-                grp.file$Column.Name[id_idx] <- 'id_org'
-            }
+            ##OLD ANNOTATION FILE IMPORT CODE
+            # ############################# 
+            # ## if existing 'id' column has been renamed to 'id_org'
+            # if(global.param$id.col.renamed){
+            #     
+            #     id_idx <- which(grp.file$Column.Name == 'id')
+            #     grp.file$Column.Name[id_idx] <- 'id_org'
+            # }
             
-            #############################
-            ## if id column has been updated
-            ## to 'id':
-            if(global.param$id.col.value.updated){
-                id_row <- data.frame(Column.Name='id', Experiment='', Group="")
-                grp.file <- rbind(id_row, grp.file) 
-            }
+            # #############################
+            # ## if id column has been updated
+            # ## to 'id':
+            # if(global.param$id.col.value.updated){
+            #     id_row <- data.frame(Column.Name='id', Experiment='', Group="")
+            #     grp.file <- rbind(id_row, grp.file) 
+            # }
             
             
-            Column.Name <- grp.file$Column.Name
-            Experiment <- as.character(grp.file$Experiment)
-            Group <- as.character(grp.file$Group)
-            
-            ## #############################################################
-            ## index on non-empty 'Experiment' rows
-            exprs.idx <- which(nchar(Experiment) > 0 )
-            norm.idx <- which(nchar(Group) > 0)
-            
-            ## ###############################
-            ## update label
-            fn.split <- unlist(strsplit( sub('.*/', '', fn), '_'))
-            if(length(fn.split) > 1){
-                label <- fn.split[1]
-                if(nchar(label) > 10)
-                    label <- chopString(label, 10, add.dots=F)
-                global.param$label <- paste(global.param$label, label )
-            } else {
-                label <- chopString( sub('.*/', '', fn) , 10, add.dots=F)
-                global.param$label <- paste(global.param$label, label, sep='-')
-            }
-            
-            ###############################################################
-            ##
-            ## - do some sanity checks
-            ## - separate expression data from annotation columns
-            ##
-            ###############################################################
-            
-            ## Number of rows in exp design file does not match number of columns in data file
-            if( length(Column.Name) != ncol(global.input$table)  ){
-                error$title <- "Problem parsing experimental design file."
-                error$msg <- 'Experimental design file does not match the table you have uploaded (different number of rows/columns)!'
-                return()
-            }
-            #table <- global.input$table
-            #save(Column.Name, table, file='debug.RData')
-            ## names in the exp design file do not match to the table
-            if( sum( Column.Name != colnames(global.input$table)) ){
-              
-                error$title <- "Problem parsing experimental design file."
-                error$msg <- 'Experimental design file does not match the table you have uploaded!'
-                return()
-            }
-            
-            ## not an experimental design file
-            if( sum( colnames(grp.file) %in% c('Column.Name', 'Experiment'), na.rm=T) < 2 )  {
-                error$title <- "Problem parsing experimental design file."
-                error$msg <- 'This is not an experimental desgin file! The file should contain at least two columns named (Column.Name, Experiment)!'
-                return()
-            }
-            ## 'empty' file
-            if( sum( nchar(Experiment) > 0, na.rm=T ) == 0 | sum(!is.na( Experiment) == 0) ){
-                error$title <- "Problem parsing experimental design file."
-                error$msg <- 'No experiments defined!'
-                return()
-            }
-            ##cat('L=', sum( Column.Name[ exprs.idx ] %in%  colnames(global.input$table)))
-            ## column names specified in exp design file not found in table
-            ##if( sum( Column.Name[ exprs.idx ] %in%  colnames(global.input$table)) != length(exprs.idx) ){
-            ##    error$msg <- 'Column names in the experimental design file cannot be found in the data table!'
-            ##    return()
-            ## }
-            ## check whether there are at least 2 replicates per group
-            num.rep=table(Experiment[exprs.idx])
-            if(min(num.rep) == 1){
-              error$title <- "Not enough replicates."
-                    error$msg <- paste('Warning! All groups must have at least 2 replicates!')
-                    return()
-            }
-            
-            ## ################################
-            ## ANNOTATION: extract empty cells
-            ## - corresponding columns will be carried over as
-            ##   annotation columns in the result file
-            grp.anno <- grp.file[which(nchar( Experiment) == 0 ), ]
-            grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
-            
-            if(length(grp.anno)>0)
-                global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
-            
-            ## ################################
-            ## EXPRESSION
-            ## - extract all non-empty cells in the 'Experiment' column
-            grp.exprs <- grp.file[exprs.idx, ]
-            grp.norms <- grp.file[norm.idx, ]
-            
-            ## order alphabetically to make coloring consistent
-            grp.exprs <- grp.exprs[order(grp.exprs$Experiment), ]
-            grp.norms <- grp.norms[order(grp.norms$Group), ]
-            
-            ## class vector
-            grp=grp.exprs$Experiment
-            grp.norm = grp.exprs$Group
-            ## robustify experiment names
-            grp <- gsub('^ {1,10}', '', grp)
-            grp <- gsub(' {1,10}$', '', grp)
-            grp <- make.names(grp)
-            names(grp)=grp.exprs$Column.Name
-            
-            grp.norm <- gsub('^ {1,10}', '', grp.norm)
-            grp.norm <- gsub(' {1,10}$', '', grp.norm)
-            grp.norm <- make.names(grp.norm)
-            names(grp.norm)=grp.exprs$Column.Name
-            
-            ## update input table, keep id and expression columns
-            #tab <- global.input$table[ , c(global.param$id.col.value, names(grp))]
-            tab <- global.input$table[ , c('id', names(grp))]
-            
-            ## #################################
-            ## remove NA rows
-            na.row.idx <- apply(tab[, names(grp)], 1, function(x) sum(is.na(x))/length(x) )
-            na.row.idx <- which(na.row.idx == 1)
-            if(length(na.row.idx) > 0){
-                tab <- tab[-na.row.idx, ]
-                global.input$NA.rows <- length(na.row.idx)
-            }
-            
-            global.input$table <- tab
-            
-            ################################
-            ## update number of groups
-            global.param$N.grp <- length(unique( na.omit(grp)) )
-            
-            ## store group assignment
-            global.param$grp <- global.param$grp.all <- grp
-            global.param$grp.norm <- grp.norm
-            global.param$grp.comp.all <- global.param$grp.comp <- unique(grp)
-            
-            ## group colors
-            grp.col <- rep(GRPCOLORS[1], length(grp))
-            names(grp.col) <- names(grp)
-            
-            for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
-            global.param$grp.colors <- grp.col
-            
-            ## group colors for figure legend
-            idx <- !duplicated(grp)
-            grp.col.legend = grp.col[idx]
-            names(grp.col.legend) <- grp[idx]
-            global.param$grp.colors.legend <- grp.col.legend
-            
-            ## group colors for normalization
-            grp.col.norm <- rep(GRPCOLORS[1], length(grp.norm))
-            names(grp.col.norm) <- names(grp.norm)
-            
-            for(i in 2:length(unique(grp.norm))) grp.col.norm[ which(grp.norm == unique(grp.norm)[i]) ] <- GRPCOLORS[i]
-            global.param$grp.colors.norm <- grp.col.norm
-            
-            ## group colors for figure legend
-            idx <- !duplicated(grp.norm)
-            grp.col.legend.norm = grp.col.norm[idx]
-            names(grp.col.legend.norm) <- grp.norm[idx]
-            
-            global.param$grp.colors.legend.norm <- grp.col.legend.norm
-            
-            ## all done
-            global.param$grp.done = T
-            
-            ## save column name used as 'id'
-            ##global.param$id.col.value = input$id.col.value
-            
+            # Column.Name <- grp.file$Column.Name
+            # Experiment <- as.character(grp.file$Experiment)
+            # Group <- as.character(grp.file$Group)
+            # 
+            # ## #############################################################
+            # ## index on non-empty 'Experiment' rows
+            # exprs.idx <- which(nchar(Experiment) > 0 )
+            # norm.idx <- which(nchar(Group) > 0)
+            # 
+            # ## ###############################
+            # ## update label
+            # fn.split <- unlist(strsplit( sub('.*/', '', fn), '_'))
+            # if(length(fn.split) > 1){
+            #     label <- fn.split[1]
+            #     if(nchar(label) > 10)
+            #         label <- chopString(label, 10, add.dots=F)
+            #     global.param$label <- paste(global.param$label, label )
+            # } else {
+            #     label <- chopString( sub('.*/', '', fn) , 10, add.dots=F)
+            #     global.param$label <- paste(global.param$label, label, sep='-')
+            # }
+            # 
+            # ###############################################################
+            # ##
+            # ## - do some sanity checks
+            # ## - separate expression data from annotation columns
+            # ##
+            # ###############################################################
+            # 
+            # ## Number of rows in exp design file does not match number of columns in data file
+            # if( length(Column.Name) != ncol(global.input$table)  ){
+            #     error$title <- "Problem parsing experimental design file."
+            #     error$msg <- 'Experimental design file does not match the table you have uploaded (different number of rows/columns)!'
+            #     return()
+            # }
+            # #table <- global.input$table
+            # #save(Column.Name, table, file='debug.RData')
+            # ## names in the exp design file do not match to the table
+            # if( sum( Column.Name != colnames(global.input$table)) ){
+            #   
+            #     error$title <- "Problem parsing experimental design file."
+            #     error$msg <- 'Experimental design file does not match the table you have uploaded!'
+            #     return()
+            # }
+            # 
+            # ## not an experimental design file
+            # if( sum( colnames(grp.file) %in% c('Column.Name', 'Experiment'), na.rm=T) < 2 )  {
+            #     error$title <- "Problem parsing experimental design file."
+            #     error$msg <- 'This is not an experimental design file! The file should contain at least two columns named (Column.Name, Experiment)!'
+            #     return()
+            # }
+            # ## 'empty' file
+            # if( sum( nchar(Experiment) > 0, na.rm=T ) == 0 | sum(!is.na( Experiment) == 0) ){
+            #     error$title <- "Problem parsing experimental design file."
+            #     error$msg <- 'No experiments defined!'
+            #     return()
+            # }
+            # ##cat('L=', sum( Column.Name[ exprs.idx ] %in%  colnames(global.input$table)))
+            # ## column names specified in exp design file not found in table
+            # ##if( sum( Column.Name[ exprs.idx ] %in%  colnames(global.input$table)) != length(exprs.idx) ){
+            # ##    error$msg <- 'Column names in the experimental design file cannot be found in the data table!'
+            # ##    return()
+            # ## }
+            # ## check whether there are at least 2 replicates per group
+            # num.rep=table(Experiment[exprs.idx])
+            # if(min(num.rep) == 1){
+            #   error$title <- "Not enough replicates."
+            #         error$msg <- paste('Warning! All groups must have at least 2 replicates!')
+            #         return()
+            # }
+            # 
+            # ## ################################
+            # ## ANNOTATION: extract empty cells
+            # ## - corresponding columns will be carried over as
+            # ##   annotation columns in the result file
+            # grp.anno <- grp.file[which(nchar( Experiment) == 0 ), ]
+            # grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
+            # 
+            # if(length(grp.anno)>0)
+            #     global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
+            # 
+            # ## ################################
+            # ## EXPRESSION
+            # ## - extract all non-empty cells in the 'Experiment' column
+            # grp.exprs <- grp.file[exprs.idx, ]
+            # grp.norms <- grp.file[norm.idx, ]
+            # 
+            # ## order alphabetically to make coloring consistent
+            # grp.exprs <- grp.exprs[order(grp.exprs$Experiment), ]
+            # grp.norms <- grp.norms[order(grp.norms$Group), ]
+            # 
+            # ## class vector
+            # grp=grp.exprs$Experiment
+            # grp.norm = grp.exprs$Group
+            # ## robustify experiment names
+            # grp <- gsub('^ {1,10}', '', grp)
+            # grp <- gsub(' {1,10}$', '', grp)
+            # grp <- make.names(grp)
+            # names(grp)=grp.exprs$Column.Name
+            # 
+            # grp.norm <- gsub('^ {1,10}', '', grp.norm)
+            # grp.norm <- gsub(' {1,10}$', '', grp.norm)
+            # grp.norm <- make.names(grp.norm)
+            # names(grp.norm)=grp.exprs$Column.Name
+            # 
+            # ## update input table, keep id and expression columns
+            # #tab <- global.input$table[ , c(global.param$id.col.value, names(grp))]
+            # tab <- global.input$table[ , c('id', names(grp))]
+            # 
+            # ## #################################
+            # ## remove NA rows
+            # na.row.idx <- apply(tab[, names(grp)], 1, function(x) sum(is.na(x))/length(x) )
+            # na.row.idx <- which(na.row.idx == 1)
+            # if(length(na.row.idx) > 0){
+            #     tab <- tab[-na.row.idx, ]
+            #     global.input$NA.rows <- length(na.row.idx)
+            # }
+            # 
+            # global.input$table <- tab
+            # 
+            # ################################
+            # ## update number of groups
+            # global.param$N.grp <- length(unique( na.omit(grp)) )
+            # 
+            # ## store group assignment
+            # global.param$grp <- global.param$grp.all <- grp
+            # global.param$grp.norm <- grp.norm
+            # global.param$grp.comp.all <- global.param$grp.comp <- unique(grp)
+            # 
+            # ## group colors
+            # grp.col <- rep(GRPCOLORS[1], length(grp))
+            # names(grp.col) <- names(grp)
+            # 
+            # for(i in 2:length(unique(grp))) grp.col[ which(grp == unique(grp)[i]) ] <- GRPCOLORS[i]
+            # global.param$grp.colors <- grp.col
+            # 
+            # ## group colors for figure legend
+            # idx <- !duplicated(grp)
+            # grp.col.legend = grp.col[idx]
+            # names(grp.col.legend) <- grp[idx]
+            # global.param$grp.colors.legend <- grp.col.legend
+            # 
+            # ## group colors for normalization
+            # grp.col.norm <- rep(GRPCOLORS[1], length(grp.norm))
+            # names(grp.col.norm) <- names(grp.norm)
+            # 
+            # for(i in 2:length(unique(grp.norm))) grp.col.norm[ which(grp.norm == unique(grp.norm)[i]) ] <- GRPCOLORS[i]
+            # global.param$grp.colors.norm <- grp.col.norm
+            # 
+            # ## group colors for figure legend
+            # idx <- !duplicated(grp.norm)
+            # grp.col.legend.norm = grp.col.norm[idx]
+            # names(grp.col.legend.norm) <- grp.norm[idx]
+            # 
+            # global.param$grp.colors.legend.norm <- grp.col.legend.norm
+            # 
+            # ## all done
+            # global.param$grp.done = T
+            # 
+            # ## save column name used as 'id'
+            # ##global.param$id.col.value = input$id.col.value
+            # 
         })
         
         ######################################
@@ -2187,11 +2210,8 @@ shinyServer(
             if( is.null(input$filt.data)){
 
                 list(
-                    
-                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
-
-                     checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group),
+                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group ),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),                  #checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group),
                      #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      numericInput('na.filt.val', 'Max. % missing values', min=0, max=100, step=5, value=global.param$na.filt.val),
                     
@@ -2212,13 +2232,12 @@ shinyServer(
             else if(input$filt.data == 'none'){
 
                 list(
-                  
                      #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),
+                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                      
                      #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
-                     checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
+                     #checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                      #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
                      numericInput('na.filt.val', 'Max. % missing values', min=0, max=100, step=5, value=input$na.filt.val),
@@ -2249,11 +2268,10 @@ shinyServer(
                 list(
                   
                     #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                     
                     #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
-                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                     
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
@@ -2284,11 +2302,10 @@ shinyServer(
                 list(
                   
                     #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),
+                    radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                     
                     #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
-                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
                     numericInput('na.filt.val', 'Max. % missing values', min=0, max=100, step=5, value=input$na.filt.val),
@@ -3295,11 +3312,29 @@ shinyServer(
                       
                     fn.hm <- paste(global.param$session.dir, 'heatmap.pdf', sep='/')
                     
+                    ######################################
+                    ## extract results
+                    res = global.results$filtered
+                    
+                    #######################################
                     ## heatmap title
                     hm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
-                    hm.title <- paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
-
-                    # column annotation
+                    #hm.title = paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
+                    hm.title = paste(hm.title, '\nsig / total: ', global.results$N.feat.filtered, ' / ',  global.results$N.feat, sep='')
+                    
+                    ###################################
+                    ## ids to show in heatmap
+                    hm.rownames <- res[, 'id.concat']
+                    
+                    #######################################
+                    ## extract expression values
+                    res = res[, names(global.param$grp)]
+                    
+                    ##@#####################################
+                    ##  dimensions depending on no. rows/columns
+                    cw <- cwHM(ncol(res))
+                    
+                    #if(!is.null(global.input$cdesc)){
                     if(!is.null(global.param$anno.col)){
                       anno.col=global.param$anno.col
                       anno.col.color=global.param$anno.col.color
@@ -3308,45 +3343,18 @@ shinyServer(
                       anno.col.color=list(Group=global.param$grp.colors.legend)
                     }
                     
+                    pdf(fn.hm, width=12)
                     if(input$hm.max){
-                     pdf(fn.hm)
-                      plotHM(res=res, 
-                             hm.rownames=hm.rownames,
-                             grp=global.param$grp, 
-                             grp.col=global.param$grp.colors, 
-                             grp.col.legend=global.param$grp.colors.legend,  
-                             hm.clust=global.plotparam$hm.clust, 
-                             hm.title=hm.title, 
-                             hm.scale=global.plotparam$hm.scale, 
-                             fontsize_row= global.plotparam$cexRow, 
-                             fontsize_col= global.plotparam$cexCol, 
-                             max.val=global.plotparam$hm.max.val, 
-                             style=global.param$which.test, 
-                             anno.col=anno.col, 
-                             anno.col.color=anno.col.color, 
-                             show.rownames=global.plotparam$hm.show.rownames, 
-                             show.colnames=global.plotparam$hm.show.colnames)
-                      dev.off()
-                   
+                        print(plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
+                               height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
+                               width=dynamicWidthHM(length(global.param$grp))))
+                        
                     } else {
-                     pdf(fn.hm)
-                      plotHM(res=res,
-                             hm.rownames=hm.rownames,
-                             grp=global.param$grp,
-                             grp.col=global.param$grp.colors,
-                             grp.col.legend=global.param$grp.colors.legend,
-                             hm.clust=global.plotparam$hm.clust,
-                             hm.title=hm.title,
-                             hm.scale=global.plotparam$hm.scale,
-                             fontsize_row= global.plotparam$cexRow,
-                             fontsize_col= global.plotparam$cexCol,
-                             style=global.param$which.test,
-                             anno.col=anno.col,
-                             anno.col.color=anno.col.color,
-                             show.rownames=global.plotparam$hm.show.rownames,
-                             show.colnames=global.plotparam$hm.show.colnames)
-                      dev.off()
-                      }
+                        print(plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
+                               height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
+                               width=dynamicWidthHM(length(global.param$grp))))
+                    }
+                    dev.off()
                     })
                 } ## end if nrow(res)>3
             }
@@ -3698,7 +3706,7 @@ shinyServer(
               
               ################################################
               ## GCT file with transformed p-values as data
-              if( !global.param$which.test == 'mod F'){
+              if( !global.param$which.test %in% c('mod F','none')){
                     withProgress(message='Exporting', detail='GCT file (transformed P-values)',{
                       rdesc <- res.comb
                       global.param.list <- reactiveValuesToList(global.param)
@@ -7010,7 +7018,7 @@ shinyServer(
 
             ############################################
             ## mod T
-            if(global.param$which.test != 'mod F'){
+            if(!global.param$which.test %in% c('mod F','none')){
                 par(mfrow=c(length(groups.comp),1))
                 for(g in groups.comp){
                   pval <- res[, paste('P.Value', g, sep='.')]

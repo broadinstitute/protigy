@@ -32,7 +32,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
-<b>v1.0 Apr 20, 2022</b>
+<b>v1.0 May 2, 2022</b>
 <ul>
 <li>Heatmap export is now fixed. 
 <li>App no longer crashes when attempting to export all the files without performing statistics (statistical test set to "none").

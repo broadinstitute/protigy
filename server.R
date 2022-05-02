@@ -2487,7 +2487,6 @@ shinyServer(
                       ',ifelse(export.cb, '\n     - [Correlation boxplot](#corrbox)','' ),'
                       ',ifelse(export.box, '\n    - [Box-and-whisker plots](#boxplot)','' ),'
                        ', sep='')
-          
           ## ##########################################################
           ##                   data set
           ## ##########################################################
@@ -4184,7 +4183,7 @@ shinyServer(
                   if(!global.param$norm.per.group){
                     tab.norm <- normalize.data(tab, id.col, norm.data )
                   }else{
-                    if(is.null(global.param$grp.norm)){
+                    if(is.null(global.param$grp.norm) | input$grp.norm=="None"){
                       ## throw error
                       shinyalert("Error applying group-wise normalization!", "No Group column detected. Proceeding with global normalization. Press OK to close this window.", type = "warning")
                       global.param$norm.per.group=FALSE

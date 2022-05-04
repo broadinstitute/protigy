@@ -48,6 +48,7 @@ plotHM <- function(res,
     cat('\n-- plotHM --\n')
   
   #########################################
+
   ## convert to data matrix
   res <- data.matrix(res)
   res <- res[, names(grp[order(grp)])]

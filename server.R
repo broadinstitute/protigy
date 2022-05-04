@@ -1354,6 +1354,10 @@ shinyServer(
             stringsAsFactors = F
               )
           
+          #replace NA strings with actual NA values
+          grp.file$Experiment[grp.file$Experiment%in%NASTRINGS]=NA
+          grp.file$Group[grp.file$Group%in%NASTRINGS]=NA
+          
           #remove samples with missing annotations from the table, group file, and cdesc
           grp.file = grp.file[!is.na(grp.file$Experiment) & !is.na(grp.file$Group),]
           #robustify levels of group variables
@@ -1367,17 +1371,18 @@ shinyServer(
           ## ANNOTATION: extract empty cells
           ## - corresponding columns will be carried over as
           ##   annotation columns in the result file
-          grp.anno <- grp.file[which(nchar( Experiment) == 0 ), ]
-          grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
-          
-          if(length(grp.anno)>0)
-            global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
+           grp.anno <- grp.file[which(nchar( Experiment) == "" ), ]
+           grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
+           
+           if(length(grp.anno)>0)
+             global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
           
           ## ################################
           ## EXPRESSION
           ## - extract all non-empty cells in the 'Experiment' column
           exprs.idx <- rownames(cdesc)
           grp.exprs <- grp.file[exprs.idx, ]
+
           ## - extract all non-empty cells in the 'Group' column
           norm.idx <- rownames(cdesc)
           grp.norms <- grp.file[norm.idx, ]
@@ -1495,8 +1500,7 @@ shinyServer(
 
             list(
                 ## upload template
-                fileInput("exp.file", "Upload experimental design file", accept=c('text/plain','.txt')),
-                actionButton( 'update.grp', 'Next', width='100')
+                fileInput("exp.file", "Upload experimental design file", accept=c('text/plain','.txt'))
             )
         })
         
@@ -1693,8 +1697,8 @@ shinyServer(
                 }
                 
                 ## shorten column names and store together with the original names
-                colnames.tmp <- chopString(colnames(tab), STRLENGTH)
-                names(colnames.tmp) <- colnames(tab)
+              colnames.tmp <- chopString(colnames(tab), STRLENGTH)
+              names(colnames.tmp) <- colnames(tab)
                 
                 ## store values
                 global.input$table <- global.input$table.org <- tab ## need to make sure that 'global.input$table.org' never gets overwritten 
@@ -1829,9 +1833,12 @@ shinyServer(
                                  dec = ".", fill = TRUE, comment.char = "")
             }
             
+            #remove the ID column (if present)
+            colnames.noid <- colnames(global.input$table)[!colnames(global.input$table)%in%global.param$id.col.value & !colnames(global.input$table)%in%global.param$id.org.col]
+            grp.file <- grp.file[grp.file[,1]%in%colnames.noid,]
+            
             #check that the first column contains the column names of the table
             #if not, throw an error
-            colnames.noid <- colnames(global.input$table)[!colnames(global.input$table)%in%global.param$id.col.value & !colnames(global.input$table)%in%global.param$id.org.col]
             if(sum(colnames.noid %in% grp.file[,1])!=length(colnames.noid)){
               error$title <- paste("Parsing error")
               error$msg <- paste("The first column of the experimental design file must be the sample (column) names, and they must match the column names in the table exactly! All columns (except the ID column) must be present in the experimental design file.")
@@ -4519,13 +4526,12 @@ shinyServer(
                 ###########################################
                 ## store data matrix as test results
                 ## - values are log, if performed
-                tab <- data.frame(id=tab[ , id.col], tab)
+                #tab <- data.frame(id=tab[ , id.col], tab)
                 res.comb <- tab
                 
                 ##################################    
                 ## add FC before normalization
                 res.comb <- data.frame(res.comb, fc.before.norm)
-                
 
             }
 
@@ -4847,7 +4853,7 @@ shinyServer(
             filename = function(){ 'experimentalDesign.txt' },
             content = function(file){
                 tab <- global.input$table
-                exp.design <- cbind(colnames(tab), rep('', ncol(tab)), rep('', ncol(tab)))
+                exp.design <- cbind(colnames(tab), rep('NA', ncol(tab)), rep('NA', ncol(tab)))
                 colnames(exp.design) <- c('Column.Name', 'Experiment', 'Group')
                 write.table(  exp.design, file, sep='\t', quote=F, na='', row.names=F  )
             }

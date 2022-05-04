@@ -32,11 +32,11 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- FALSE
 ## version number
-VER <- "1.0"
+VER <- "1.0.1"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
-NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!","")
+NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!","Na","nA")
 ## separator tested in the uploaded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
@@ -74,6 +74,7 @@ if(PACMAN){
   p_load(shinyjs)
   p_load(shinyjqui)
   p_load(shinyalert)
+  p_load(markdown)
 
   p_load(magrittr)
   p_load(tibble)

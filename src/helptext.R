@@ -1,4 +1,4 @@
-# Last updated April 20, 2022 by Natalie Clark (nclark@broadinstitute.org) - v 1.0
+# Last updated May 4, 2022 by Natalie Clark (nclark@broadinstitute.org) - v 1.0.1
 
 ############################
 ## UI part
@@ -32,7 +32,13 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
-<b>v1.0 May 2, 2022</b>
+<b>v1.0.1 May 4, 2022</b>\
+<ul>
+<li>Blanks ("") are now read in as blanks rather than missing values. This is important to retain sample annotation information from .gct files.
+<li>When not performing statistics (statistical test set to "none"), the expression values in the .gct file are no longer repeated twice.
+<li>The export template file is now fixed to contain NA (missing values) rather than blanks.
+<li>Multiple characters such as "na" (and all capitalization variations of NA) are classified as missing values.
+<b>v1.0.0 May 2, 2022</b>
 <ul>
 <li>Heatmap export is now fixed. 
 <li>App no longer crashes when attempting to export all the files without performing statistics (statistical test set to "none").

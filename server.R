@@ -9,7 +9,7 @@
 ##
 ## This file defines the server logical of the app. It also takes care of most of the user interface.
 ##
-## Last updated April 20, 2022 by Natalie Clark (nclark@broadinstitute.org) - v 1.0
+## Last updated May 4, 2022 by Natalie Clark (nclark@broadinstitute.org) - v 1.0.1
 ################################################################################################################
 p_load(shiny)
 
@@ -1354,6 +1354,16 @@ shinyServer(
             stringsAsFactors = F
               )
           
+          ## ################################
+          ## ANNOTATION: extract empty cells
+          ## - corresponding columns will be carried over as
+          ##   annotation columns in the result file
+          grp.anno <- grp.file[which(nchar( Experiment) == 0 ), ]
+          grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
+          
+          if(length(grp.anno)>0)
+            global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
+          
           #replace NA strings with actual NA values
           grp.file$Experiment[grp.file$Experiment%in%NASTRINGS]=NA
           grp.file$Group[grp.file$Group%in%NASTRINGS]=NA
@@ -1366,16 +1376,6 @@ shinyServer(
           global.input$table <- tab <- tab[,colnames(tab)%in%grp.file$Column.Name]
           global.param$cdesc.all <- global.param$cdesc.selection <- cdesc[rownames(cdesc)%in%grp.file$Column.Name,]
           cdesc <- global.param$cdesc.all
-          
-          ## ################################
-          ## ANNOTATION: extract empty cells
-          ## - corresponding columns will be carried over as
-          ##   annotation columns in the result file
-           grp.anno <- grp.file[which(nchar( Experiment) == "" ), ]
-           grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
-           
-           if(length(grp.anno)>0)
-             global.input$table.anno <- data.frame(id=global.results$id.map[, 'id'], global.input$table[ , grp.anno])
           
           ## ################################
           ## EXPRESSION

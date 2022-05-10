@@ -32,6 +32,9 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v1.0.2 May 10, 2022</b>\
+<ul>
+<li>Fixes missing sample annotation columns in output .gct files.
 <b>v1.0.1 May 4, 2022</b>\
 <ul>
 <li>Blanks ("") are now read in as blanks rather than missing values. This is important to retain sample annotation information from .gct files.

@@ -1358,7 +1358,7 @@ shinyServer(
           ## ANNOTATION: extract empty cells
           ## - corresponding columns will be carried over as
           ##   annotation columns in the result file
-          grp.anno <- grp.file[which(nchar( Experiment) == 0 ), ]
+          grp.anno <- grp.file[which(nchar( Experiment) == 0 | is.na(nchar( Experiment))), ]
           grp.anno <- setdiff( grp.anno$Column.Name, global.param$id.col.value )
           
           if(length(grp.anno)>0)
@@ -4855,7 +4855,7 @@ shinyServer(
                 tab <- global.input$table
                 exp.design <- cbind(colnames(tab), rep('NA', ncol(tab)), rep('NA', ncol(tab)))
                 colnames(exp.design) <- c('Column.Name', 'Experiment', 'Group')
-                write.table(  exp.design, file, sep='\t', quote=F, na='', row.names=F  )
+                write.table(  exp.design, file, sep='\t', quote=F, na='NA', row.names=F  )
             }
         )
 

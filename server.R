@@ -330,7 +330,7 @@ shinyServer(
                                                     fluidRow(column(3, HTML('<a href="https://rmarkdown.rstudio.com/" target="_blank_">Markdown</a> report')), 
                                                              column(3, HTML('Spreadsheet')),
                                                              column(3, HTML('GCT')),
-                                                             column(3, HTML('Gimme all!'))),
+                                                             column(3, HTML('Export all checked files'))),
                                                     fluidRow(column(3, 
                                                            if(!global.results$export.rmd)
                                                              actionButton('export.rmd', 'html', icon = icon("code", lib="font-awesome"))
@@ -1374,7 +1374,11 @@ shinyServer(
           grp.file$Experiment <- make.names(grp.file$Experiment)
           grp.file$Group <- make.names(grp.file$Group)
           global.input$table <- tab <- tab[,colnames(tab)%in%grp.file$Column.Name]
-          global.param$cdesc.all <- global.param$cdesc.selection <- cdesc[rownames(cdesc)%in%grp.file$Column.Name,]
+          #replace the Group annotation column if needed
+          if(input$grp.norm=="None" & "Group"%in%colnames(cdesc)){
+            cdesc$Group <- rep("None",dim(cdesc)[1])
+          }
+          global.param$cdesc.all <- global.param$cdesc.selection <- cdesc[rownames(cdesc)%in%grp.file$Column.Name,colSums(is.na(cdesc))<nrow(cdesc)]
           cdesc <- global.param$cdesc.all
           
           ## ################################
@@ -1388,8 +1392,8 @@ shinyServer(
           grp.norms <- grp.file[norm.idx, ]
           
           ## order alphabetically to make coloring consistent
-          grp.exprs <- grp.exprs[order(grp.exprs$Experiment), ]
-          grp.norms <- grp.norms[order(grp.norms$Group), ]
+          #grp.exprs <- grp.exprs[order(grp.exprs$Experiment), ]
+          #grp.norms <- grp.norms[order(grp.norms$Group), ]
           
           ## class vector
           grp=grp.exprs$Experiment
@@ -2112,8 +2116,8 @@ shinyServer(
                     #column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.all), selected = unique(global.param$grp.selection))),
                     #} else{ column( 6, checkboxGroupInput('select.groups', label=' ', choices = unique(global.param$grp.comp.all), selected = unique(global.param$grp.comp.selection)))},
                     column( 6, checkboxGroupInput('select.anno', label=' ', 
-                                                  choices = unique(global.param$cdesc.all), 
-                                                  selected = unique(global.param$cdesc.selection)
+                                                  choices = unique(colnames(global.param$cdesc.all)), 
+                                                  selected = unique(colnames(global.param$cdesc.all))
                                                   #selected=NULL
                                                   ))
                   )
@@ -2136,7 +2140,7 @@ shinyServer(
         observeEvent(input$toggle.select.anno, {
           #if(input$select.groups.button == 0) return()
           updateCheckboxGroupInput(inputId = 'select.anno', session = session,
-                                   selected = setdiff(unique(global.param$cdesc.selection), input$select.anno)
+                                   selected = setdiff(unique(colnames(global.param$cdesc.all)), input$select.anno)
                                    #selected = setdiff( global.param$grp.comp.all, unique(global.param$grp.comp.selection))
           )
         })
@@ -2169,7 +2173,7 @@ shinyServer(
           ## make sure at least one group 
           ## has been selected
           if(length(grp.unique) == 0){
-            shinyalert("No data selected!", "Please slect at least one group.", type = "error")
+            shinyalert("No data selected!", "Please select at least one group.", type = "error")
           }
           
           ## update selection
@@ -2181,14 +2185,18 @@ shinyServer(
             
             cdesc.selection <- input$select.anno
             global.param$cdesc.selection <- cdesc.selection
-            
+
             # update data tracks and colors
             anno.col <- global.param$anno.col.all
             anno.col.color <- global.param$anno.col.color.all
             
             # preserve last column (class vector)
-            global.param$anno.col <- anno.col[names(global.param$grp.selection), c( cdesc.selection, global.param$grp.gct3) ]
-            global.param$anno.col.color <- anno.col.color[ c(cdesc.selection, global.param$grp.gct3 ) ]
+            global.param$anno.col <- anno.col[names(global.param$grp.selection), colnames(anno.col)%in%unique( c(cdesc.selection, global.param$grp.gct3)) ]
+            global.param$anno.col.color <- anno.col.color[ unique(c(cdesc.selection, global.param$grp.gct3 )) ]
+            if(is.character(global.param$anno.col)){
+              global.param$anno.col <- data.frame(global.param$anno.col)
+              colnames(global.param$anno.col) <- colnames(anno.col)[colnames(anno.col)%in%unique( cdesc.selection, global.param$grp.gct3)]
+            }
           }
           shinyalert("Group Selection Updated!", "Press OK to close this window and proceed with analysis.", type = "success")
           
@@ -2218,7 +2226,7 @@ shinyServer(
 
                 list(
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group ),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),                  #checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),                  #checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group),
                      #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      numericInput('na.filt.val', 'Max. % missing values', min=0, max=100, step=5, value=global.param$na.filt.val),
                     
@@ -3334,7 +3342,13 @@ shinyServer(
                     
                     #######################################
                     ## extract expression values
-                    res = res[, names(global.param$grp)]
+                    if (!is.null(global.param$grp.selection)){
+                      res = res[, names(global.param$grp.selection)]
+                      grp.hm <- global.param$grp.selection
+                    }else{
+                      res = res[, names(global.param$grp)]
+                      grp.hm <- global.param$grp
+                    }
                     
                     ##@#####################################
                     ##  dimensions depending on no. rows/columns
@@ -3348,15 +3362,15 @@ shinyServer(
                       anno.col=data.frame(Group=global.param$grp)
                       anno.col.color=list(Group=global.param$grp.colors.legend)
                     }
-                    
+
                     pdf(fn.hm, width=12)
                     if(input$hm.max){
-                        print(plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
+                        print(plotHM(res=res, hm.rownames=hm.rownames, grp=grp.hm, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
                                height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
                                width=dynamicWidthHM(length(global.param$grp))))
                         
                     } else {
-                        print(plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
+                        print(plotHM(res=res, hm.rownames=hm.rownames, grp=grp.hm, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
                                height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
                                width=dynamicWidthHM(length(global.param$grp))))
                     }
@@ -5103,6 +5117,7 @@ shinyServer(
           ## plot
           #par(mfrow=c(1,2))
           upset(data.frame( test.tab.up ), 
+                nsets = length(grp.comp),
                 order.by='degree', 
                 nintersects=NA,
                 text.scale=c(2,2,1.5, 1.2, 2, 2),
@@ -5176,6 +5191,7 @@ shinyServer(
           
           ## plot
           upset(data.frame( test.tab.dn), 
+                nsets = length(grp.comp),
                           order.by='degree', 
                           nintersects=NA,
                           text.scale=c(2,2,1.5, 1.2, 2, 2),
@@ -6837,7 +6853,13 @@ shinyServer(
             
             #######################################
             ## extract expression values
-            res = res[, names(global.param$grp)]
+            if (!is.null(global.param$grp.selection)){
+              res = res[, names(global.param$grp.selection)]
+              grp.hm <- global.param$grp.selection
+            }else{
+              res = res[, names(global.param$grp)]
+              grp.hm <- global.param$grp
+            }
 
             ##@#####################################
             ##  dimensions depending on no. rows/columns
@@ -6851,13 +6873,14 @@ shinyServer(
               anno.col=data.frame(Group=global.param$grp)
               anno.col.color=list(Group=global.param$grp.colors.legend)
             }
+            
 
             ######################################
             ## plot
             if(input$hm.max){
                 withProgress({
                     setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                    plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
+                    plotHM(res=res, hm.rownames=hm.rownames, grp=grp.hm, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
                            height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
                            width=dynamicWidthHM(length(global.param$grp)))
                     
@@ -6865,7 +6888,7 @@ shinyServer(
             } else {
                  withProgress({
                    setProgress(message = 'Processing...', detail= 'Generating Heatmap')
-                   plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
+                   plotHM(res=res, hm.rownames=hm.rownames, grp=grp.hm, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
                           height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
                           width=dynamicWidthHM(length(global.param$grp)))
                    

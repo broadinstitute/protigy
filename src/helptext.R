@@ -32,15 +32,21 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v1.0.3 July 21, 2022</b>\
+<ul>
+<li>Fixes issues with heatmap visualization and export.
+</ul>
 <b>v1.0.2 May 10, 2022</b>\
 <ul>
 <li>Fixes missing sample annotation columns in output .gct files.
+</ul>
 <b>v1.0.1 May 4, 2022</b>\
 <ul>
 <li>Blanks ("") are now read in as blanks rather than missing values. This is important to retain sample annotation information from .gct files.
 <li>When not performing statistics (statistical test set to "none"), the expression values in the .gct file are no longer repeated twice.
 <li>The export template file is now fixed to contain NA (missing values) rather than blanks.
 <li>Multiple characters such as "na" (and all capitalization variations of NA) are classified as missing values.
+</ul>
 <b>v1.0.0 May 2, 2022</b>
 <ul>
 <li>Heatmap export is now fixed. 
@@ -94,7 +100,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
 </ul>
 <b>v0.8.9.7 May 11, 2021</b>
 <ul>
-<li>Normalization: Added checkbox for group-level normalization. If enabled the normalization will be performed within a particualr group (Median, Median-MAD, Quantile, VSN). For Median and Median-MAD normalization, the group-level median of sample medians is added to each normaized data value.</li>
+<li>Normalization: Added checkbox for group-level normalization. If enabled the normalization will be performed within a particular group (Median, Median-MAD, Quantile, VSN). For Median and Median-MAD normalization, the group-level median of sample medians is added to each normaized data value.</li>
 </ul>
 <b>v0.8.9.6 April 30, 2021</b>
 <ul>

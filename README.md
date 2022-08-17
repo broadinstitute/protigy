@@ -96,7 +96,7 @@ The app can run locally on your desktop computer (Windows/Linux/MAC) or can be d
 
 Software requirements:
 
--   [R \>3.4](https://cran.r-project.org/)
+-   [R 3.4-3.6.3](https://cran.r-project.org/)
 -   [Shiny](https://shiny.rstudio.com/) R-package : `install.packages("shiny")`
 -   [Pandoc](https://github.com/jgm/pandoc/releases/tag/2.1.1) (optional, required to create R Markdown reports)
 -   [Perl](http://strawberryperl.com) (optional, required to create Excel sheets on Windows OS)

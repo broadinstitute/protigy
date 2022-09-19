@@ -32,6 +32,13 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v1.0.4 September 19, 2022</b>\
+<ul>
+<li>Fixes multiple plotting issues.
+<li>Volcano plot labels may now be chosen from the following: ID_Symbol (default), ID, or Symbol.
+<li>Gene symbol support for Ensembl protein IDs is now included.
+<li>For gct files, if a geneSymbol column is included in the row descriptors (rdesc), it is used to determine the symbol rather than using the available database.
+</ul>
 <b>v1.0.3 July 21, 2022</b>\
 <ul>
 <li>Fixes issues with heatmap visualization and export.

@@ -147,6 +147,7 @@ shinyServer(
             volc.maxp=100,     ## max. -log10 p-value
             volc.hyper.fc=1,    ## min. FC for hyperbolic curve
             volc.hyper.curv=3,  ## curvation parameter for hyperbol. curve
+            volc.label="ID_Symbol", #default text label
             
             volc.init=T,
             
@@ -559,11 +560,12 @@ shinyServer(
                                                      fluidRow(
     
     
-                                                              column(3, numericInput( paste("cex.volcano",groups.comp[i], sep='.'), "Point size", value=global.plotparam$volc.ps, min=1, step=1, width='100px')),
+                                                              column(2, numericInput( paste("cex.volcano",groups.comp[i], sep='.'), "Point size", value=global.plotparam$volc.ps, min=1, step=1, width='100px')),
                                                               ##column(1, numericInput( paste("opac.volcano",groups.comp[i],sep='.'), "Opacity %", value=50, min=0, max=100, step=10)),
-                                                              column(3, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=global.plotparam$volc.ls, min=.1, step=.1, width='100px')),
-                                                              column(3, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=global.plotparam$volc.grid, width='100px')),
-                                                              column(3, numericInput( paste( "max.logP", groups.comp[i], sep='.'), "Max. Log10(p-value)", value=global.plotparam$volc.maxp, min=20, max=300, step=10, width='100px') )
+                                                              column(2, numericInput( paste("cex.volcano.lab",groups.comp[i],sep='.'), "Label size", value=global.plotparam$volc.ls, min=.1, step=.1, width='100px')),
+                                                              column(2, selectInput( paste("grid.volcano",groups.comp[i],sep='.'), "Grid", c(T, F), selected=global.plotparam$volc.grid, width='100px')),
+                                                              column(2, numericInput( paste( "max.logP", groups.comp[i], sep='.'), "Max. Log10(p-value)", value=global.plotparam$volc.maxp, min=20, max=300, step=10, width='100px') ),
+                                                              column(2, selectInput( paste("volc.label",groups.comp[i],sep='.'), "Labels", c("ID_Symbol", "ID","Symbol"), selected=global.plotparam$volc.label, width='100px'))
     
                                                               ##column(1, downloadButton(paste('downloadVolcano', groups.comp[i],sep='.'), 'Download (pdf)'))
                                                           )
@@ -602,12 +604,12 @@ shinyServer(
                                                   ## the actual plot  plus table
                                                   fluidRow(
                                                       ## plot
-                                                      column(width=8,
+                                                      column(width=7,
                                                              box( width=NULL,  title='Volcano plot', status = 'primary', solidHeader = T,
                                                                  plotOutput( paste("volcano", groups.comp[i], sep='.'), height=600, click=paste('plot_click', groups.comp[i], sep='.'), hover=hoverOpts(id=paste('plot_hover', groups.comp[i], sep='.'), delay=10), brush=brushOpts(id=paste('plot_brush', groups.comp[i], sep='.'), resetOnNew=T, delayType='debounce', delay='1000' ), dblclick=paste('plot_dblclick', groups.comp[i], sep='.'))
                                                                  )),
                                                       ## table
-                                                      column(width=4,
+                                                      column(width=5,
                                                              box(width=NULL,  title='Selection', status = 'primary', solidHeader = T,
                                                                  fluidRow(
                                                                  column(6, actionButton(inputId=paste('volc.tab.reset', groups.comp[i], sep='.'), label='Remove all')),
@@ -1653,7 +1655,7 @@ shinyServer(
                 
                 ## #################
                 ## map to gene names
-                map.res <- mapIDs(tab$id)
+                map.res <- mapIDs(tab$id,gct@rdesc)
                 global.results$keytype <- map.res$keytype
                 global.results$id.map <- map.res$id.map
                 
@@ -2250,8 +2252,8 @@ shinyServer(
                      #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                      
-                     #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
-                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
+                     #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
+                     radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=input$norm.data),
                      #checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                      #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
@@ -2285,8 +2287,8 @@ shinyServer(
                     #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                     
-                    #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
-                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
+                    #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=input$norm.data),
                     
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
@@ -2319,8 +2321,8 @@ shinyServer(
                     #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                     
-                    #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=global.param$norm.data),
-                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (log-intensity)', 'Median-MAD', 'Median-MAD (log-intensity)', 'Upper-quartile', '2-component', 'Quantile', 'VSN (intensity)', 'none'), selected=input$norm.data),
+                    #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
+                    radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=input$norm.data),
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                     #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
                     numericInput('na.filt.val', 'Max. % missing values', min=0, max=100, step=5, value=input$na.filt.val),
@@ -3216,6 +3218,7 @@ shinyServer(
                 
                 ## group vector
                 grp <- global.param$grp
+                grp <- sort(grp)
                 ## group colors
                 grp.col <- global.param$grp.colors
                 grp.col.leg <- global.param$grp.colors.legend
@@ -5580,10 +5583,14 @@ shinyServer(
                       res <- as.data.frame( global.results$data$output )
 
                       ## determine what to show in the plot, i.e. 'id' or mapped gene names
-                      if( !is.null(global.results$id.map ))
-                          txt.col <- 'id.concat'
-                      else
-                          txt.col <- 'id'
+                      volc.label <- input[[paste('volc.label', grp.comp[my_i], sep='.')]]
+                      if( volc.label=="ID_Symbol"&!is.null(global.results$id.map )){
+                        txt.col <- 'id.concat' 
+                      }else if(volc.label=="Symbol"&!is.null(global.results$id.map )){
+                        txt.col <- 'id.mapped'
+                      }else{
+                        txt.col <- 'id'
+                      }
 
                       ## identify the points clicked
                       text.tmp <- nearPoints(res, input[[paste('plot_click', grp.comp[my_i], sep='.')]], threshold=10, maxpoints =  1, xvar=paste('logFC', grp.comp[my_i], sep='.'), yvar=paste('Log.P.Value', grp.comp[my_i], sep='.'))
@@ -5599,8 +5606,8 @@ shinyServer(
                           if(is.null(volc[[ paste('x', grp.comp[my_i], sep='.')]] )){
                               volc[[paste('x', grp.comp[my_i], sep='.')]] = text.tmp[paste('logFC', grp.comp[my_i], sep='.')]
                               volc[[paste('y', grp.comp[my_i], sep='.')]] = text.tmp[paste('Log.P.Value', grp.comp[my_i], sep='.')]
-                              ## volc[[paste('text', grp.comp[my_i], sep='.')]] = text.tmp['id']
-                               volc[[paste('text', grp.comp[my_i], sep='.')]] = text.tmp[ txt.col ]
+                               volc[[paste('text', grp.comp[my_i], sep='.')]] = text.tmp[txt.col]
+                               volc[[paste('id', grp.comp[my_i], sep='.')]] = text.tmp[ 'id' ]
                               volc[[paste('xy', grp.comp[my_i], sep='.')]] = paste(text.tmp[paste('logFC', grp.comp[my_i], sep='.')], text.tmp[paste('Log.P.Value', grp.comp[my_i], sep='.')])
                               volc[[paste('P.Value', grp.comp[my_i], sep='.')]] <- text.tmp[paste('P.Value', grp.comp[my_i], sep='.')]
                               volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- text.tmp[paste('adj.P.Val', grp.comp[my_i], sep='.')]
@@ -5618,11 +5625,12 @@ shinyServer(
                                       volc[[paste('x', grp.comp[my_i], sep='.')]] <- volc[[paste('x', grp.comp[my_i], sep='.')]][-idx]
                                       volc[[paste('y', grp.comp[my_i], sep='.')]] <- volc[[paste('y', grp.comp[my_i], sep='.')]][-idx]
                                       volc[[paste('text', grp.comp[my_i], sep='.')]] <- volc[[paste('text', grp.comp[my_i], sep='.')]][-idx]
+                                      volc[[paste('id', grp.comp[my_i], sep='.')]] <- volc[[paste('id', grp.comp[my_i], sep='.')]][-idx]
                                       volc[[paste('xy', grp.comp[my_i], sep='.')]] <- volc[[paste('xy', grp.comp[my_i], sep='.')]][-idx]
                                       volc[[paste('P.Value', grp.comp[my_i], sep='.')]] <- volc[[paste('P.Value', grp.comp[my_i], sep='.')]][-idx]
                                       volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]][-idx]
                                   } else {
-                                      volc[[paste('text', grp.comp[my_i], sep='.')]] <- volc[[ paste('y', grp.comp[my_i], sep='.') ]] <- volc[[paste('x', grp.comp[my_i], sep='.')]] <- volc[[paste('xy', grp.comp[my_i], sep='.')]] <- volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- volc[[paste('P.Value', grp.comp[my_i], sep='.')]]<- NULL
+                                      volc[[paste('text', grp.comp[my_i], sep='.')]] <-volc[[paste('id', grp.comp[my_i], sep='.')]] <- volc[[ paste('y', grp.comp[my_i], sep='.') ]] <- volc[[paste('x', grp.comp[my_i], sep='.')]] <- volc[[paste('xy', grp.comp[my_i], sep='.')]] <- volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- volc[[paste('P.Value', grp.comp[my_i], sep='.')]]<- NULL
                                                     }
                                   ################################################
                                   ## ADD: if selected point is not present add it to the list
@@ -5630,8 +5638,8 @@ shinyServer(
                                   volc[[paste('x', grp.comp[my_i], sep='.')]]=c( volc[[paste('x', grp.comp[my_i], sep='.')]],
                                                                       text.tmp[paste('logFC', grp.comp[my_i], sep='.')])
                                   volc[[paste('y', grp.comp[my_i], sep='.')]]=c(volc[[paste('y', grp.comp[my_i], sep='.')]], text.tmp[paste('Log.P.Value', grp.comp[my_i], sep='.')])
-                                  ##volc[[paste('text', grp.comp[my_i], sep='.')]]=c(volc[[paste('text', grp.comp[my_i], sep='.')]],  text.tmp[ 'id'] )
-                                  volc[[paste('text', grp.comp[my_i], sep='.')]]=c(volc[[paste('text', grp.comp[my_i], sep='.')]],  text.tmp[ txt.col ] )
+                                  volc[[paste('text', grp.comp[my_i], sep='.')]]=c(volc[[paste('text', grp.comp[my_i], sep='.')]],  text.tmp[ txt.col] )
+                                  volc[[paste('id', grp.comp[my_i], sep='.')]]=c(volc[[paste('id', grp.comp[my_i], sep='.')]],  text.tmp[ 'id' ] )
                                   volc[[paste('xy', grp.comp[my_i], sep='.')]] = c(volc[[paste('xy', grp.comp[my_i], sep='.')]], paste(text.tmp[paste('logFC', grp.comp[my_i], sep='.')], text.tmp[paste('Log.P.Value', grp.comp[my_i], sep='.')]) )
 
                                   volc[[paste('P.Value', grp.comp[my_i], sep='.')]]=c(volc[[paste('P.Value', grp.comp[my_i], sep='.')]],  text.tmp[paste('P.Value', grp.comp[my_i], sep='.')] )
@@ -5648,6 +5656,7 @@ shinyServer(
                       volc[[paste('y', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('xy', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('text', grp.comp[my_i], sep='.')]] <- NULL
+                      volc[[paste('id', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('P.Value', grp.comp[my_i], sep='.')]] <- NULL
                       volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- NULL
                   })
@@ -5671,6 +5680,7 @@ shinyServer(
                       volc[[paste('x', grp.comp[my_i], sep='.')]] <- volc[[paste('x', grp.comp[my_i], sep='.')]][-idx]
                       volc[[paste('y', grp.comp[my_i], sep='.')]] <- volc[[paste('y', grp.comp[my_i], sep='.')]][-idx]
                       volc[[paste('text', grp.comp[my_i], sep='.')]] <- volc[[paste('text', grp.comp[my_i], sep='.')]][-idx]
+                      volc[[paste('id', grp.comp[my_i], sep='.')]] <- volc[[paste('id', grp.comp[my_i], sep='.')]][-idx]
                       volc[[paste('xy', grp.comp[my_i], sep='.')]] <- volc[[paste('xy', grp.comp[my_i], sep='.')]][-idx]
                       volc[[paste('P.Value', grp.comp[my_i], sep='.')]] <- volc[[paste('P.Value', grp.comp[my_i], sep='.')]][-idx]
                       volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]] <- volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]][-idx]
@@ -5689,7 +5699,7 @@ shinyServer(
 
                       id.tmp <- volc[[paste('text', grp.comp[my_i], sep='.')]]
 
-                      dat.select = data.frame(id=unlist(volc[[paste('text', grp.comp[my_i], sep='.')]]), logFC=round( unlist(volc[[paste('x', grp.comp[my_i], sep='.')]]), 2), P.Value=round( unlist(volc[[paste('P.Value', grp.comp[my_i], sep='.')]]),3), adj.P.Value=round( unlist(volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]]), 3) )
+                      dat.select = data.frame(id=unlist(volc[[paste('id', grp.comp[my_i], sep='.')]]), label=unlist(volc[[paste('text', grp.comp[my_i], sep='.')]]), logFC=round( unlist(volc[[paste('x', grp.comp[my_i], sep='.')]]), 2), P.Value=round( unlist(volc[[paste('P.Value', grp.comp[my_i], sep='.')]]),3), adj.P.Value=round( unlist(volc[[paste('adj.P.Val', grp.comp[my_i], sep='.')]]), 3) )
                       up.id <- dat.select[, 'id']
                       up.link <- link.db(up.id, global.results$keytype)
                       dat.select[, 'id'] <- up.link
@@ -6062,6 +6072,16 @@ shinyServer(
             }
             ## store a copy of IDs before zoom
             IDs.all <- IDs
+            
+            ##change IDs depending on label
+            ##needed to plot PPI interactors in the same style
+            if(input[[paste('volc.label', group, sep='.')]]=="ID_Symbol" & !is.null(global.results$id.map ) ){
+              IDs <- res[ , 'id.concat']
+            }else if(input[[paste('volc.label', group, sep='.')]]=="Symbol" & !is.null(global.results$id.map ) ){
+              IDs <- res[ , 'id.mapped']
+            }else{
+              IDs <- res[ , 'id']
+            }
 
             ## which filter has been used?
             filter.str <- paste('filter:', global.param$filter.type, '\ncutoff:', global.param$filter.value)
@@ -6312,15 +6332,17 @@ shinyServer(
             ## title
             mtext(group, side=3, cex=cex.main, line=2)
             ## label axes
-            if(global.param$which.test == 'Two-sample mod T')
-                mtext( paste("log(", sub('.*\\.vs\\.', '', group), "/", sub('\\.vs.*', '', group),")"), side=1, cex=cex.axis, line=3)
-            else
-                mtext(expression(log(FC)), side=1, cex=cex.axis, line=3)
-            if(global.param$filter.type=="adj.p"){
-              mtext(expression(-10*log[10](adj.p-value)), side=2, cex=cex.axis, line=3)
+            if(global.param$which.test == 'Two-sample mod T'){
+              mtext( paste("log(", sub('.*\\.vs\\.', '', group), "/", sub('\\.vs.*', '', group),")"), side=1, cex=cex.axis, line=3)
             }else{
-              mtext(expression(-10*log[10](p-value)), side=2, cex=cex.axis, line=3)
+              mtext(expression(log(FC)), side=1, cex=cex.axis, line=3)
             }
+            # if(global.param$filter.type=="adj.p"){
+            #   mtext(expression(-10*log[10](adj.p-value)), side=2, cex=cex.axis, line=3)
+            # }else{
+            #   mtext(expression(-10*log[10](p-value)), side=2, cex=cex.axis, line=3)
+            # }
+            mtext(expression(-10*log[10](p-value)), side=2, cex=cex.axis, line=3)
             ## draw axes
             axis(1, cex.axis=cex.axis)
             axis(2, las=2, cex.axis=cex.axis)
@@ -6337,7 +6359,7 @@ shinyServer(
             if( hyperbol & global.param$filter.type == 'adj.p'){
                 lines( x.hc, y.hc(x.hc, x0, y0, c), col='grey30', lty='dashed')
                 lines(-x.hc, y.hc(x.hc, x0, y0, c), col='grey30', lty='dashed')
-                text( xlim[2]-(xlim[2]*.05), y0, paste(global.param$filter.type, global.param$filter.value, sep='='), pos=3, col='grey30')
+                text( xlim[2]-(xlim[2]*.2), y0, paste(global.param$filter.type, "=", global.param$filter.value, ",", "logFC", "=", input[[paste( "ppi.min.fc", group, sep='.')]], sep=''), pos=1, col='grey30')
             }
 
             ## ###################################
@@ -6348,7 +6370,7 @@ shinyServer(
               filt.minlogPVal <- min(logPVal[names(sig.idx)], na.rm=T)
             
                 abline(h=filt.minlogPVal, col=my.col2rgb('grey30', 50), lwd=2, lty='dashed')
-                text( xlim[2]-(xlim[2]*.1), filt.minlogPVal, paste(global.param$filter.type, global.param$filter.value, sep='='), pos=3, col='grey30')
+                text( xlim[2]-(xlim[2]*.1), filt.minlogPVal, paste(global.param$filter.type, global.param$filter.value, sep='='), pos=1, col='grey30')
             }
 
             ## number of significant
@@ -6691,6 +6713,7 @@ shinyServer(
                
                   ## group vector
                   grp <- global.param$grp
+                  grp <- sort(grp)
                   ## group colors
                   grp.col <- global.param$grp.colors
                   grp.col.leg <- global.param$grp.colors.legend

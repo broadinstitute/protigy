@@ -32,7 +32,7 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- FALSE
 ## version number
-VER <- "1.0.3"
+VER <- "1.0.4"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -345,8 +345,8 @@ ppi <- import.ppi.db()
 ## n.try = number of ids taken from 'ids' to try to
 ##         determine organism
 ## ###############################################
-mapIDs <- function(ids,
-                   n.try=10
+mapIDs <- function(ids,rdesc=NULL,
+                   n.try=100
                    ){
     withProgress(message='Mapping gene names...', {
 
@@ -354,11 +354,13 @@ mapIDs <- function(ids,
             ##           id type
             ## ###################################
             keytype <- 'UNKNOWN'
-            ## Uniprot or RefSeq?
+            ## Uniprot or RefSeq or Ensembl?
             if(length(grep('^(Q|P|O|A|E|H|F)', ids)) > 0)
                 keytype='UNIPROT'
             if(length(grep('^(NP_|XP_|YP_)', ids)) > 0)
                 keytype='REFSEQ'
+            if(length(grep('ENSP', ids)) > 0)
+              keytype='ENSEMBLPROT'
 
             ## ###################################
             ##        extract query strings
@@ -367,7 +369,9 @@ mapIDs <- function(ids,
               id.query <- sub('(-|;|\\.|_|\\|).*', '', ids) ## first id
             } else if(keytype == 'REFSEQ') {
               id.query <- sub('(\\.|;).*', '', ids) ## first id
-            } else {
+            } else if(keytype=='ENSEMBLPROT') {
+              id.query <- sub('(\\.|;).*', '', ids) ## first id
+            }else {
               id.query <- ids
             }
             names(id.query) <- ids
@@ -414,17 +418,23 @@ mapIDs <- function(ids,
   
             ## ##################################
             ## map
-            if(keytype != 'UNKNOWN' & orgtype != 'UNKNOWN'){
-              if(orgtype == 'HSA')
-                id.map.tmp <- try(mapIds(org.Hs.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
-              if(orgtype == 'MMU')
-                id.map.tmp <- try(mapIds(org.Mm.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
-              if(orgtype == 'RNO')
-                id.map.tmp <- try(mapIds(org.Rn.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
-              if(orgtype == 'DRE')
-                id.map.tmp <- try(mapIds(org.Dr.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
-            } else {
+            
+            #if geneSymbol column is included in rdesc, use that
+            if(!is.null(rdesc)&("geneSymbol"%in%colnames(rdesc))){
+              id.map.tmp <- sub('(-|;|\\.|_|\\|).*', '', rdesc$geneSymbol) #take first if there is a list
+            }else{
+              if(keytype != 'UNKNOWN' & orgtype != 'UNKNOWN'){
+                if(orgtype == 'HSA')
+                  id.map.tmp <- try(mapIds(org.Hs.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
+                if(orgtype == 'MMU')
+                  id.map.tmp <- try(mapIds(org.Mm.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
+                if(orgtype == 'RNO')
+                  id.map.tmp <- try(mapIds(org.Rn.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
+                if(orgtype == 'DRE')
+                  id.map.tmp <- try(mapIds(org.Dr.eg.db, keys=id.query , column=c('SYMBOL'), keytype=keytype, multiVals='first'))
+              } else {
                 id.map.tmp <- c()
+              }
             }
 
             if(class(id.map.tmp) == 'try-error' | is.null( class(id.map.tmp) ) | class(id.map.tmp) == 'NULL' ){
@@ -436,8 +446,11 @@ mapIDs <- function(ids,
             } else {
     
               ## if successful
-              id.map.tmp[which(is.na(id.map.tmp))] <- 'NotFound'
-              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=as.character(id.map.tmp), id.concat=paste(ids, id.map.tmp, sep='_'), stringsAsFactors=F)
+              id.mapped <- id.map.tmp
+              id.mapped[which(is.na(id.mapped) | id.mapped=="")] <- ids[which(is.na(id.mapped) | id.mapped=="")]
+              id.map.tmp[which(is.na(id.map.tmp) | id.map.tmp=="")] <- 'NotFound'
+              
+              id.map <- data.frame(id=names(id.query), id.query=id.query, id.mapped=as.character(id.mapped), id.concat=paste(ids, id.map.tmp, sep='_'), stringsAsFactors=F)
             
             }
 
@@ -608,7 +621,7 @@ de_duplicate_ids <- function(ids, global.param=NULL, show_modal = TRUE){
 ##
 ## ##############################################################################
 link.db <- function(id, # vetcor of ids
-                    keytype=c('UNKNOWN', 'UNIPROT', 'REFSEQ'),
+                    keytype=c('UNKNOWN', 'UNIPROT', 'REFSEQ','ENSEMBLPROT'),
                     db=c('GENECARDS', 'UNIPROT')){
   
   keytype <- match.arg(keytype)
@@ -617,7 +630,7 @@ link.db <- function(id, # vetcor of ids
   if(keytype == 'UNIPROT'){
     up.link <- paste("<a href='https://www.uniprot.org/uniprot/", sub('(_|,|;|\\.).*', '', id),"' target='_blank'>", id, "</a>", sep='')
   }
-  if(keytype %in% c('REFSEQ', 'UNKNOWN')){
+  if(keytype %in% c('REFSEQ', 'ENSEMBLPROT','UNKNOWN')){
     up.link <- paste("<a href='http://www.genecards.org/Search/Keyword?queryString=", sub('^(NP_|NM_|NR_.*?)(_|,|;|\\.).*', '\\1', id),"' target='_blank'>", id, "</a>", sep='')
   }
   return(up.link)
@@ -626,11 +639,11 @@ link.db <- function(id, # vetcor of ids
 #############################################################################################
 normalize.data  <- function(data, id.col,
                          method=c('Median',
-                                  'Median (log-intensity)',
+                                  'Median (non-zero)',
                                   'Quantile', 
-                                  'VSN (intensity)', 
+                                  'VSN', 
                                   'Median-MAD',
-                                  'Median-MAD (log-intensity)',
+                                  'Median-MAD (non-zero)',
                                   '2-component', 
                                   'Upper-quartile'),
                          grp.vec=NULL  ## if NULL apply global normalization strategy
@@ -679,11 +692,11 @@ normalize.data  <- function(data, id.col,
 #############################################################################################
 normalize.data.helper <- function(data, id.col, 
                            method=c('Median',
-                                    'Median (log-intensity)',
+                                    'Median (non-zero)',
                                     'Quantile', 
-                                    'VSN (intensity)', 
+                                    'VSN', 
                                     'Median-MAD',
-                                    'Median-MAD (log-intensity)',
+                                    'Median-MAD (non-zero)',
                                     '2-component', 
                                     'Upper-quartile'),
                            per_group=FALSE ## for Median & Median-MAD
@@ -720,7 +733,7 @@ normalize.data.helper <- function(data, id.col,
       }
     }
     ## median plus shifting by medians of medians
-    if(method == 'Median (log-intensity)'){
+    if(method == 'Median (non-zero)'){
       
       all_medians <- apply(data, 2, median, na.rm=T)
       data.norm <- apply(data, 2, function(x) x - median(x, na.rm=T))
@@ -739,7 +752,7 @@ normalize.data.helper <- function(data, id.col,
         }
     }
     ## median & MAD plus shifting by medians of medians
-    if(method == 'Median-MAD (log-intensity)'){
+    if(method == 'Median-MAD (non-zero)'){
   
       all_medians <- apply(data, 2, median, na.rm=T)
       data.norm <- apply(data, 2, function(x) (x - median(x, na.rm=T))/mad(x, na.rm=T) )
@@ -781,7 +794,7 @@ normalize.data.helper <- function(data, id.col,
     }
     
     ## VSN - variance stabilizing normalization
-    if(method == 'VSN (intensity)'){
+    if(method == 'VSN'){
       p_load(vsn)
       data.norm <- justvsn(data)
     }

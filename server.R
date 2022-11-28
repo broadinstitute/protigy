@@ -9,7 +9,7 @@
 ##
 ## This file defines the server logical of the app. It also takes care of most of the user interface.
 ##
-## Last updated May 4, 2022 by Natalie Clark (nclark@broadinstitute.org) - v 1.0.1
+## Last updated November 28, 2022 by Natalie Clark (nclark@broadinstitute.org) - v 1.1
 ################################################################################################################
 p_load(shiny)
 
@@ -1260,6 +1260,7 @@ shinyServer(
           
           ## list all column description columns (cdesc)    
           list(
+            checkboxInput("QC.filter","Filter out QC.fail samples (requires QC.status column)",FALSE),
             radioButtons("grp.gct3", "Choose column for statistical testing", colnames(global.input$cdesc)),
             radioButtons("grp.norm", 'Choose column for group-wise normalization. If you are NOT using group-wise normalization, select \"None.\"', c(colnames(global.input$cdesc),"None")),
             actionButton("update.grp.gct3", 'OK')
@@ -1271,7 +1272,7 @@ shinyServer(
           if(is.null(input$grp.gct3)) return()
           if(global.param$grp.done) return()
           
-          HTML(paste('<br><p><font size=\"4\"><b>Current selection for statistical testing:</b><b>', input$grp.gct3,'</b></p><br>','<br><p><font size=\"4\"><b>Current selection for group-wise normalization:</b><b>', input$grp.norm,'</b></p><br>'))
+          HTML(paste('<br><p><font size=\"4\"><b>Current selection for statistical testing:</b><b>', input$grp.gct3,'</b><br>','<br><font size=\"4\"><b>Current selection for group-wise normalization:</b><b>', input$grp.norm,'</b><br>','<br><font size=\"4\"><b>Filter QC.fail samples:</b><b>', input$QC.filter,'</b></p><br>'))
         })
         # preview levels current selection for statistical testing
         output$grp.gct3.prev.tab <- renderTable({
@@ -1279,7 +1280,16 @@ shinyServer(
           if(is.null(input$grp.norm)) return()
           if(global.param$grp.done) return()
           
-          tab <- table(global.input$cdesc[, input$grp.gct3]) 
+          #if QC.filter is checked but QC.status column does not exist inform the user
+          if(input$QC.filter & "QC.status"%in%colnames(global.input$cdesc)){
+            tab <- table(global.input$cdesc[global.input$cdesc$QC.status!="QC.fail", input$grp.gct3])
+          }else if (input$QC.filter & "QC.status"%in%colnames(global.input$cdesc)){
+            shinyalert("No QC.status column detected!","No QC.status column detected for filtering. Analysis will proceed using all samples.", type="warning")
+            tab <- table(global.input$cdesc[, input$grp.gct3])
+          }else{
+            tab <- table(global.input$cdesc[, input$grp.gct3])
+          }
+          
           tab <- data.frame(Stat.Test.Level=names(tab), Stat.Test.Freq=as.character(unlist(tab)), stringsAsFactors = F )
           
           list(tab)
@@ -1291,7 +1301,14 @@ shinyServer(
           if(global.param$grp.done) return()
           if(input$grp.norm=="None") return()
           
-          tab <- table(global.input$cdesc[, input$grp.norm]) 
+          if(input$QC.filter & "QC.status"%in%colnames(global.input$cdesc)){
+            tab <- table(global.input$cdesc[global.input$cdesc$QC.status!="QC.fail", input$grp.norm])
+          }else if (input$QC.filter & !"QC.status"%in%colnames(global.input$cdesc)){
+            shinyalert("No QC.status column detected!","No QC.status column detected for filtering. Analysis will proceed using all samples.", type="warning")
+            tab <- table(global.input$cdesc[, input$grp.norm])
+          }else{
+            tab <- table(global.input$cdesc[, input$grp.norm])
+          }
           tab <- data.frame(Group.Norm.Level=names(tab), Group.Norm.Freq=as.character(unlist(tab)), stringsAsFactors = F )
           
           list(tab)
@@ -1308,6 +1325,7 @@ shinyServer(
          
           ## store grp column
           global.param$grp.gct3 <- input$grp.gct3
+          
           
           ## store grp normalization column
           if(input$grp.norm=="None"){
@@ -1343,16 +1361,24 @@ shinyServer(
           names(Experiment) <- Column.Name
           Group <- rep('', length(Column.Name))
           names(Group) <- Column.Name
+          QC <- rep('QC.pass',length(Column.Name))
+          names(QC) <- Column.Name
 
           Experiment[ rownames(cdesc) ] <- cdesc[, global.param$grp.gct3]
           Group[ rownames(cdesc) ] <- cdesc[, global.param$grp.norm]
+          #add QC.status column if it exists
+          if(input$QC.filter & "QC.status"%in%colnames(cdesc)){
+            QC[ rownames(cdesc) ] <- cdesc[, "QC.status"]
+          }
           
+          #don't need to keep QC column for analysis, just for filtering, so this should work fine
           global.param$cdesc.all <- global.param$cdesc.selection <- setdiff(colnames(cdesc),  c(global.param$grp.gct3,global.param$grp.norm))
         
           grp.file=data.frame(
             Column.Name,
             Experiment,
             Group,
+            QC,
             stringsAsFactors = F
               )
           
@@ -1370,6 +1396,12 @@ shinyServer(
           grp.file$Experiment[grp.file$Experiment%in%NASTRINGS]=NA
           grp.file$Group[grp.file$Group%in%NASTRINGS]=NA
           
+          #filter out QC.fail samples if requested
+          if(input$QC.filter){
+            grp.file$Experiment[grp.file$QC=="QC.fail"]=NA
+            grp.file$Group[grp.file$QC=="QC.fail"]=NA
+          }
+          
           #remove samples with missing annotations from the table, group file, and cdesc
           grp.file = grp.file[!is.na(grp.file$Experiment) & !is.na(grp.file$Group),]
           #robustify levels of group variables
@@ -1382,6 +1414,25 @@ shinyServer(
           }
           global.param$cdesc.all <- global.param$cdesc.selection <- cdesc[rownames(cdesc)%in%grp.file$Column.Name,colSums(is.na(cdesc))<nrow(cdesc)]
           cdesc <- global.param$cdesc.all
+          
+          #if an annotation only appears once, throw an error
+          tab2 <- table(cdesc[, global.param$grp.gct3]) 
+          tab2 <- data.frame(Stat.Test.Level=names(tab2), Stat.Test.Freq=as.character(unlist(tab2)), stringsAsFactors = F )
+          if("1"%in%tab2$Stat.Test.Freq){
+            error$title <- paste("All column levels must have more than one sample!")
+            error$msg <- paste("At least one column level has only one sample assigned to it. Analysis cannot proceed. Please remove this sample or choose another column to use for statistical testing.")
+            return()
+          }
+          
+          if(global.param$norm.per.group){
+            tab3 <- table(cdesc[, global.param$grp.norm]) 
+            tab3 <- data.frame(Stat.Test.Level=names(tab3), Stat.Test.Freq=as.character(unlist(tab3)), stringsAsFactors = F )
+            if("1"%in%tab3$Stat.Test.Freq){
+              error$title <- paste("All column levels must have more than one sample!")
+              error$msg <- paste("At least one column level has only one sample assigned to it. Analysis cannot proceed. Please remove this sample or choose another column to use for group-wise normalization.")
+              return()
+            }
+          }
           
           ## ################################
           ## EXPRESSION
@@ -2227,6 +2278,7 @@ shinyServer(
             if( is.null(input$filt.data)){
 
                 list(
+                  checkboxInput('intensity','Intensity data',FALSE),
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group ),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),                  #checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group),
                      #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
@@ -2246,9 +2298,10 @@ shinyServer(
             ## ###################################################
             ## no filter
             ## - show everything
-            else if(input$filt.data == 'none'){
+            else if(input$filt.data == 'none' & !input$intensity){
 
                 list(
+                  checkboxInput('intensity','Intensity data',FALSE),
                      #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                      radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                      
@@ -2276,14 +2329,50 @@ shinyServer(
                      actionButton('select.groups.button', 'Select groups')
                 )
             }
+          ## ###################################################
+          ## no filter + intensity data
+          ## - only show relevant normalization+filtering methods and statistical tests
+          ## max missing values is 99%, otherwise statistics fails
+          else if(input$filt.data == 'none' & input$intensity){
+            
+            list(
+              checkboxInput('intensity','Intensity data',TRUE),
+              #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+              radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
+              
+              #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
+              radioButtons('norm.data', 'Data normalization', choices=c('Median (non-zero)', 'Median-MAD (non-zero)','Upper-quartile', 'Quantile','VSN', 'none'), selected=input$norm.data),
+              #checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
+              #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+              #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+              numericInput('na.filt.val', 'Max. % missing values', min=0, max=99, step=3, value=min(input$na.filt.val,99)),
+              
+              radioButtons('filt.data', 'Filter data', choices=c( 'StdDev', 'none'), selected='none'),
+              
+              #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
+              
+              #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+              radioButtons('which.test', 'Select test', choices=c('Two-sample mod T', 'mod F', 'none'), selected=input$which.test),
+              
+              actionButton('run.test', 'Run analysis!'),
+              br(),
+              hr(),
+              # fluidRow(
+              #   column(6, actionButton('select.groups.button', 'Select Groups')),
+              #   column(6, actionButton('select.anno.button', 'Select Annotation Tracks'))
+              #)
+              actionButton('select.groups.button', 'Select groups')
+            )
+          }
 
             ## ###################################################
             ## Reproducibility filter
             ## - show only one sample T test
+            ## no option for intensity data with reproducibility filter
             else if(input$filt.data == 'Reproducibility'){
 
                 list(
-                  
+                  #checkboxInput('intensity','Intensity data',FALSE),
                     #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                     
@@ -2301,7 +2390,7 @@ shinyServer(
                     # sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      # radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected='One-sample mod T'),
                     #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T',  'mod F', 'none'), selected=global.param$which.test),
-                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T',  'mod F', 'none'), selected=input$which.test),
+                    radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'none'), selected=input$which.test),
                     
 
                      actionButton('run.test', 'Run analysis!'),
@@ -2314,10 +2403,10 @@ shinyServer(
             ## ###################################################
             ## StdDev filter
             ## - show everything
-            else if(input$filt.data == 'StdDev'){
+            else if(input$filt.data == 'StdDev' & !input$intensity){
 
                 list(
-                  
+                  checkboxInput('intensity','Intensity data',FALSE),
                     #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                     
@@ -2342,6 +2431,39 @@ shinyServer(
                     actionButton('select.groups.button', 'Select groups')
                 )
             }
+          
+          ## ###################################################
+          ## StdDev filter plus intensity data
+          ## - show only appropriate normalization+filtering methods and statistical tests
+          ## max missing values is 99%, otherwise statistics fails
+          else if(input$filt.data == 'StdDev' & input$intensity){
+            
+            list(
+              checkboxInput('intensity','Intensity data',TRUE),
+              #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
+              radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
+              
+              #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
+              radioButtons('norm.data', 'Data normalization', choices=c('Median (non-zero)', 'Median-MAD (non-zero)','Upper-quartile', 'Quantile','VSN', 'none'), selected=input$norm.data),
+              #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+              #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=input$na.filt.val),
+              numericInput('na.filt.val', 'Max. % missing values', min=0, max=99, step=3, value=min(input$na.filt.val,99)),
+              
+              radioButtons('filt.data', 'Filter data', choices=c( 'StdDev', 'none'), selected='StdDev'),
+              
+              sliderInput('sd.filt.val', 'Percentile StdDev', min=10, max=90, value=global.param$sd.filt.val),
+              
+              #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
+              
+              #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'Two-sample LM', 'mod F', 'none'), selected=global.param$which.test),
+              #radioButtons('which.test', 'Select test', choices=c('One-sample mod T', 'Two-sample mod T', 'mod F', 'none'), selected=global.param$which.test),
+              radioButtons('which.test', 'Select test', choices=c('Two-sample mod T', 'mod F', 'none'), selected=input$which.test),
+              actionButton('run.test', 'Run analysis!'),
+              br(),
+              hr(),
+              actionButton('select.groups.button', 'Select groups')
+            )
+          }
 
         })
         
@@ -3605,25 +3727,15 @@ shinyServer(
                 if(!(global.param$which.test %in% c('mod F'))){
                     par(mfrow=c(length(grp.comp),1))
                     for(g in grp.comp){
-                        pval <- res.all[, paste('P.Value', g, sep='.')]
-                        if(global.param$filter.type=="adj.p"){
-                          hist(pval, breaks=50, main=paste('Histogram of adj.p-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='adj.p-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
-                          legend('top', legend=g, cex=2)
-                        }else{
+                          pval <- res.all[, paste('P.Value', g, sep='.')]
                           hist(pval, breaks=50, main=paste('Histogram of p-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='p-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
                           legend('top', legend=g, cex=2)
-                        }
                     }
                  ############################################
                  ## mod F
                 } else {
-                  if(global.param$filter.type=="adj.p"){
-                    pval <- res.all[, paste('adj.p.value')]
-                    hist(pval, breaks=50, main=paste('Histogram of adj.p-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='adj.p-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
-                  } else{
-                    pval <- res.all[, paste('p.value')]
+                    pval <- res.all[, paste('P.Value')]
                     hist(pval, breaks=50, main=paste('Histogram of p-values (N=', sum(!is.na(pval)), ')',sep=''), xlab='p-value', cex.main=2.2, cex.axis=2, cex.lab=2, col='darkblue', border=NA)
-                  }
                 }
                 dev.off()
                 })
@@ -4090,6 +4202,7 @@ shinyServer(
         ## - filter missing values (optional)
         ## - filter data(optional)
         ## - test (optional)
+        ## - flag for intensity data
         ##
         ################################################################################
         observeEvent(input$run.test, {
@@ -4110,6 +4223,7 @@ shinyServer(
             global.param$norm.data <- input$norm.data
             global.param$norm.per.group <- input$norm.per.group
             global.param$log.transform <- input$log.transform
+            global.param$intensity <-input$intensity
 
             #####################################################################
             ## if the 'Run test' - button has been pressed for the first time,
@@ -4147,6 +4261,7 @@ shinyServer(
             ## ##############################################################################
             test <- global.param$which.test
             norm.data <- global.param$norm.data
+            intensity <- global.param$intensity
             
             ## NA filter: backwards compatibility
             if(!is.null(global.param$na.filt.val)){
@@ -4172,13 +4287,16 @@ shinyServer(
                 ids.tmp <- tab[, id.col]
                 dat.tmp <- tab[, -which(colnames(tab) == id.col)]
                 dat.tmp <- data.matrix(dat.tmp)
-
                 dat.tmp[dat.tmp == 0] <- NA
-
-                if(log.trans == 'log2'){
+                
+                #if there are negative values in the matrix, do not log transform!
+                if(sum(na.omit(dat.tmp<0))>0){
+                  shinyalert("Dataset contains negative values!", "Analysis will proceed WITHOUT log-transformation. If you wish to log-transform, please re-upload a dataset without negative values.", type = "warning")
+                  log.trans="none"
+                  global.param$log.transform = log.trans
+                }else if(log.trans == 'log2'){
                     dat.tmp <- log(dat.tmp, 2)
-                }
-                if(log.trans == 'log10'){
+                }else if(log.trans == 'log10'){
                     dat.tmp <- log(dat.tmp, 10)
                 }
                 ## putting a data frame around here turns out to be ESSENTIAL!! DON'T USE CBIND HERE!
@@ -4344,7 +4462,7 @@ shinyServer(
                         #############################
                         ## the actual test
                         #############################
-                        res.tmp <-  modT.test.2class( tab.group, groups=groups.tmp, id.col=id.col, label=g )$output
+                        res.tmp <-  modT.test.2class( tab.group, groups=groups.tmp, id.col=id.col, label=g , intensity=intensity)$output
 
                         if(count == 0){
                             res.comb <- res.tmp
@@ -4437,7 +4555,7 @@ shinyServer(
                     tab.group <- cbind(tab[, id.col], tab[, names(groups)])
                     colnames(tab.group)[1] <- id.col
                   
-                    res.comb <- modF.test( tab.group, id.col=id.col, class.vector=groups, nastrings=NASTRINGS, na.rm=FALSE)$output
+                    res.comb <- modF.test( tab.group, id.col=id.col, class.vector=groups, nastrings=NASTRINGS, na.rm=FALSE, intensity=intensity)$output
                     colnames(res.comb) <- sub('^X', '', colnames(res.comb))
                 })
                 
@@ -7072,24 +7190,15 @@ shinyServer(
             if(!global.param$which.test %in% c('mod F','none')){
                 par(mfrow=c(length(groups.comp),1))
                 for(g in groups.comp){
-                  pval <- res[, paste('P.Value', g, sep='.')]
-                    if(global.param$filter.type=="adj.p"){
-                      hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='adj.p-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
-                      legend('top', legend=g, cex=2)
-                    }else{
+                      pval <- res[, paste('P.Value', g, sep='.')]
                       hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='p-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
                       legend('top', legend=g, cex=2)
-                    }
                 }
             ############################################
             ## mod F
             } else {
-              pval <- res[, paste('P.Value')]
-              if(global.param$filter.type=="adj.p"){
-                hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='adj.p-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
-              }else{
+                pval <- res[, paste('P.Value')]
                 hist(pval, breaks=50, main=paste('Number of tests: ', sum(!is.na(pval)), '',sep=''), xlab='p-value', cex.main=2.5, cex.axis=1.8, cex.lab=1.8, col='darkblue', border=NA)
-              }
             }
 
         },

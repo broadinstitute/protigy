@@ -21,7 +21,7 @@
 ##   20151211 'label'
 #####################################################################################
 modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NULL,
-                              group.na.rm=FALSE, nastrings=c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?"), label=NULL) {
+                              group.na.rm=FALSE, nastrings=c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?"), label=NULL, intensity=FALSE) {
 
     cat('\n-- modT.test.2class --\n')
 
@@ -38,7 +38,7 @@ modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NU
 
     ## moderated t test for 2 classes
     design.mat <- cbind (ref=1, comparison=groups)
-    mod.t.result <- moderated.t (data, design.mat)
+    mod.t.result <- moderated.t (data, design.mat, intensity)
 
     ## 20151211 kk
     mod.t.result <- data.frame( mod.t.result, Log.P.Value=-10*log(mod.t.result$P.Value,10), stringsAsFactors=F)
@@ -73,7 +73,7 @@ modT.test.2class <- function (d, output.prefix, groups, id.col=NULL, data.col=NU
 modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALSE,
                        p.value.alpha=0.05, use.adj.pvalue=TRUE, apply.log=FALSE,
                        na.rm=FALSE, nastrings=c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?"),
-                       plot=TRUE, pairs.plot.2rep=FALSE, limits=NULL, xlab="", ylab="", label='', ...) {
+                       plot=TRUE, pairs.plot.2rep=FALSE, limits=NULL, xlab="", ylab="", label='', intensity=FALSE, ...) {
   #
   # data.file should contain one peptide in each row.
   # The columns contain the normalized log-ratio from each replicate
@@ -109,7 +109,7 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
 
     ## moderated t test
       ##View(data)
-    mod.t.result <- moderated.t (data)
+    mod.t.result <- moderated.t (data, intensity)
     ##View(data)
   if (use.adj.pvalue) mod.sig <- mod.t.result [,'adj.P.Val'] <= p.value.alpha
   else  mod.sig <- mod.t.result [,'P.Value'] <= p.value.alpha
@@ -149,7 +149,7 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
                        p.value.alpha=0.05, use.adj.pvalue=TRUE,
                        na.rm=FALSE, nastrings=c("NA", "<NA>", "#NUM!", "#DIV/0!", "#NA", "#NAME?"),
                        plot=TRUE, limits=NULL, xlab="", ylab="", plot.by.group=TRUE,
-                       add.xy.axes=TRUE, ...) {
+                       add.xy.axes=TRUE, intensity=FALSE, ...) {
   #
   # data.file should contain one peptide in each row.
   # The columns contain the normalized log-ratio from each replicate
@@ -185,7 +185,12 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
   #  opposed to groups with non-zero average values)
   data.rownorm <- sweep (data, MARGIN=1, STATS=apply (data, 1, mean, na.rm=TRUE))
   fit <- lmFit (data.rownorm, design)
-  fit <- eBayes (fit)
+  #trend=TRUE for intensity data
+  if(intensity){
+    fit <- eBayes (fit, trend=TRUE, robust=TRUE)
+  }else{
+    fit <- eBayes (fit, robust=TRUE)
+  }
 
   sig <- topTable (fit, number=nrow(data), sort.by='none')
   if (use.adj.pvalue) mod.sig <- sig [,'adj.P.Val'] <= p.value.alpha
@@ -214,13 +219,14 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
 ##    - single function for one/two sample test
 ##
 ##########################################################################
-moderated.t <- function (data, design=NULL) {
+moderated.t <- function (data, design=NULL, intensity=FALSE) {
     ## data is a table with rows representing peptides/proteins/genes
     ## and columns representing replicates
 
      cat('\n-- moderated.t --\n')
 
     data.matrix <- data.frame (data, stringsAsFactors=F)
+    
     ## the design matrix is expected to be:
     ##    ref    comparison
     ##     1         0
@@ -242,7 +248,12 @@ moderated.t <- function (data, design=NULL) {
     ## two sample test
     if(!is.null(design)){
         m <- lmFit (data.matrix, design)
-        m <- eBayes (m, robust=TRUE)
+        #trend=TRUE for intensity data
+        if(intensity){
+          m <- eBayes (m, trend=TRUE, robust=TRUE)
+        }else{
+          m <- eBayes (m, robust=TRUE)
+        }
         sig <- topTable (m, coef=colnames (design)[2], number=nrow(data), sort.by='none')
     } else {
     #############################################
@@ -250,7 +261,12 @@ moderated.t <- function (data, design=NULL) {
         ##cat('here2 ')
         m <- lmFit (data.matrix, method='robust')
         ##cat('here3 ')
-        m <- eBayes (m, robust=TRUE)
+        #trend=TRUE for intensity data
+        if(intensity){
+          m <- eBayes (m, trend=TRUE, robust=TRUE)
+        }else{
+          m <- eBayes (m, robust=TRUE)
+        }
         ##at('here4 ')
         sig <- topTable (m, number=nrow(data), sort.by='none')
         ##cat('here5 ')

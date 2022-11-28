@@ -32,6 +32,15 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v1.1 November 28, 2022</b>\
+<ul>
+<li>A checkbox has been added to filter out samples where QC.status=QC.fail. This option is for GCT files ONLY. If the QC.status column does not exist and the box is checked, a warning message is printed and analysis will proceed using all samples.
+<li>A warning message appears when attempting to log-transform a dataset that contains negative values (i.e., a dataset that has already been log-transformed). In this case, log-transformation will not occur to prevent downstream analysis errors.
+<li>An error message appears when a column label only has one sample assigned to it, and analysis will not proceed. ProTIGY requires all column labels have more than one sample assigned to them. When this error appears, the user must either remove that sample from the file, or use another column for statistical testing and/or group-wise normalization.
+<li>A checkbox has been added to indicate the data are intensity data rather than ratios. When the box is checked, normalization methods, filtering methods, and statistical testing will be automatically filtered to only methods appropriate for intensity data. Further, the missing value rate will be capped at 99%, as the statistical analysis can fail when the missing value rate is 100%.
+<li> For the moderated two-sample t-test and the moderated F test, eBayes(trend=true) is used for intensity data. This option is more stable for intensity data, but does require the capped missing value rate of 99%. eBayes(trend=FALSE) continues to be used for ratios.
+<li> Help text has been edited for non-GCT files to clarify that NA must be used for missing sample annotations. Further, a sample can be excluded in a non-GCT file by leaving the Experiment and Group annotations as NA.
+</ul>
 <b>v1.0.4 September 19, 2022</b>\
 <ul>
 <li>Fixes multiple plotting issues.
@@ -605,7 +614,7 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'id'){
 
         txt <- paste('<br><br><p><font size=\"4\"><b>Group assigment</b></br>
-Download a template of an experimental design file. You can open this file in Excel and define the groups you want to compare. Replicate measurements have to be grouped under a single name in the \'Experiment\'-column. You can use the \'Group\' column to denote group-wise normalization. If you are not performing group-wise normalization, you may leave this blank. <mark>Please don\'t use special characters, like blanks or any punctuation, when defining these names!</mark> </font></p>
+Download a template of an experimental design file. You can open this file in Excel and define the groups you want to compare. Replicate measurements have to be grouped under a single name in the \'Experiment\'-column. You can use the \'Group\' column to denote group-wise normalization. If you are not performing group-wise normalization, you may leave this as NA. If you would like to exclude a sample from analysis, you may leave both Experiment and Group as NA. <mark>Please don\'t use special characters, like blanks or any punctuation, when defining these names!</mark> </font></p>
 <br><p><font size=\"4\"><b>Select ID column</b></br>
 Choose a column from the list on the left that contains <b>unique</b> identifiers for the features in the data table. If the enntries are not unique, uniqueness will enforces by appending \"_1\". Preferably, IDs should be unique protein accession numbers (e.g. <font face=\"Courier\">NP_073737</font>) or a combination of protein accession and residue number in case of PTM analysis (e.g. <font face=\"Courier\">NP_073737_S544s _1_1_544_544</font>).</p>  
 <br><p><font size=\"4\"><b>Automatic retrieval of gene symbols</b></br>
@@ -681,7 +690,9 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
     if(what == 'ana'){
 
         txt <- paste('<font size=\"4\">
+        <p><h3>Intensity data</h3>Check the box if you are using raw or log-transformed intensity data. Only the relevant normalization methods and statistical tests for intensity data will now show under \'Data normalization\' and \'Select test\'.</p>
 <p><h3>Log-transformation</h3>Apply log transformation to the data.</p>
+<p><h3>Normalize per group</h3>If enabled the normalization will be performed within a particular group (Median, Median-MAD, Quantile, VSN). For Median and Median-MAD normalization, the group-level median of sample medians is added to each normaized data value.</p>
 <p><h3>Data normalization</h3>You can apply different normalization methods to the data prior to testing. The methods are applied for each sample (column) separately, except for \'Quantile\' and \'VSN\' normalization which take the entire matrix into account.</p>
 <p>
 <ul>
@@ -696,10 +707,6 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 <li><b>none</b>: The data will be taken as is. Use this option if the data has already been normalized.</li>
 </ul>
 
-<p>
-<h4><b>Normalize per group</b></h4>
-If enabled the normalization will be performed within a particualr group (Median, Median-MAD, Quantile, VSN). For Median and Median-MAD normalization, the group-level median of sample medians is added to each normaized data value.
-
 
 
 <h3>Filter data</h3>
@@ -707,10 +714,10 @@ If enabled the normalization will be performed within a particualr group (Median
 <b>You can filter the data by p-value (non-adjusted or adjusted) and change the p-value cutoff once running the analysis (on the next screen).</b>
 
 <br><br><b>Missing data:</b><br>
-Remove features not quantified in percent of samples specied in the text field.
+Remove features not quantified in percent of samples specied in the text field. For intensity data, the missing data rate is capped at 99% to prevent downstream statistical testing from throwing an error.
 
 <br><br><b>Reproducibility:</b><br>
-Remove features that were not reproducibly quantified across replicate measurements of a group. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue. <b>This type of filter is applied separately to each group.</b>
+Remove features that were not reproducibly quantified across replicate measurements of a group. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue. <b>This type of filter is applied separately to each group.</b>  <b>This filter is only appropriate for ratio data.</b>
 
 <br><br><b>StdDev:</b><br>
 Remove features with low standard deviation across all samples. Only useful if applied to sample cohorts that were quantified against a common reference. The percentile <b><i>P</i></b> you specify 
@@ -721,7 +728,7 @@ Using this type of filter is useful to explore result of unsupervised clustering
 <ul>
 <li><b>One-sample mod T</b>: For each group test whether the group mean is significantly different from zero. Only meaningful to <b>ratio data</b>!</li>
 <li><b>Two-sample mod T</b>: For each possible pairwise comparison of groups test whether the group means are significantly different from each other.</li>
-<li><b>mod F</b>: Test whether there is a significant difference between any of the defined groups. Should be used if more than 2 groups are being compared. Only meaningful to <b>ratio data</b>!</li>
+<li><b>mod F</b>: Test whether there is a significant difference between any of the defined groups. Should be used if more than 2 groups are being compared. </li>
 <li><b>none</b>: Don\'t do any test. Useful for exploratory data analysis such as PCA.</li>
 </ul>
 <br></font></p>')

@@ -32,7 +32,7 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- FALSE
 ## version number
-VER <- "1.1"
+VER <- "1.1.1"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -75,6 +75,7 @@ if(PACMAN){
   p_load(shinyjqui)
   p_load(shinyalert)
   p_load(markdown)
+  p_load(tippy)
 
   p_load(magrittr)
   p_load(tibble)
@@ -158,6 +159,7 @@ if(PACMAN){
   library(shinyjs)
   library(shinyjqui)
   library(shinyalert)
+  library(tippy)
 
   library(magrittr)
   library(tibble)

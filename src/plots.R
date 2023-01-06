@@ -1025,7 +1025,10 @@ plotCorrBox <- function(cm,              ## correlation matrix
     cm.grp=cm[ names(grp) [grp == x], names(grp) [grp == x]]
     cm.grp[upper.tri(cm.grp, diag = FALSE)]
   }  )
-  ylim <- c(min(unlist(cor.group))-0.1*min(unlist(cor.group)), 1)
+  #change y-axis depending on if there are negative correlations
+  #if negative, go min value-0.1 to 1. else, go 0 to 1
+  ylim <- c(min(0,min(unlist(cor.group))-0.1*min(unlist(cor.group))), 1)
+  #ylim <- c(min(unlist(cor.group))-0.1*min(unlist(cor.group)), 1)
   
   # plot
   par(mar=c(8, 5, 2, 1))
@@ -1033,7 +1036,7 @@ plotCorrBox <- function(cm,              ## correlation matrix
                names=names(grp.col.legend), grid=F,
                show.numb = 'median', numb.col='black', 
                main=paste('Pairwise intra-group correlations (', cor.method,')'),
-               ylab='Correlation coeffient',
+               ylab='Correlation coefficient',
                ylim=ylim,
                numb.cex=1,
                las=2)

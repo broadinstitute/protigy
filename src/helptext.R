@@ -32,6 +32,13 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v1.1.1 January 5, 2023</b>\
+<ul>
+<li>A checkbox has been added for group-wise normalization on the group assignment screen. When this box is checked, group normalization will be performed based on the selected column. When the box is left unchecked, group normalization will not be performed. This replaces the previous checkbox on the statistical analysis screen.
+<li>There is now a help button that explains how the missing value filter works, as well as help text within the application.
+<li>The correlation boxplot is now always scaled from 0 to 1 for positive values. For negative values, the boxplot will scale based on the minimum value. This should produce more comparable boxplots across datasets.
+<li>More information has been added to the workflow summary including if intensity data were used, if group-wise normalization was performed, and if QC.fail samples were filtered.
+</ul>
 <b>v1.1 November 28, 2022</b>\
 <ul>
 <li>A checkbox has been added to filter out samples where QC.status=QC.fail. This option is for GCT files ONLY. If the QC.status column does not exist and the box is checked, a warning message is printed and analysis will proceed using all samples.
@@ -714,7 +721,7 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 <b>You can filter the data by p-value (non-adjusted or adjusted) and change the p-value cutoff once running the analysis (on the next screen).</b>
 
 <br><br><b>Missing data:</b><br>
-Remove features not quantified in percent of samples specied in the text field. For intensity data, the missing data rate is capped at 99% to prevent downstream statistical testing from throwing an error.
+This represents the maximum number of missing values allowed. For example: A value of 70 means a feature may have up to 70% missing values (must be quantified in at least 30% of samples). If you do not wish to perform missing value filtering, please leave the value at 100 (99 for intensity-based data). For intensity data, the missing data rate is capped at 99% to prevent downstream statistical testing from throwing an error.
 
 <br><br><b>Reproducibility:</b><br>
 Remove features that were not reproducibly quantified across replicate measurements of a group. For duplicate measurements a Bland-Altman Filter of 99.9% (+/-3.29 sigma) will be applied. For more than two replicate measurements per group a generalized reproducibility filter is applied which is based on a linear mixed effects model to model the within-group variance and between-group variance (See \'MethComp book (pp 58-61). <i>Comparing Clinical Measurement Methods</i> by Bendix Carstensen\' for more details). You can inspect the results of the filtering step in the multiscatter plot under the \'QC\'-tab as well as in the interactive scatterplots. Data points removed prior to testing will be depicted in blue. <b>This type of filter is applied separately to each group.</b>  <b>This filter is only appropriate for ratio data.</b>

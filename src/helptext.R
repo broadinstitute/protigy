@@ -32,6 +32,12 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v1.1.2 January 18, 2023</b>\
+<ul>
+<li>Previously, raw log-fold changes were median-centered by default. Raw log-fold changes are no longer median-centered so that they accurately reflect the fold change before any normalization is performed.
+<li>When a one-sample T-test or no test is performed, raw average abundances per group are reported in the place of fold change. Column headers and descriptors in the exported excel file have been updated to reflect this for these cases.
+<li>Help text has been updated to clarify that data must be log-transformed prior to statistical analysis. The statistical testing performed in Protigy is not valid for non-log-transformed data. 
+</ul>
 <b>v1.1.1 January 5, 2023</b>\
 <ul>
 <li>A checkbox has been added for group-wise normalization on the group assignment screen. When this box is checked, group normalization will be performed based on the selected column. When the box is left unchecked, group normalization will not be performed. This replaces the previous checkbox on the statistical analysis screen.
@@ -698,7 +704,7 @@ If the ID column contains <a href=\"http://www.uniprot.org/\" target=\"_blank_\"
 
         txt <- paste('<font size=\"4\">
         <p><h3>Intensity data</h3>Check the box if you are using raw or log-transformed intensity data. Only the relevant normalization methods and statistical tests for intensity data will now show under \'Data normalization\' and \'Select test\'.</p>
-<p><h3>Log-transformation</h3>Apply log transformation to the data.</p>
+<p><h3>Log-transformation</h3>Apply log transformation to the data. <b>Data MUST be log-transformed for statistical testing!</b> If you select "none," we assume you have already log-transformd your data.</p>
 <p><h3>Normalize per group</h3>If enabled the normalization will be performed within a particular group (Median, Median-MAD, Quantile, VSN). For Median and Median-MAD normalization, the group-level median of sample medians is added to each normaized data value.</p>
 <p><h3>Data normalization</h3>You can apply different normalization methods to the data prior to testing. The methods are applied for each sample (column) separately, except for \'Quantile\' and \'VSN\' normalization which take the entire matrix into account.</p>
 <p>

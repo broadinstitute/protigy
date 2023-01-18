@@ -9,7 +9,7 @@
 ##
 ## This file defines the server logical of the app. It also takes care of most of the user interface.
 ##
-## Last updated January 5, 2023 by Natalie Clark (nclark@broadinstitute.org) - v 1.1.1
+## Last updated January 18, 2023 by Natalie Clark (nclark@broadinstitute.org) - v 1.1.2
 ################################################################################################################
 p_load(shiny)
 
@@ -2305,7 +2305,7 @@ shinyServer(
 
                 list(
                   checkboxInput('intensity','Intensity data',FALSE),
-                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),                    #checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group ),
+                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),              #checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group ),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),                  #checkboxInput('norm.per.group', 'Normalize per group', value = global.param$norm.per.group),
                      #sliderInput('na.filt.val', 'Max. % missing values', min=0, max=100, value=global.param$na.filt.val),
                      numericInput('na.filt.val', 'Max. % missing values', min=0, max=100, step=5, value=global.param$na.filt.val),
@@ -2331,7 +2331,7 @@ shinyServer(
                 list(
                   checkboxInput('intensity','Intensity data',FALSE),
                      #radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=global.param$log.transform),
-                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),                    #checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
+                     radioButtons('log.transform', 'Log-transformation', choices=c('none', 'log10', 'log2'), selected=input$log.transform),             #checkboxInput('norm.per.group', 'Normalize per group', value = input$norm.per.group),
                      
                      #radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=global.param$norm.data),
                      radioButtons('norm.data', 'Data normalization', choices=c('Median', 'Median (non-zero)', 'Median-MAD', 'Median-MAD (non-zero)', 'Upper-quartile', '2-component', 'Quantile', 'VSN', 'none'), selected=input$norm.data),

@@ -32,7 +32,7 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- FALSE
 ## version number
-VER <- "1.1.1"
+VER <- "1.1.2"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -510,7 +510,7 @@ calculate_fc <- function(tab, grp.vec, groups.comp, test,
                          mode='sort',  ## for assigning pairwise comparisons
                                       ## sort: group names are ordered alphanumerically
                                       ##       e.g. "Exp_B" and "Exp_A" -> "Exp_A.vs.Exp_B",
-                         center=T     ## if TRUE median centering will be applied
+                         center=F     ## if TRUE median centering will be applied
                          ){
   #browser()
   groups <- unique(grp.vec)
@@ -561,7 +561,12 @@ calculate_fc <- function(tab, grp.vec, groups.comp, test,
   if(center)
     group_fc <- apply(group_fc, 2, function(column) column - median(column, na.rm=T))
   
-  colnames(group_fc) <- paste0('logFC.raw.', colnames(group_fc))
+  ## for one-sample and none, it is average, not FC
+  if(test %in% c("One-sample mod T", "none")){
+    colnames(group_fc) <- paste0('avg.raw.', colnames(group_fc))
+  }else{
+    colnames(group_fc) <- paste0('logFC.raw.', colnames(group_fc))
+  }
   return(group_fc)
 }
 

@@ -109,7 +109,7 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
 
     ## moderated t test
       ##View(data)
-    mod.t.result <- moderated.t (data, intensity)
+    mod.t.result <- moderated.t (data, intensity=intensity)
     ##View(data)
   if (use.adj.pvalue) mod.sig <- mod.t.result [,'adj.P.Val'] <= p.value.alpha
   else  mod.sig <- mod.t.result [,'P.Value'] <= p.value.alpha
@@ -186,8 +186,14 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
   data.rownorm <- sweep (data, MARGIN=1, STATS=apply (data, 1, mean, na.rm=TRUE))
   fit <- lmFit (data.rownorm, design)
   #trend=TRUE for intensity data
+  #if it fails, do trend=FALSE
   if(intensity){
-    fit <- eBayes (fit, trend=TRUE, robust=TRUE)
+    fit <- tryCatch({
+      eBayes (fit, trend=TRUE, robust=TRUE)},
+      error= function(e){
+        shinyalert("Setting intensity-trend failed. Performing with trend=FALSE. This usually occurs when the distribution of detected features is not uniform across samples. Please evaluate your data and consider re-running analysis with a stricter missing value filter.",type="warning",immediate=T)
+        eBayes (fit, trend=FALSE, robust=TRUE)
+      })
   }else{
     fit <- eBayes (fit, robust=TRUE)
   }
@@ -248,9 +254,15 @@ moderated.t <- function (data, design=NULL, intensity=FALSE) {
     ## two sample test
     if(!is.null(design)){
         m <- lmFit (data.matrix, design)
-        #trend=TRUE for intensity data
+        #try trend=TRUE for intensity data
+        #if it fails, perform trend=FALSE
         if(intensity){
-          m <- eBayes (m, trend=TRUE, robust=TRUE)
+          m <- tryCatch({
+            eBayes (m, trend=TRUE, robust=TRUE)},
+            error= function(e){
+              shinyalert("Setting intensity-trend failed. Performing with trend=FALSE. This usually occurs when the distribution of detected features is not uniform across samples. Please evaluate your data and consider re-running analysis with a stricter missing value filter.",type="warning",immediate=T)
+              eBayes (m, trend=FALSE, robust=TRUE)
+            })
         }else{
           m <- eBayes (m, robust=TRUE)
         }
@@ -261,12 +273,8 @@ moderated.t <- function (data, design=NULL, intensity=FALSE) {
         ##cat('here2 ')
         m <- lmFit (data.matrix, method='robust')
         ##cat('here3 ')
-        #trend=TRUE for intensity data
-        if(intensity){
-          m <- eBayes (m, trend=TRUE, robust=TRUE)
-        }else{
-          m <- eBayes (m, robust=TRUE)
-        }
+        #one-sample t-test is only run for ratio data
+        m <- eBayes (m, robust=TRUE)
         ##at('here4 ')
         sig <- topTable (m, number=nrow(data), sort.by='none')
         ##cat('here5 ')

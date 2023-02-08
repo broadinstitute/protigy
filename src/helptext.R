@@ -32,6 +32,12 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v1.1.3 February 8, 2023</b>\
+<ul>
+<li>Occasionally, eBayes(trend=TRUE) fails for intensity-based data, particularly when the distribution of quantified features is not uniform across samples. In these cases, eBayes(trend=FALSE) is run instead, and a warning message is printed. We highly encourage users who encounter this warning to carefully examine their data, and re-perform statistical analysis as needed. Typically, setting a stricter missing value filter will fix the issue.
+<li> The one-sample T-test is now fixed. It was not working due to an error in passing a parameter to the function.
+<li> An issue with heatmap color annotations was fixed. The issue occured during conversion of certain annotation group names to R-compliant names.
+</ul>
 <b>v1.1.2 January 18, 2023</b>\
 <ul>
 <li>Previously, raw log-fold changes were median-centered by default. Raw log-fold changes are no longer median-centered so that they accurately reflect the fold change before any normalization is performed.

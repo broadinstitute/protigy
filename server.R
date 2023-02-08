@@ -1377,8 +1377,9 @@ shinyServer(
           }
           
           ## robustify levels of group variable
-          #cdesc[, input$grp.gct3] <- make.names(cdesc[, input$grp.gct3])
-          #cdesc[, input$grp.norm] <- make.names(cdesc[, input$grp.norm])
+          ## prevent NA from being converted (TEXT FILE INPUT ONLY)
+          cdesc[!is.na(cdesc[,input$grp.gct3]), input$grp.gct3] <- make.names(cdesc[!is.na(cdesc[,input$grp.gct3]), input$grp.gct3])
+          cdesc[!is.na(cdesc[,input$grp.norm]), input$grp.norm] <- make.names(cdesc[!is.na(cdesc[,input$grp.norm]), input$grp.norm])
           global.input$cdesc <- cdesc
           
           # initialize grp file

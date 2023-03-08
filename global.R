@@ -32,7 +32,7 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- FALSE
 ## version number
-VER <- "1.1.3"
+VER <- "1.1.4"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -563,7 +563,7 @@ calculate_fc <- function(tab, grp.vec, groups.comp, test,
   
   ## for one-sample and none, it is average, not FC
   if(test %in% c("One-sample mod T", "none")){
-    colnames(group_fc) <- paste0('avg.raw.', colnames(group_fc))
+    colnames(group_fc) <- paste0('AveExpr.raw.', colnames(group_fc))
   }else{
     colnames(group_fc) <- paste0('logFC.raw.', colnames(group_fc))
   }

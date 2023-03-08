@@ -159,6 +159,7 @@ shinyServer(
             hm.max.val=4,
             hm.show.rownames=T,
             hm.show.colnames=T,
+            hm.clust="none",
             
             ## PCA
             pca.x='PC 1',
@@ -232,7 +233,7 @@ shinyServer(
             #updateCheckboxInput(session, 'export.pca.loadings', 'PCA loadings (xls)', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.ms', 'Multiscatter', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.excel', 'Excel sheet', value=!input$export.toggle.all)
-            updateCheckboxInput(session, 'export.gct.file', 'GCT files: 1) original data and 2) signed log p-values', value=!input$export.toggle.all)
+            updateCheckboxInput(session, 'export.gct.file', 'GCT files: 1) normalized data and 2) signed log p-values', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.cm', 'Correlation matrix', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.cb', 'Correlation boxplot', value=!input$export.toggle.all)
             updateCheckboxInput(session, 'export.profile', 'Profile plot', value=!input$export.toggle.all)
@@ -374,7 +375,7 @@ shinyServer(
                                                   #checkboxInput('export.pca.loadings', "PCA loadings (xls)", value = T),
                                                   checkboxInput('export.ms', 'Multiscatter',value=T),
                                                   checkboxInput('export.excel', 'Excel sheet',value=T),
-                                                  checkboxInput('export.gct.file', 'GCT files: 1) original data and 2) signed log p-values',value=T),
+                                                  checkboxInput('export.gct.file', 'GCT files: 1) normalized data and 2) signed log p-values',value=T),
                                                   checkboxInput('export.cm', 'Correlation matrix',value=T),
                                                   checkboxInput('export.cb', 'Correlation boxplot',value=T),
                                                   checkboxInput('export.profile', 'Profile plot',value=T),
@@ -1439,7 +1440,7 @@ shinyServer(
           if(!input$grp.norm.check & "Group"%in%colnames(cdesc)){
             cdesc$Group <- rep("None",dim(cdesc)[1])
           }
-          global.param$cdesc.all <- global.param$cdesc.selection <- cdesc[rownames(cdesc)%in%grp.file$Column.Name,colSums(is.na(cdesc))<nrow(cdesc)]
+          global.param$cdesc.all <- global.param$cdesc.selection <- cdesc[rownames(cdesc)%in%grp.file$Column.Name,colSums(is.na(cdesc))<nrow(cdesc),drop=F]
           cdesc <- global.param$cdesc.all
           
           #if an annotation only appears once, throw an error
@@ -2608,6 +2609,8 @@ shinyServer(
           
           ## ids to show in heatmap
           hm.rownames <- res[, 'id.concat']
+          ## data for heatmap
+          hm.res <- res
           
           ## groups to compare
           grp.comp <- unique( global.param$grp.comp )
@@ -2800,15 +2803,11 @@ shinyServer(
                 rmd <- paste(rmd, "
                            \n```{r heatmap, echo=F, fig.width=8, fig.height=8}
                            \nwithProgress(message='Exporting', detail='heatmap',{
+                              ######################################
                            \n# heatmap title
                            \nhm.title <- paste('filter:', global.param$filter.type, ' / cutoff:', global.param$filter.value, sep='')
                            \nhm.title <- paste(hm.title, '\nsig / total: ', nrow(res), ' / ', nrow( global.results$data$output ), sep='')
-                           \n# column annotation
-                           \nif(!is.null(global.input$cdesc)){
-                           \n  hm.cdesc <- global.input$cdesc[global.param$cdesc.selection,  ]
-                           \n} else {
-                           \n   hm.cdesc <- NULL
-                           \n}
+
                            \nif(!is.null(global.param$anno.col)){
                            \n  anno.col=global.param$anno.col
                            \n     anno.col.color=global.param$anno.col.color
@@ -2817,9 +2816,9 @@ shinyServer(
                            \n  anno.col.color=list(Group=global.param$grp.colors.legend)
                            \n}
                            \nif(global.plotparam$hm.max){
-                           \n  plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$cexRow, fontsize_col= global.plotparam$cexCol, max.val=global.plotparam$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=global.plotparam$hm.show.rownames, show.colnames=global.plotparam$hm.show.colnames)
+                           \n  plotHM(res=hm.res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$hm.cexRow, fontsize_col= global.plotparam$hm.cexCol, max.val=global.plotparam$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=global.plotparam$hm.show.rownames, show.colnames=global.plotparam$hm.show.colnames)
                            \n} else {
-                           \n  plotHM(res=res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$cexRow, fontsize_col= global.plotparam$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=global.plotparam$hm.show.rownames, show.colnames=global.plotparam$hm.show.colnames)
+                           \n   plotHM(res=hm.res, hm.rownames=hm.rownames, grp=global.param$grp, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=global.plotparam$hm.clust, hm.title=hm.title, hm.scale=global.plotparam$hm.scale , fontsize_row= global.plotparam$hm.cexRow, fontsize_col= global.plotparam$hm.cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=global.plotparam$hm.show.rownames, show.colnames=global.plotparam$hm.show.colnames)
                            \n}
                            \n}) # end withProgress
                            \n```   
@@ -3027,7 +3026,7 @@ shinyServer(
               \n```{r boxplot, echo=F, warning=F, message=F, fig.width=10}
               \nwithProgress(message="Exporting", detail="boxplots",{
               \nif(is.null(global.results$table.log)){
-              \n  tab <- data.frame(global.results$table.na.filt)
+              \n  tab <- data.frame(global.input$table)
               \n} else{
               \n  tab <- data.frame(global.results$table.log)
               \n}
@@ -3886,7 +3885,6 @@ shinyServer(
                       global.param.list <- reactiveValuesToList(global.param)
                      
                       #save(rdesc, logp.colnames, logfc.colnames, file='debug.RData')
-                     
                       logp <- rdesc[, logp.colnames] %>% data.matrix
                       fc <- rdesc[, logfc.colnames ] %>% data.matrix
                       
@@ -4489,6 +4487,7 @@ shinyServer(
                 withProgress(message='Two-sample test', value=0, {
 
                     count=0
+                    res.comb <- tab
                     ## loop over groups
                     for(g in unique(groups.comp)){
 
@@ -4504,16 +4503,24 @@ shinyServer(
                         ## the actual test
                         #############################
                         res.tmp <-  modT.test.2class( tab.group, groups=groups.tmp, id.col=id.col, label=g , intensity=intensity)$output
-
-                        if(count == 0){
-                            res.comb <- res.tmp
-                        } else {
-                            ## make sure the order is correct
-                            if(nrow(res.tmp ) != nrow(res.comb)) stop( "number of rows don't match!\n" )
-                            res.tmp <- res.tmp[rownames(res.comb), ]
-                            ##res.comb <- cbind(res.comb, res.tmp)
-                            res.comb <- data.frame(res.comb, res.tmp, stringsAsFactors=F)
-                        }
+                        #previous code would incorrectly throw away a test result if a feature was missing
+                        # if(count == 0){
+                        #     res.comb <- res.tmp
+                        # } else {
+                        #     ## make sure the order is correct
+                        #     if(nrow(res.tmp ) != nrow(res.comb)) stop( "number of rows don't match!\n" )
+                        #     #res.tmp <- res.tmp[rownames(res.comb), ]
+                        #     ##res.comb <- cbind(res.comb, res.tmp)
+                        #     res.comb <- data.frame(res.comb, res.tmp, stringsAsFactors=F)
+                        # }
+                        
+                        
+                        #create data frame of expression values and test results
+                        res.test <- res.tmp[, !colnames(res.tmp)%in%colnames(res.comb)]
+                        res.comb <- merge(res.comb,res.test,by="row.names",all=T)
+                        rownames(res.comb) <- res.comb[,1]
+                        res.comb <- res.comb[,-1]
+                        
                         ##################################################
                         ## progress bar
                         incProgress(count/length(unique(groups.comp)), detail=g)
@@ -4546,7 +4553,7 @@ shinyServer(
                 withProgress(message='One-sample T test', value=0, {
 
                     count=0
-                    
+                    res.comb <- tab
                     ## loop over groups
                     for(g in unique(groups.comp)){
 
@@ -4555,14 +4562,20 @@ shinyServer(
                         colnames(tab.group)[1] <- id.col
 
                         res.tmp <- modT.test( tab.group, id.col=id.col, plot=F, nastrings=NASTRINGS, label=g, na.rm=FALSE)$output
-                    
-                        if(count == 0){
-                            res.comb <- res.tmp
-                        } else {
-                            if(nrow(res.tmp ) != nrow(res.comb)) stop( "number of rows don't match!\n" )
-                            res.tmp <- res.tmp[rownames(res.comb), ]
-                            res.comb <- cbind(res.comb, res.tmp)
-                        }
+                        #previous code would incorrectly throw away a test result if a feature was missing
+                        # if(count == 0){
+                        #     res.comb <- res.tmp
+                        # } else {
+                        #     if(nrow(res.tmp ) != nrow(res.comb)) stop( "number of rows don't match!\n" )
+                        #     res.tmp <- res.tmp[rownames(res.comb), ]
+                        #     res.comb <- cbind(res.comb, res.tmp)
+                        # }
+                        
+                        #create data frame of expression values and test results
+                        res.test <- res.tmp[, !colnames(res.tmp)%in%colnames(res.comb)]
+                        res.comb <- merge(res.comb,res.test,by="row.names",all=T)
+                        rownames(res.comb) <- res.comb[,1]
+                        res.comb <- res.comb[,-1]
 
                         #############################################
                         ## update progress bar
@@ -4585,6 +4598,7 @@ shinyServer(
                 res.comb <- data.frame(id=res.id, res.test, res.exprs, stringsAsFactors=F)
                 ##res.comb <- res.comb[tab[, id.col], ]
                 res.comb <- res.comb[rownames(tab),]
+                
             }
 
             ##################################
@@ -7073,7 +7087,6 @@ shinyServer(
                    plotHM(res=res, hm.rownames=hm.rownames, grp=grp.hm, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
                           height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
                           width=dynamicWidthHM(length(global.param$grp)))
-                   
                    })
             }
         },

@@ -132,6 +132,7 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
     ##colnames (mod.t)[1] <- id.col   # retain id.col (if provided)
     ##rownames(mod.t) <- make.unique( as.character(mod.t[,1]), sep='_' )
     rownames(mod.t) <- id
+    
 
     final.results <- mod.t
     cat('\n-- modT.test exit --/n')
@@ -274,7 +275,7 @@ moderated.t <- function (data, design=NULL, intensity=FALSE) {
         m <- lmFit (data.matrix, method='robust')
         ##cat('here3 ')
         #one-sample t-test is only run for ratio data
-        m <- eBayes (m, robust=TRUE)
+        m <- eBayes (m, trend=FALSE, robust=TRUE)
         ##at('here4 ')
         sig <- topTable (m, number=nrow(data), sort.by='none')
         ##cat('here5 ')

@@ -32,6 +32,14 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v1.1.4 March 7, 2023</b>\
+<ul>
+<li>Fixed an issue with the one-sample and two-sample T-test. Previously, in the rare case where a protein was not detected in all samples in a certain group, any test comparisons involving that group would be erroneously discarded, which would cause an error when attempting to export the signed log-transformed p-values. Now, all test results are reported for all proteins: NAs are reported when a protein was excluded from a particular test. 
+<li> Fixed an issue where exporting the RMarkdown report would fail when attempting to export the heatmap.
+<li> Fixed an issue where a GCT file with only one cdesc column could not be imported correctly.
+<li> Fixed some column descriptors in output GCT files.
+<li> Updated various help text within the app.
+</ul>
 <b>v1.1.3 February 8, 2023</b>\
 <ul>
 <li>Occasionally, eBayes(trend=TRUE) fails for intensity-based data, particularly when the distribution of quantified features is not uniform across samples. In these cases, eBayes(trend=FALSE) is run instead, and a warning message is printed. We highly encourage users who encounter this warning to carefully examine their data, and re-perform statistical analysis as needed. Typically, setting a stricter missing value filter will fix the issue.

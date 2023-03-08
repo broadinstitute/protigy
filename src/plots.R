@@ -741,9 +741,9 @@ makeBoxplotly <- function(tab, id.col, grp, grp.col, verbose=T, title='boxplot')
   
   ##########################################
   ## plot
-  p <-  plot_ly(tab, x=tab[, 1],  type='box', name=colnames(tab)[1], marker = list(color = grp.col[1]), line=list( color=grp.col[1]), hoverinfo='name+x', hoverlabel=list(namelength=STRLENGTH)  )
+  p <-  plot_ly(tab, x=tab[, 1],  type='box', name=colnames(tab)[1], color=list(color = grp.col[1]), marker = list(color = grp.col[1]), line=list( color=grp.col[1]), hoverinfo='name+x', hoverlabel=list(namelength=STRLENGTH)  )
   for(i in 2:ncol(tab))
-    p <- p %>% add_trace(x=tab[, i], name=colnames(tab)[i], marker=list(color = grp.col[i] ), line=list( color=grp.col[i]))
+    p <- p %>% add_trace(x=tab[, i], name=colnames(tab)[i], color=list(color = grp.col[i]), marker=list(color = grp.col[i] ), line=list( color=grp.col[i]))
   p <- p %>%  layout(showlegend = FALSE, title=title, yaxis=list(visible=T) )# %>% yaxis(visible=F)
   return(p)
 }

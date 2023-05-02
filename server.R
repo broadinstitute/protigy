@@ -3211,12 +3211,34 @@ shinyServer(
             
             colnames.tmp <- colnames(res.comb)
             grp.comp <- unique(global.param$grp.comp)
+            stat_header <-'^logFC\\.|^AveExpr\\.|^t\\.|^P\\.Value\\.|^adj\\.P\\.Val\\.|^Log\\.P\\.Value\\.|^RawlogFC\\.|^RawAveExpr\\.'
             
-            for(g in grp.comp){
-              g.new <- strsplit(g, '\\.vs\\.') %>% unlist
-              g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
-              colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
+            #do this for each column
+            for(i in 1:length(colnames.tmp)){
+              #if this is not a stat-related column, skip
+              if(!grepl(stat_header,colnames.tmp[i])){
+                next
+              }else{
+                #remove the stat header to get the group comparison
+                colnames.split <- unlist(strsplit(colnames.tmp[i],stat_header))
+                groups <- colnames.split[2]
+                #flip the order
+                g.new <- unlist(strsplit(groups, '\\.vs\\.'))
+                g.new <- paste0(g.new[2], '.over.', g.new[1])
+                #put the newly ordered groups back into the column
+                header.loc <- str_locate(colnames.tmp[i],stat_header)
+                my.header <- substring(colnames.tmp[i],header.loc[1],header.loc[2])
+                colnames.tmp[i] <- paste0(my.header,g.new)
+              }
             }
+            
+            
+            # old code which just matched substrings was inaccurate when a comparison was an exact substring match
+            # for(g in grp.comp){
+            #   g.new <- strsplit(g, '\\.vs\\.') %>% unlist
+            #   g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
+            #   colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
+            # }
             colnames(res.comb) <- colnames.tmp
           }
           
@@ -3526,7 +3548,7 @@ shinyServer(
                       anno.col.color=list(Group=global.param$grp.colors.legend)
                     }
 
-                    pdf(fn.hm, width=12)
+                    pdf(fn.hm, height=12, width=24)
                     if(input$hm.max){
                         print(plotHM(res=res, hm.rownames=hm.rownames, grp=grp.hm, grp.col=global.param$grp.colors, grp.col.legend=global.param$grp.colors.legend,  hm.clust=input$hm.clust, hm.title=hm.title, hm.scale=input$hm.scale, cellwidth=cw, fontsize_row=input$cexRow, fontsize_col=input$cexCol, max.val=input$hm.max.val, style=global.param$which.test, anno.col=anno.col, anno.col.color=anno.col.color, show.rownames=input$hm.show.rownames, show.colnames=input$hm.show.colnames,
                                height=min( dynamicHeightHM( nrow(global.results$filtered)), 1200 ),
@@ -3844,17 +3866,40 @@ shinyServer(
               if(global.param$which.test == 'Two-sample mod T'){
                 
                 colnames.tmp <- colnames(res.comb)
+                stat_header <-'^logFC\\.|^AveExpr\\.|^t\\.|^P\\.Value\\.|^adj\\.P\\.Val\\.|^Log\\.P\\.Value\\.|^RawlogFC\\.|^RawAveExpr\\.'
                 
-                for(g in grp.comp){
-                  g.new <- strsplit(g, '\\.vs\\.') %>% unlist
-                  g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
-                  colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
-                 # colnames.tmp <- gsub(g, g.new, colnames.tmp)
-                  
-                 # grp.comp.pval.gct[g] <- g.new
-                  logp.colnames[g] <- paste0('Log.P.Value.', g.new)
-                  logfc.colnames[g] <- paste0('logFC.', g.new)
+                #do this for each column
+                for(i in 1:length(colnames.tmp)){
+                  #if this is not a stat-related column, skip
+                  if(!grepl(stat_header,colnames.tmp[i])){
+                    next
+                  }else{
+                    #remove the stat header to get the group comparison
+                    colnames.split <- unlist(strsplit(colnames.tmp[i],stat_header))
+                    groups <- colnames.split[2]
+                    #flip the order
+                    g.new <- unlist(strsplit(groups, '\\.vs\\.'))
+                    g.new <- paste0(g.new[2], '.over.', g.new[1])
+                    #put the newly ordered groups back into the column
+                    header.loc <- str_locate(colnames.tmp[i],stat_header)
+                    my.header <- substring(colnames.tmp[i],header.loc[1],header.loc[2])
+                    colnames.tmp[i] <- paste0(my.header,g.new)
+                  }
                 }
+                
+                # old code which just matched substrings was inaccurate when a comparison was an exact substring match
+                # for(g in grp.comp){
+                #   g.new <- strsplit(g, '\\.vs\\.') %>% unlist
+                #   g.new <- paste(g.new[2], '.over.', g.new[1], sep='')
+                #   colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
+                #  # colnames.tmp <- gsub(g, g.new, colnames.tmp)
+                #   
+                #  # grp.comp.pval.gct[g] <- g.new
+                #   logp.colnames[g] <- paste0('Log.P.Value.', g.new)
+                #   logfc.colnames[g] <- paste0('logFC.', g.new)
+                # }
+                logp.colnames <- colnames.tmp[grepl('^Log\\.P\\.Value',colnames.tmp)]
+                logfc.colnames <- colnames.tmp[grepl('^logFC',colnames.tmp)]
                 colnames(res.comb) <- colnames.tmp
               }
             
@@ -4517,7 +4562,7 @@ shinyServer(
                         
                         #create data frame of expression values and test results
                         res.test <- res.tmp[, !colnames(res.tmp)%in%colnames(res.comb)]
-                        res.comb <- merge(res.comb,res.test,by="row.names",all=T)
+                        res.comb <- base::merge(res.comb,res.test,by="row.names",all=T)
                         rownames(res.comb) <- res.comb[,1]
                         res.comb <- res.comb[,-1]
                         
@@ -4537,7 +4582,7 @@ shinyServer(
                 ## reorder columns in table
                 res.id <- res.comb$id ## id column
                 res.exprs <- res.comb[, names(groups)] ## expression values
-                res.test <- res.comb[, grep('^logFC|^AveExpr|^t\\.|^P\\.Value|^adj.P.Val|^Log\\.P\\.Value', colnames(res.comb))] ## test results
+                res.test <- res.comb[, grep('^logFC\\.|^AveExpr\\.|^t\\.|^P\\.Value\\.|^adj\\.P\\.Val\\.|^Log\\.P\\.Value\\.|^RawlogFC\\.|^RawAveExpr\\.', colnames(res.comb))] ## test results
                 res.test <- res.test[, order(colnames(res.test))]
 
                 ## assemble new table
@@ -4573,7 +4618,7 @@ shinyServer(
                         
                         #create data frame of expression values and test results
                         res.test <- res.tmp[, !colnames(res.tmp)%in%colnames(res.comb)]
-                        res.comb <- merge(res.comb,res.test,by="row.names",all=T)
+                        res.comb <- base::merge(res.comb,res.test,by="row.names",all=T)
                         rownames(res.comb) <- res.comb[,1]
                         res.comb <- res.comb[,-1]
 
@@ -4592,7 +4637,7 @@ shinyServer(
                 ## reorder columns of the table
                 res.id <- res.comb$id ## id column
                 res.exprs <- res.comb[, names(groups)] ## expression values
-                res.test <- res.comb[, grep('^logFC|^AveExpr|^t\\.|^P\\.Value|^adj.P.Val|^Log\\.P\\.Value', colnames(res.comb))] ## test results
+                res.test <- res.comb[, grep('^logFC\\.|^AveExpr\\.|^t\\.|^P\\.Value\\.|^adj\\.P\\.Val\\.|^Log\\.P\\.Value\\.|^RawlogFC\\.|^RawAveExpr\\.', colnames(res.comb))] ## test results
                 res.test <- res.test[, order(colnames(res.test))]
                 ## assemble new table
                 res.comb <- data.frame(id=res.id, res.test, res.exprs, stringsAsFactors=F)
@@ -4622,7 +4667,7 @@ shinyServer(
                 ## reorder columns of the data table
                 res.id <- res.comb$id ## id column
                 res.exprs <- tab[, names(groups)]
-                res.test <- res.comb[, grep('^logFC|^AveExpr|^F$|^P\\.Value$|^adj.P.Val$|^Log\\.P\\.Value', colnames(res.comb))] ## test results
+                res.test <- res.comb[, grep('^logFC\\.|^AveExpr|^t|^P\\.Value|^adj\\.P\\.Val|^Log\\.P\\.Value|^RawlogFC\\.', colnames(res.comb))] ## test results
                 res.test <- res.test[, order(colnames(res.test))]
 
                 ## assemble new table

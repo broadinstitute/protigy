@@ -204,14 +204,21 @@ modF.test <- function (d, class.vector, output.prefix, id.col=NULL,
   else  mod.sig <- sig [,'P.Value'] <= p.value.alpha
   non.na.n <- apply (data, 1, function (x) { sum (is.finite (x)) })
 
-
+# old code had coefficients in the table
     mod.f <- data.frame ( cbind (id=id, sig, significant=mod.sig, total.n=non.na.n, Log.P.Value=-10*log(sig[,'P.Value'] ,10)), stringsAsFactors=F )
 
     ##if(!is.null(label))
     ##    colnames(mod.f) <- paste(colnames(mod.f), label, sep='.')
 
     final.results <- mod.f
-    colnames(final.results) <- sub("^f", "logFC.", colnames(final.results))
+    colnames(final.results) <- sub("^f", "AveExpr.", colnames(final.results))
+    
+    #replace zero-centered average with the true average expression
+    avg <- t(aggregate(t(data),by=list(class.vector),function(x) mean(x,na.rm=T)))
+    avg <- avg[-1,]
+    avg <- matrix(as.numeric(avg),ncol=ncol(avg))
+    final.results[,grepl("AveExpr.",colnames(final.results))]=avg
+    final.results[,colnames(final.results)=="AveExpr"]=rowMeans(avg,na.rm=T)
 
     cat('\n-- modF.test exit --\n')
     return( list( input=d, output=final.results, groups=class.vector)  )

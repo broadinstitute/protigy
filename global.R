@@ -32,11 +32,11 @@ options(repos = BiocManager::repositories())
 ## set to FALSE if deployed to RStudio Connect 
 PACMAN <- FALSE
 ## version number
-VER <- "1.1.4"
+VER <- "1.1.5"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
-NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!","Na","nA")
+NASTRINGS <<- c("NA", "<NA>", "#N/A", "#NUM!", "#DIV/0!", "#NA", "#NAME?", "na", "#VALUE!","Na","nA","NaN")
 ## separator tested in the uploaded file
 SEPARATOR <<- c('\t', ',', ';')
 ## Colors used throughout the app to color the defined groups
@@ -80,6 +80,7 @@ if(PACMAN){
   p_load(magrittr)
   p_load(tibble)
   p_load(dplyr)
+  p_load(stringr)
   
   ## heatmap
   p_load(pheatmap)
@@ -164,6 +165,7 @@ if(PACMAN){
   library(magrittr)
   library(tibble)
   library(dplyr)
+  library(stringr)
 
   ## heatmap
   library(pheatmap)
@@ -525,21 +527,21 @@ calculate_fc <- function(tab, grp.vec, groups.comp, test,
   colnames(group_avg) <- groups
     
   ## ##########################################
-  ## one sample: just average the log values
-  if(test %in% c("One-sample mod T", "none")){
+  ## one sample & mod F: just average the log values
+  if(test %in% c("One-sample mod T", "none", "mod F")){
       group_fc <- group_avg
   }
 
   ## ##########################################
   ## moderated F: average log values and subtract
   ## groups as specified by the user
-  if(test == "mod F"){
-    groups.comp <- get_pairwise_group_comparisons(groups, mode=mode)
-  }
+  #if(test == "mod F"){
+  #  groups.comp <- get_pairwise_group_comparisons(groups, mode=mode)
+  #}
   
   ## ##########################################
   ## two sample: subtract averaged groups
-  if(test %in% c("Two-sample mod T", 'mod F')){
+  if(test %in% c("Two-sample mod T")){
     
     groups.comp.split <- strsplit(groups.comp, split = '\\.vs\\.')
     names(groups.comp.split) <- groups.comp
@@ -561,11 +563,11 @@ calculate_fc <- function(tab, grp.vec, groups.comp, test,
   if(center)
     group_fc <- apply(group_fc, 2, function(column) column - median(column, na.rm=T))
   
-  ## for one-sample and none, it is average, not FC
-  if(test %in% c("One-sample mod T", "none")){
-    colnames(group_fc) <- paste0('AveExpr.raw.', colnames(group_fc))
+  ## for one-sample/mod F/none, it is average, not FC
+  if(test %in% c("One-sample mod T", "none", "mod F")){
+    colnames(group_fc) <- paste0('RawAveExpr.', colnames(group_fc))
   }else{
-    colnames(group_fc) <- paste0('logFC.raw.', colnames(group_fc))
+    colnames(group_fc) <- paste0('RawlogFC.', colnames(group_fc))
   }
   return(group_fc)
 }
@@ -1363,7 +1365,7 @@ makeProfileplot <- function(tab, id.col, grp, grp.col, grp.col.leg,
         }
       }
       p <- p %>% layout(title = main, 
-                        xaxis = list(title='Abundance', range=xlim),
+                        xaxis = list(title='expression', range=xlim),
                         yaxis = list(title='Density'))
     }
     cat('\n-- makeProfileplot exit --\n')

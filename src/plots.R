@@ -707,7 +707,7 @@ makeBoxplot <- function(tab, id.col, grp, grp.col, grp.col.leg, legend=T, cex.la
   ##########################################
   ## plot
   par(mar=mar)
-  boxplot(tab, pch=20, col='white', outline=T, horizontal=T, las=2, xlab=expression(log[2](ratio)), border=grp.col, at=at.vec, axes=F, main='', cex=2, xlim=c(0, ifelse(legend, ncol(tab)+2, ncol(tab)) ))
+  boxplot(tab, pch=20, col='white', outline=T, horizontal=T, las=2, xlab="expression", border=grp.col, at=at.vec, axes=F, main='', cex=2, xlim=c(0, ifelse(legend, ncol(tab)+2, ncol(tab)) ))
   ##legend('top', legend=names(grp.col.leg), ncol=2, bty='n', border = names(grp.col.leg), fill='white', cex=1.5)
   if(legend)
     legend('top', legend=names(grp.col.leg), ncol=length(grp.col.leg), bty='n', border = grp.col.leg, fill=grp.col.leg, cex=cex.lab)

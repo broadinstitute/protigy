@@ -4667,7 +4667,7 @@ shinyServer(
                 ## reorder columns of the data table
                 res.id <- res.comb$id ## id column
                 res.exprs <- tab[, names(groups)]
-                res.test <- res.comb[, grep('^logFC\\.|^AveExpr|^t|^P\\.Value|^adj\\.P\\.Val|^Log\\.P\\.Value|^RawlogFC\\.', colnames(res.comb))] ## test results
+                res.test <- res.comb[, grep('^logFC\\.|^AveExpr|^t|^P\\.Value|^adj\\.P\\.Val|^Log\\.P\\.Value|^RawlogFC\\.|^RawAveExpr\\.', colnames(res.comb))] ## test results
                 res.test <- res.test[, order(colnames(res.test))]
 
                 ## assemble new table

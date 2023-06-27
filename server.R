@@ -3240,6 +3240,7 @@ shinyServer(
             #   colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
             # }
             colnames(res.comb) <- colnames.tmp
+            View(res.comb)
           }
           
           ## filename 
@@ -4396,6 +4397,9 @@ shinyServer(
             ## normalization
             ## ###########################################
             fc.before.norm <- calculate_fc(tab,global.param$grp, groups.comp, test)
+            #add rownames
+            rownames(fc.before.norm) <- rownames(tab)
+            
             
             ## ###########################################
             ##
@@ -4575,7 +4579,9 @@ shinyServer(
                 
                 ##################################    
                 ## add FC before normalization
-                res.comb <- data.frame(res.comb, fc.before.norm)
+                res.comb <- merge(res.comb, fc.before.norm,by="row.names")
+                rownames(res.comb) <- res.comb[,1]
+                res.comb <- res.comb[,-1]
                     
 
                 ##################################
@@ -4631,7 +4637,9 @@ shinyServer(
 
                 ##################################    
                 ## add FC before normalization
-                res.comb <- data.frame(res.comb, fc.before.norm)
+              res.comb <- merge(res.comb, fc.before.norm,by="row.names")
+              rownames(res.comb) <- res.comb[,1]
+              res.comb <- res.comb[,-1]
                 
                 ##################################
                 ## reorder columns of the table
@@ -4661,7 +4669,9 @@ shinyServer(
                 
                 ##################################    
                 ## add FC before normalization
-                res.comb <- data.frame(res.comb, fc.before.norm)
+              res.comb <- merge(res.comb, fc.before.norm,by="row.names")
+              rownames(res.comb) <- res.comb[,1]
+              res.comb <- res.comb[,-1]
                 
                 ##################################
                 ## reorder columns of the data table
@@ -4766,7 +4776,9 @@ shinyServer(
                 
                 ##################################    
                 ## add FC before normalization
-                res.comb <- data.frame(res.comb, fc.before.norm)
+                res.comb <- merge(res.comb, fc.before.norm,by="row.names")
+                rownames(res.comb) <- res.comb[,1]
+                res.comb <- res.comb[,-1]
 
             }
 

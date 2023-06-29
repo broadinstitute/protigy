@@ -3240,7 +3240,6 @@ shinyServer(
             #   colnames.tmp <- gsub(paste0(g,'$'), g.new, colnames.tmp)
             # }
             colnames(res.comb) <- colnames.tmp
-            View(res.comb)
           }
           
           ## filename 

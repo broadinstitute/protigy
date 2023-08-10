@@ -108,7 +108,6 @@ modT.test <- function (d, output.prefix, id.col=NULL, data.col=NULL, fix.id=FALS
   if (apply.log) data <- log2 (data)
 
     ## moderated t test
-      ##View(data)
     mod.t.result <- moderated.t (data, intensity=intensity)
     ##View(data)
   if (use.adj.pvalue) mod.sig <- mod.t.result [,'adj.P.Val'] <= p.value.alpha

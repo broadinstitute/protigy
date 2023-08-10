@@ -4476,7 +4476,7 @@ shinyServer(
                 global.results$table.log <- global.results$table.log[na.filt$ids, ]
                 
                 ## fc.before.norm doesn't have rownames..
-                fc.before.norm  <- fc.before.norm[ which(tab[, id.col] %in% na.filt$ids), ]
+                fc.before.norm  <- fc.before.norm[ which(tab[, id.col] %in% na.filt$ids), ,drop=F]
                 
                 ## use na-filtered table downstream
                 tab <- tab.na.filt

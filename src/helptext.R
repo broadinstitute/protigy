@@ -32,6 +32,10 @@ printHTML <- function(input, output, session, what, error=NULL, global.input=NUL
     if(what == 'cl'){
       txt <- '<h4><font color="red">What\'s new?</font></h4>
 <font size=\"3\">
+<b>v1.1.7 August 10, 2023</b>\
+<ul>
+<li>Fixed an issue where statistical analysis results would not display properly for files with only one comparison after a missing value filter was applied.
+</ul>
 <b>v1.1.6 June 27, 2023</b>\
 <ul>
 <li>Fixed an issue where, with certain input files, the raw average expression/raw fold change columns were not sorted properly in the output data files.

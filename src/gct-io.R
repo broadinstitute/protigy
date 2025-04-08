@@ -82,9 +82,9 @@ suppressMessages({
   setMethod("dim", methods::signature("GCT"), function(x) {
     dim(x@mat)
   })
-  setMethod("range", methods::signature("GCT"), function(x, na.rm=F, finite=F) {
-    range(x@mat, na.rm=na.rm, finite=finite)
-  })
+  # setMethod("range", methods::signature("GCT"), function(x, na.rm=F, finite=F) {
+  #   range(x@mat, na.rm=na.rm, finite=finite)
+  # })
   setMethod("max", methods::signature("GCT"), function(x, na.rm=F) {
     max(x@mat, na.rm=na.rm)
   })

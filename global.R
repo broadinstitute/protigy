@@ -30,9 +30,9 @@ options(repos = BiocManager::repositories())
 #################################################################
 ## use PACMAN R package manager?
 ## set to FALSE if deployed to RStudio Connect 
-PACMAN <- FALSE
+PACMAN <- TRUE
 ## version number
-VER <- "1.1.7"
+VER <- "1.1.8"
 ## maximal file size for upload
 MAXSIZEMB <<- 1024
 ## list of strings indicating missing data
@@ -151,6 +151,7 @@ if(PACMAN){
   #other needed packages
   p_load(seriation)
   p_load(preprocessCore)
+  p_load(car)
 
 } else { ## RStudio Connect
   

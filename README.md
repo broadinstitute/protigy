@@ -1,3 +1,9 @@
+## Announcement: The Protigy v2.0 App is now available [here](https://github.com/broadinstitute/protigy-v2)!
+
+Please note the original ProTIGY will no longer be updated. The current release v1.1.8 is the final version. For future updates, please use the new [protigy-v2](https://github.com/broadinstitute/protigy-v2) repository.
+
+------------------------------------------------------------------------
+
 <img src="www/logo_v4.png" alt="Drawing" style="width: 200px;"/>
 
 This [Shiny](https://shiny.rstudio.com/) app facilitates exploratory and interactive analysis of quantitative omics datasets. Primarily developed for mass spectrometry-based proteomics data ProTIGY supports any dataset that can be arranged as *p x n* matrix with *p* being features (e.g. proteins, transcripts, genes, ...) quantitatively measured across *n* samples (e.g. replicates of different experimental conditions, ... ). Examples of other datasets other than proteomics include datasets derived from *RNA-seq* or gene expression *microarrays*.
@@ -143,3 +149,4 @@ Below are slides presented during a BroadE workshop in Feb 2018 at the [Broad In
 ProTIGY has been released under [BSD-3](https://github.com/broadinstitute/protigy/blob/master/LICENSE.md) license. ProTIGY is being developed and maintained at the [Proteomics Platform](https://www.broadinstitute.org/proteomics) of the [Broad Institute of MIT and Harvard](https://www.broadinstitute.org/).
 
 ------------------------------------------------------------------------
+
